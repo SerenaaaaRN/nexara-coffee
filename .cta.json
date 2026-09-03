@@ -6,11 +6,7 @@
   "includeExamples": false,
   "tailwind": true,
   "projectPreset": "default",
-  "addOnOptions": {
-    "drizzle": {
-      "database": "postgresql"
-    }
-  },
+  "addOnOptions": {},
   "git": true,
   "install": true,
   "intent": true,
@@ -20,7 +16,6 @@
   "chosenAddOns": [
     "biome",
     "compiler",
-    "drizzle",
     "table",
     "better-auth",
     "tanstack-query"

@@ -1,0 +1,33 @@
+{
+    "$schema": "https://unpkg.com/knip@latest/schema.json",
+    "entry": [
+      "src/router.tsx",
+      "src/routes/**/*.tsx"
+    ],
+    "project": ["src/**/*.{ts,tsx}"],
+    "rules": {
+      "files": "warn",
+      "dependencies": "warn"
+    },
+    "ignore": [
+      "src/routeTree.gen.ts",
+      "src/routeTree.gen.tsx",
+      "src/graphify-out/**",
+      "legacy/**",
+      "**/components/ui/*"
+    ],
+    "ignoreDependencies": [
+      "@netlify/vite-plugin-tanstack-start",
+      "shadcn",
+      "tailwindcss",
+      "tw-animate-css",
+      "next-themes",
+      "cmdk"
+    ],
+    "ignoreExportsUsedInFile": {
+      "interface": true,
+      "type": true
+    },
+    "vitest": true
+  }
+  
