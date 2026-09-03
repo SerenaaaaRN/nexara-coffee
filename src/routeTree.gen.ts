@@ -9,21 +9,36 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthRegisterRouteImport } from './routes/_auth/register'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
+import { Route as DashboardIndexRouteImport } from './routes/_dashboard/index'
+import { Route as DashboardAuditRouteImport } from './routes/_dashboard/audit'
+import { Route as DashboardBranchesRouteImport } from './routes/_dashboard/branches'
+import { Route as DashboardChatRouteImport } from './routes/_dashboard/chat'
+import { Route as DashboardCustomersRouteImport } from './routes/_dashboard/customers'
+import { Route as DashboardEmployeeRouteImport } from './routes/_dashboard/employee'
+import { Route as DashboardKasirRouteImport } from './routes/_dashboard/kasir'
+import { Route as DashboardMapsRouteImport } from './routes/_dashboard/maps'
+import { Route as DashboardMenuRouteImport } from './routes/_dashboard/menu'
+import { Route as DashboardNotificationsRouteImport } from './routes/_dashboard/notifications'
+import { Route as DashboardOrdersRouteImport } from './routes/_dashboard/orders'
+import { Route as DashboardOverviewRouteImport } from './routes/_dashboard/overview'
+import { Route as DashboardPayoutsRouteImport } from './routes/_dashboard/payouts'
+import { Route as DashboardReviewsRouteImport } from './routes/_dashboard/reviews'
+import { Route as DashboardSettingsRouteImport } from './routes/_dashboard/settings'
+import { Route as DashboardTransactionsRouteImport } from './routes/_dashboard/transactions'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/_dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
@@ -46,6 +61,86 @@ const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => AuthRoute,
 } as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAuditRoute = DashboardAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardBranchesRoute = DashboardBranchesRouteImport.update({
+  id: '/branches',
+  path: '/branches',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardChatRoute = DashboardChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardCustomersRoute = DashboardCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardEmployeeRoute = DashboardEmployeeRouteImport.update({
+  id: '/employee',
+  path: '/employee',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardKasirRoute = DashboardKasirRouteImport.update({
+  id: '/kasir',
+  path: '/kasir',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardMapsRoute = DashboardMapsRouteImport.update({
+  id: '/maps',
+  path: '/maps',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardMenuRoute = DashboardMenuRouteImport.update({
+  id: '/menu',
+  path: '/menu',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardNotificationsRoute = DashboardNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardOrdersRoute = DashboardOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardOverviewRoute = DashboardOverviewRouteImport.update({
+  id: '/overview',
+  path: '/overview',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardPayoutsRoute = DashboardPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardReviewsRoute = DashboardReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardTransactionsRoute = DashboardTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -53,29 +148,75 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof DashboardIndexRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/reset-password': typeof AuthResetPasswordRoute
+  '/audit': typeof DashboardAuditRoute
+  '/branches': typeof DashboardBranchesRoute
+  '/chat': typeof DashboardChatRoute
+  '/customers': typeof DashboardCustomersRoute
+  '/employee': typeof DashboardEmployeeRoute
+  '/kasir': typeof DashboardKasirRoute
+  '/maps': typeof DashboardMapsRoute
+  '/menu': typeof DashboardMenuRoute
+  '/notifications': typeof DashboardNotificationsRoute
+  '/orders': typeof DashboardOrdersRoute
+  '/overview': typeof DashboardOverviewRoute
+  '/payouts': typeof DashboardPayoutsRoute
+  '/reviews': typeof DashboardReviewsRoute
+  '/settings': typeof DashboardSettingsRoute
+  '/transactions': typeof DashboardTransactionsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/': typeof DashboardIndexRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/reset-password': typeof AuthResetPasswordRoute
+  '/audit': typeof DashboardAuditRoute
+  '/branches': typeof DashboardBranchesRoute
+  '/chat': typeof DashboardChatRoute
+  '/customers': typeof DashboardCustomersRoute
+  '/employee': typeof DashboardEmployeeRoute
+  '/kasir': typeof DashboardKasirRoute
+  '/maps': typeof DashboardMapsRoute
+  '/menu': typeof DashboardMenuRoute
+  '/notifications': typeof DashboardNotificationsRoute
+  '/orders': typeof DashboardOrdersRoute
+  '/overview': typeof DashboardOverviewRoute
+  '/payouts': typeof DashboardPayoutsRoute
+  '/reviews': typeof DashboardReviewsRoute
+  '/settings': typeof DashboardSettingsRoute
+  '/transactions': typeof DashboardTransactionsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
+  '/_dashboard': typeof DashboardRouteWithChildren
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/register': typeof AuthRegisterRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
+  '/_dashboard/audit': typeof DashboardAuditRoute
+  '/_dashboard/branches': typeof DashboardBranchesRoute
+  '/_dashboard/chat': typeof DashboardChatRoute
+  '/_dashboard/customers': typeof DashboardCustomersRoute
+  '/_dashboard/employee': typeof DashboardEmployeeRoute
+  '/_dashboard/kasir': typeof DashboardKasirRoute
+  '/_dashboard/maps': typeof DashboardMapsRoute
+  '/_dashboard/menu': typeof DashboardMenuRoute
+  '/_dashboard/notifications': typeof DashboardNotificationsRoute
+  '/_dashboard/orders': typeof DashboardOrdersRoute
+  '/_dashboard/overview': typeof DashboardOverviewRoute
+  '/_dashboard/payouts': typeof DashboardPayoutsRoute
+  '/_dashboard/reviews': typeof DashboardReviewsRoute
+  '/_dashboard/settings': typeof DashboardSettingsRoute
+  '/_dashboard/transactions': typeof DashboardTransactionsRoute
+  '/_dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -86,6 +227,21 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/reset-password'
+    | '/audit'
+    | '/branches'
+    | '/chat'
+    | '/customers'
+    | '/employee'
+    | '/kasir'
+    | '/maps'
+    | '/menu'
+    | '/notifications'
+    | '/orders'
+    | '/overview'
+    | '/payouts'
+    | '/reviews'
+    | '/settings'
+    | '/transactions'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -94,38 +250,69 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/reset-password'
+    | '/audit'
+    | '/branches'
+    | '/chat'
+    | '/customers'
+    | '/employee'
+    | '/kasir'
+    | '/maps'
+    | '/menu'
+    | '/notifications'
+    | '/orders'
+    | '/overview'
+    | '/payouts'
+    | '/reviews'
+    | '/settings'
+    | '/transactions'
     | '/api/auth/$'
   id:
     | '__root__'
-    | '/'
     | '/_auth'
+    | '/_dashboard'
     | '/_auth/forgot-password'
     | '/_auth/login'
     | '/_auth/register'
     | '/_auth/reset-password'
+    | '/_dashboard/audit'
+    | '/_dashboard/branches'
+    | '/_dashboard/chat'
+    | '/_dashboard/customers'
+    | '/_dashboard/employee'
+    | '/_dashboard/kasir'
+    | '/_dashboard/maps'
+    | '/_dashboard/menu'
+    | '/_dashboard/notifications'
+    | '/_dashboard/orders'
+    | '/_dashboard/overview'
+    | '/_dashboard/payouts'
+    | '/_dashboard/reviews'
+    | '/_dashboard/settings'
+    | '/_dashboard/transactions'
+    | '/_dashboard/'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
+  DashboardRoute: typeof DashboardRouteWithChildren
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_auth': {
       id: '/_auth'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_dashboard': {
+      id: '/_dashboard'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/forgot-password': {
@@ -156,6 +343,118 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthResetPasswordRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_dashboard/': {
+      id: '/_dashboard/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/audit': {
+      id: '/_dashboard/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof DashboardAuditRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/branches': {
+      id: '/_dashboard/branches'
+      path: '/branches'
+      fullPath: '/branches'
+      preLoaderRoute: typeof DashboardBranchesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/chat': {
+      id: '/_dashboard/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof DashboardChatRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/customers': {
+      id: '/_dashboard/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof DashboardCustomersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/employee': {
+      id: '/_dashboard/employee'
+      path: '/employee'
+      fullPath: '/employee'
+      preLoaderRoute: typeof DashboardEmployeeRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/kasir': {
+      id: '/_dashboard/kasir'
+      path: '/kasir'
+      fullPath: '/kasir'
+      preLoaderRoute: typeof DashboardKasirRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/maps': {
+      id: '/_dashboard/maps'
+      path: '/maps'
+      fullPath: '/maps'
+      preLoaderRoute: typeof DashboardMapsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/menu': {
+      id: '/_dashboard/menu'
+      path: '/menu'
+      fullPath: '/menu'
+      preLoaderRoute: typeof DashboardMenuRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/notifications': {
+      id: '/_dashboard/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof DashboardNotificationsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/orders': {
+      id: '/_dashboard/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof DashboardOrdersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/overview': {
+      id: '/_dashboard/overview'
+      path: '/overview'
+      fullPath: '/overview'
+      preLoaderRoute: typeof DashboardOverviewRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/payouts': {
+      id: '/_dashboard/payouts'
+      path: '/payouts'
+      fullPath: '/payouts'
+      preLoaderRoute: typeof DashboardPayoutsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/reviews': {
+      id: '/_dashboard/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof DashboardReviewsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/settings': {
+      id: '/_dashboard/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/transactions': {
+      id: '/_dashboard/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof DashboardTransactionsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -182,9 +481,51 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface DashboardRouteChildren {
+  DashboardAuditRoute: typeof DashboardAuditRoute
+  DashboardBranchesRoute: typeof DashboardBranchesRoute
+  DashboardChatRoute: typeof DashboardChatRoute
+  DashboardCustomersRoute: typeof DashboardCustomersRoute
+  DashboardEmployeeRoute: typeof DashboardEmployeeRoute
+  DashboardKasirRoute: typeof DashboardKasirRoute
+  DashboardMapsRoute: typeof DashboardMapsRoute
+  DashboardMenuRoute: typeof DashboardMenuRoute
+  DashboardNotificationsRoute: typeof DashboardNotificationsRoute
+  DashboardOrdersRoute: typeof DashboardOrdersRoute
+  DashboardOverviewRoute: typeof DashboardOverviewRoute
+  DashboardPayoutsRoute: typeof DashboardPayoutsRoute
+  DashboardReviewsRoute: typeof DashboardReviewsRoute
+  DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardTransactionsRoute: typeof DashboardTransactionsRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAuditRoute: DashboardAuditRoute,
+  DashboardBranchesRoute: DashboardBranchesRoute,
+  DashboardChatRoute: DashboardChatRoute,
+  DashboardCustomersRoute: DashboardCustomersRoute,
+  DashboardEmployeeRoute: DashboardEmployeeRoute,
+  DashboardKasirRoute: DashboardKasirRoute,
+  DashboardMapsRoute: DashboardMapsRoute,
+  DashboardMenuRoute: DashboardMenuRoute,
+  DashboardNotificationsRoute: DashboardNotificationsRoute,
+  DashboardOrdersRoute: DashboardOrdersRoute,
+  DashboardOverviewRoute: DashboardOverviewRoute,
+  DashboardPayoutsRoute: DashboardPayoutsRoute,
+  DashboardReviewsRoute: DashboardReviewsRoute,
+  DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardTransactionsRoute: DashboardTransactionsRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
+  DashboardRoute: DashboardRouteWithChildren,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
