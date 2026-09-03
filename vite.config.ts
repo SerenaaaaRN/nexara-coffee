@@ -6,14 +6,14 @@ import viteReact, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const config = defineConfig({
-	resolve: { tsconfigPaths: true },
-	plugins: [
-		devtools(),
-		tailwindcss(),
-		tanstackStart(),
-		viteReact(),
-		babel({ presets: [reactCompilerPreset()] }),
-	],
+    resolve: { tsconfigPaths: true },
+    plugins: [
+        devtools(),
+        tailwindcss(),
+        tanstackStart(),
+        viteReact(),
+        babel({ presets: [reactCompilerPreset()] }),
+    ],
 });
 
 export default config;
