@@ -1,5 +1,5 @@
-import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import { Menu as DropdownMenuPrimitive } from "@base-ui/react/menu";
+import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 function DropdownMenu({
