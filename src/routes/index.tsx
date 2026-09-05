@@ -16,7 +16,7 @@ export const Route = createFileRoute("/")({
     },
     head: () => ({
         meta: [
-            { title: "Nexara Coffee — Kopi Palembang" },
+            { title: "Nexara Coffee" },
             {
                 name: "description",
                 content:

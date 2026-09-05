@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Coffee } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { LANDING_COPY } from "@/features/landing/data";
 
 const NAV_LINKS = [
@@ -22,30 +22,31 @@ export const LandingNavbar = () => {
                 </a>
                 <nav className="ml-6 hidden items-center gap-1 md:flex">
                     {NAV_LINKS.map((link) => (
-                        <Button
+                        <a
                             key={link.href}
-                            variant="ghost"
-                            size="sm"
-                            render={<a href={link.href}>{link.label}</a>}
-                        />
+                            href={link.href}
+                            className={buttonVariants({
+                                variant: "ghost",
+                                size: "sm",
+                            })}>
+                            {link.label}
+                        </a>
                     ))}
                 </nav>
                 <div className="ml-auto flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        render={
-                            <Link to="/login">{LANDING_COPY.loginCta}</Link>
-                        }
-                    />
-                    <Button
-                        size="sm"
-                        render={
-                            <Link to="/register">
-                                {LANDING_COPY.registerCta}
-                            </Link>
-                        }
-                    />
+                    <Link
+                        to="/login"
+                        className={buttonVariants({
+                            variant: "ghost",
+                            size: "sm",
+                        })}>
+                        {LANDING_COPY.loginCta}
+                    </Link>
+                    <Link
+                        to="/register"
+                        className={buttonVariants({ size: "sm" })}>
+                        {LANDING_COPY.registerCta}
+                    </Link>
                 </div>
             </div>
         </header>
