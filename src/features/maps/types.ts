@@ -17,6 +17,18 @@ export type BranchMarkerJoined = Pick<
     manager: Pick<DBUser, "name"> | null;
 };
 
-export type BranchMarker = Omit<ToCamelCase<BranchMarkerJoined>, "manager"> & {
+export type BranchMarker = Pick<
+    ToCamelCase<BranchMarkerJoined>,
+    | "id"
+    | "name"
+    | "address"
+    | "lat"
+    | "lng"
+    | "phone"
+    | "openingTime"
+    | "closingTime"
+    | "status"
+    | "ownershipType"
+> & {
     managerName: string | null;
 };

@@ -12,7 +12,16 @@ export interface MenuItemVariant {
     price: number;
 }
 
-export type MenuItem = Omit<ToCamelCase<DBMenuItem>, "variants"> & {
+export type MenuItem = Pick<
+    ToCamelCase<DBMenuItem>,
+    | "id"
+    | "categoryId"
+    | "name"
+    | "description"
+    | "price"
+    | "imageUrl"
+    | "isAvailable"
+> & {
     variants: MenuItemVariant[] | null;
 };
 

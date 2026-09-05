@@ -6,7 +6,16 @@ import type {
 import { z } from "zod";
 import type { ToCamelCase } from "@/utils/convert-types";
 
-export type AuditLog = Omit<ToCamelCase<DBAuditLog>, "metadata"> & {
+export type AuditLog = Pick<
+    ToCamelCase<DBAuditLog>,
+    | "id"
+    | "actorId"
+    | "branchId"
+    | "action"
+    | "targetTable"
+    | "targetId"
+    | "createdAt"
+> & {
     metadata: unknown;
 };
 
@@ -18,7 +27,16 @@ export type AuditMetadata =
     | AuditMetadata[]
     | { [key: string]: AuditMetadata };
 
-export type AuditLogRow = Omit<AuditLog, "metadata"> & {
+export type AuditLogRow = Pick<
+    AuditLog,
+    | "id"
+    | "actorId"
+    | "branchId"
+    | "action"
+    | "targetTable"
+    | "targetId"
+    | "createdAt"
+> & {
     metadata: AuditMetadata | null;
     actorName: string | null;
     branchName: string | null;

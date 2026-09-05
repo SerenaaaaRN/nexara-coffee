@@ -9,7 +9,10 @@ import type { ToCamelCase } from "@/utils/convert-types";
 
 export type Channel = ToCamelCase<DBChannel>;
 
-export type ChatMessage = Omit<ToCamelCase<DBChatMessage>, "createdAt"> & {
+export type ChatMessage = Pick<
+    ToCamelCase<DBChatMessage>,
+    "id" | "channelId" | "senderId" | "content"
+> & {
     createdAt: Date;
 };
 
