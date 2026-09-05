@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: <user can't be null because is relational, trust me bro> */
 import {
     queryOptions,
     useQuery,
