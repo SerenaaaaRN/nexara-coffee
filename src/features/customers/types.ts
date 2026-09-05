@@ -1,4 +1,6 @@
+import type { CustomerRow as DBCustomer } from "@database/types";
 import { z } from "zod";
+import type { ToCamelCase } from "@/utils/convert-types";
 
 export const CUSTOMER_SEGMENTS = ["regular", "vip", "new"] as const;
 export type CustomerSegment = (typeof CUSTOMER_SEGMENTS)[number];
@@ -6,20 +8,11 @@ export type CustomerSegment = (typeof CUSTOMER_SEGMENTS)[number];
 export const LOYALTY_TIERS = ["bronze", "silver", "gold", "platinum"] as const;
 export type LoyaltyTier = (typeof LOYALTY_TIERS)[number];
 
-export interface Customer {
-    id: string;
-    fullName: string;
-    email: string | null;
-    phone: string | null;
-    segment: string;
-    loyaltyPoints: number;
-    loyaltyTier: string;
-    createdAt: string;
-}
+export type Customer = ToCamelCase<DBCustomer>;
 
-export interface CustomerRow extends Customer {
+export type CustomerRow = Customer & {
     orderCount: number;
-}
+};
 
 export const createCustomerSchema = z.object({
     fullName: z.string().min(1, "Name is required"),
