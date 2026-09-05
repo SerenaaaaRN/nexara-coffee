@@ -1,3 +1,4 @@
+import type { UserRow as DBUser } from "@database/types";
 import { z } from "zod";
 
 export const profileSchema = z.object({
@@ -37,10 +38,7 @@ export type ProfileFormValues = z.infer<typeof profileSchema>;
 export type PasswordFormValues = z.infer<typeof passwordSchema>;
 export type ChangeRoleFormValues = z.infer<typeof changeRoleSchema>;
 
-export type SettingsUser = {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    image: string | null;
-};
+export type SettingsUser = Pick<
+    DBUser,
+    "id" | "name" | "email" | "role" | "image"
+>;

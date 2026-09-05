@@ -1,27 +1,22 @@
-export type BranchMarker = {
-    id: string;
-    name: string;
-    address: string;
-    lat: string | null;
-    lng: string | null;
-    phone: string | null;
-    openingTime: string | null;
-    closingTime: string | null;
-    status: string;
-    ownershipType: string;
-    managerName: string | null;
+import type { BranchRow as DBBranch, UserRow as DBUser } from "@database/types";
+import type { ToCamelCase } from "@/utils/convert-types";
+
+export type BranchMarkerJoined = Pick<
+    DBBranch,
+    | "id"
+    | "name"
+    | "address"
+    | "lat"
+    | "lng"
+    | "phone"
+    | "opening_time"
+    | "closing_time"
+    | "status"
+    | "ownership_type"
+> & {
+    manager: Pick<DBUser, "name"> | null;
 };
 
-export type BranchMarkerJoined = {
-    id: string;
-    name: string;
-    address: string;
-    lat: string | null;
-    lng: string | null;
-    phone: string | null;
-    opening_time: string | null;
-    closing_time: string | null;
-    status: string;
-    ownership_type: string;
-    manager: { name: string } | null;
+export type BranchMarker = Omit<ToCamelCase<BranchMarkerJoined>, "manager"> & {
+    managerName: string | null;
 };

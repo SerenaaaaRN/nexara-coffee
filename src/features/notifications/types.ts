@@ -1,16 +1,10 @@
+import type { NotificationRow as DBNotification } from "@database/types";
 import { z } from "zod";
+import type { ToCamelCase } from "@/utils/convert-types";
 
-export interface Notification {
-    id: string;
-    userId: string;
-    type: string;
-    title: string;
-    body: string | null;
-    isRead: boolean;
-    createdAt: string;
-}
+export type Notification = ToCamelCase<DBNotification>;
 
-export interface NotificationRow extends Notification {}
+export type NotificationRow = Notification;
 
 export const markReadSchema = z.object({
     id: z.string().min(1),
