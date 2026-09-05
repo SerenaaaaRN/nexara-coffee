@@ -43,7 +43,7 @@ export function LoginForm() {
             return;
         }
         toast.success(`Selamat datang kembali, ${data.user.name}!`);
-        navigate({ to: "/" });
+        navigate({ to: "/overview" });
     }
 
     return (
@@ -128,7 +128,7 @@ export function LoginForm() {
                             onClick={() =>
                                 signIn.social({
                                     provider: "google",
-                                    callbackURL: "/",
+                                    callbackURL: "/overview",
                                 })
                             }>
                             <img
@@ -147,7 +147,7 @@ export function LoginForm() {
                             onClick={() =>
                                 signIn.social({
                                     provider: "github",
-                                    callbackURL: "/",
+                                    callbackURL: "/overview",
                                 })
                             }>
                             <Github />

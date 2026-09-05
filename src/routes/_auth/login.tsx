@@ -5,7 +5,7 @@ import { getSessionFn } from "@/lib/auth-utils";
 export const Route = createFileRoute("/_auth/login")({
     beforeLoad: async () => {
         const session = await getSessionFn();
-        if (session) throw redirect({ to: "/" });
+        if (session) throw redirect({ to: "/overview" });
     },
     component: LoginForm,
 });
