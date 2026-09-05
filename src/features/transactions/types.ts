@@ -1,33 +1,24 @@
+import type {
+    BranchRow as DBBranch,
+    OrderRow as DBOrder,
+    TransactionRow as DBTransaction,
+} from "@database/types";
 import { z } from "zod";
+import type { ToCamelCase } from "@/utils/convert-types";
 
 export const PAYMENT_METHODS = ["cash", "qris", "debit", "credit"] as const;
 
-export interface Transaction {
-    id: string;
-    orderId: string;
-    branchId: string;
-    paymentMethod: string;
-    amount: string;
-    status: string;
-    createdAt: string;
-}
+export type Transaction = ToCamelCase<DBTransaction>;
 
 export type TransactionRow = Transaction & {
     orderNumber: string | null;
     branchName: string | null;
 };
 
-export interface TransactionJoined {
-    id: string;
-    order_id: string;
-    branch_id: string;
-    payment_method: string;
-    amount: string;
-    status: string;
-    created_at: string;
-    orders: { id: string; order_number: string } | null;
-    branches: { id: string; name: string } | null;
-}
+export type TransactionJoined = DBTransaction & {
+    orders: Pick<DBOrder, "id" | "order_number"> | null;
+    branches: Pick<DBBranch, "id" | "name"> | null;
+};
 
 export const recordTransactionSchema = z.object({
     orderId: z.string().min(1, "Order is required"),
