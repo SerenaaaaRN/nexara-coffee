@@ -1,28 +1,21 @@
+import type {
+    BranchRow as DBBranch,
+    EmployeeDetailsRow as DBEmployee,
+    UserRow as DBUser,
+} from "@database/types";
 import { z } from "zod";
+import type { ToCamelCase } from "@/utils/convert-types";
 
-export interface Employee {
-    id: string;
-    userId: string;
-    branchId: string;
-    baseSalary: string;
-    hireDate: string;
-    createdAt: string;
-}
+export type Employee = ToCamelCase<DBEmployee>;
 
-export interface EmployeeRow extends Employee {
+export type EmployeeRow = Employee & {
     user: { id: string; name: string; email: string; role: string };
     branch: { id: string; name: string };
-}
+};
 
-export type EmployeeJoined = {
-    id: string;
-    user_id: string;
-    branch_id: string;
-    base_salary: string;
-    hire_date: string;
-    created_at: string;
-    user: { id: string; name: string; email: string; role: string } | null;
-    branches: { id: string; name: string } | null;
+export type EmployeeJoined = DBEmployee & {
+    user: Pick<DBUser, "id" | "name" | "email" | "role"> | null;
+    branches: Pick<DBBranch, "id" | "name"> | null;
 };
 
 export const createEmployeeSchema = z.object({

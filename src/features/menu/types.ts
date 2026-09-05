@@ -1,36 +1,27 @@
+import type {
+    MenuCategoryRow as DBMenuCategory,
+    MenuItemRow as DBMenuItem,
+} from "@database/types";
 import { z } from "zod";
+import type { ToCamelCase } from "@/utils/convert-types";
 
-export interface MenuCategory {
-    id: string;
+export type MenuCategory = ToCamelCase<DBMenuCategory>;
+
+export interface MenuItemVariant {
     name: string;
-    displayOrder: number;
+    price: number;
 }
 
-export interface MenuItem {
-    id: string;
-    categoryId: string;
-    name: string;
-    description: string | null;
-    price: string;
-    variants: { name: string; price: number }[] | null;
-    imageUrl: string | null;
-    isAvailable: boolean;
-}
+export type MenuItem = Omit<ToCamelCase<DBMenuItem>, "variants"> & {
+    variants: MenuItemVariant[] | null;
+};
 
-export interface MenuItemRow extends MenuItem {
+export type MenuItemJoined = DBMenuItem & {
+    category: Pick<DBMenuCategory, "id" | "name" | "display_order"> | null;
+};
+
+export type MenuItemRow = MenuItem & {
     category: MenuCategory;
-}
-
-export type MenuItemJoined = {
-    id: string;
-    category_id: string;
-    name: string;
-    description: string | null;
-    price: string;
-    variants: { name: string; price: number }[] | null;
-    image_url: string | null;
-    is_available: boolean;
-    category: { id: string; name: string; display_order: number } | null;
 };
 
 export interface MenuItemFormData {
