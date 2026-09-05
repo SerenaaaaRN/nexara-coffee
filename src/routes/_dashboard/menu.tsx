@@ -7,14 +7,12 @@ import {
     menuCategoriesOptions,
     menuItemsOptions,
 } from "@/features/menu/hooks/useMenuQueries";
-import { requireAccessRSC } from "@/lib/with-auth.server";
 
 const menuSearchSchema = z.object({
     category: z.string().optional(),
 });
 
 export const Route = createFileRoute("/_dashboard/menu")({
-    beforeLoad: () => requireAccessRSC("read", "menu"),
     validateSearch: menuSearchSchema,
     loader: async ({ context: { queryClient } }) => {
         await Promise.all([

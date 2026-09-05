@@ -4,7 +4,6 @@ import { OrdersSkeleton } from "@/components/fallbacks/dashboard";
 import { OrdersPage } from "@/features/orders/components/orders-page";
 import { ORDER_STATUSES } from "@/features/orders/data";
 import { ordersOptions } from "@/features/orders/hooks/useOrderQueries";
-import { requireAccessRSC } from "@/lib/with-auth.server";
 
 const ordersSearchSchema = z.object({
     branchId: z.string().optional(),
@@ -15,7 +14,6 @@ const ordersSearchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_dashboard/orders")({
-    beforeLoad: () => requireAccessRSC("read", "orders"),
     validateSearch: ordersSearchSchema,
     loaderDeps: ({ search: { branchId, status, dateFrom, dateTo } }) => ({
         branchId,

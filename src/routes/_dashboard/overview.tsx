@@ -3,10 +3,8 @@ import { z } from "zod";
 import { OverviewSkeleton } from "@/components/fallbacks/dashboard";
 import { OverviewPage } from "@/features/overview/components/overview-page";
 import { overviewDashboardOptions } from "@/features/overview/hooks/useOverviewDashboard";
-import { requireAccessRSC } from "@/lib/with-auth.server";
 
 export const Route = createFileRoute("/_dashboard/overview")({
-    beforeLoad: () => requireAccessRSC("read", "reports"),
     validateSearch: z.object({
         branch: z.string().optional(),
     }),

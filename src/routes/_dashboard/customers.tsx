@@ -4,14 +4,12 @@ import { CustomersSkeleton } from "@/components/fallbacks/dashboard";
 import { ErrorPage } from "@/components/fallbacks/error-page";
 import { CustomersPage } from "@/features/customers/components/customers-page";
 import { customersOptions } from "@/features/customers/hooks/useCustomerQueries";
-import { requireAccessRSC } from "@/lib/with-auth.server";
 
 const customersSearchSchema = z.object({
     customer: z.string().optional(),
 });
 
 export const Route = createFileRoute("/_dashboard/customers")({
-    beforeLoad: () => requireAccessRSC("read", "customers"),
     validateSearch: customersSearchSchema,
     loader: async ({ context: { queryClient } }) => {
         await queryClient.ensureQueryData(customersOptions());
