@@ -8,6 +8,8 @@ import { createDirectChannelSchema, sendMessageSchema } from "../types";
  * Mengirim pesan ke dalam channel chat.
  * Juga akan mem-publish event realtime melalui Ably.
  *
+ * Visitor hanya boleh mengirim ke channel global dan DM miliknya.
+ *
  * @param channelId - ID channel chat
  * @param content - Isi pesan
  * @returns Data pesan yang baru dibuat
@@ -26,6 +28,18 @@ export const sendMessageFn = createServerFn({ method: "POST" })
         }
 
         const { supabaseAdmin } = await import("@database/server");
+
+        if (auth.session.user.role === "visitor") {
+            const { isChannelVisibleToVisitor } = await import(
+                "./useChatQueries"
+            );
+            const allowed = await isChannelVisibleToVisitor(
+                channelId,
+                auth.session.user.id,
+            );
+            if (!allowed)
+                return { success: false as const, error: "Forbidden" };
+        }
 
         const { data: message, error } = await supabaseAdmin
             .from("chat_messages")
@@ -71,6 +85,8 @@ export const sendMessageFn = createServerFn({ method: "POST" })
  * Membuat channel Direct Message (DM) dengan user lain.
  * Jika channel DM sudah ada, akan mengembalikan ID channel yang sudah ada.
  *
+ * Visitor tidak boleh memulai DM (hanya boleh membalas).
+ *
  * @param targetUserId - ID user yang akan dichat
  * @returns ID channel yang dibuat atau ditemukan
  */
@@ -81,6 +97,9 @@ export const createDirectChannelFn = createServerFn({ method: "POST" })
         const auth = await requireAccessAction("create", "chat");
         if (!auth.success)
             return { success: false as const, error: auth.error };
+
+        if (auth.session.user.role === "visitor")
+            return { success: false as const, error: "Forbidden" };
 
         const { rateLimit } = await import("@/lib/rate-limit");
         if (!rateLimit(`chat:create-dm:${auth.session.user.id}`, 10, 60_000)) {

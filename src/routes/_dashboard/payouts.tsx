@@ -3,12 +3,14 @@ import { z } from "zod";
 import { PayoutsSkeleton } from "@/components/fallbacks/dashboard";
 import { PayoutsPage } from "@/features/payouts/components/payouts-page";
 import { payoutsOptions } from "@/features/payouts/hooks/usePayoutQueries";
+import { requireAccessRSC } from "@/lib/with-auth.server";
 
 const payoutsSearchSchema = z.object({
     branch: z.string().optional(),
 });
 
 export const Route = createFileRoute("/_dashboard/payouts")({
+    beforeLoad: () => requireAccessRSC("read", "payouts"),
     validateSearch: payoutsSearchSchema,
     loaderDeps: ({ search: { branch } }) => ({ branch }),
     loader: ({ context: { queryClient }, deps }) =>

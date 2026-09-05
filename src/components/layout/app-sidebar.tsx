@@ -42,11 +42,13 @@ const navMain: NavItem[] = [
         title: "Overview",
         url: "/overview",
         icon: LayoutDashboard,
+        hideFrom: ["visitor"],
     },
     {
         title: "Operations",
         url: "/orders",
         icon: Coffee,
+        hideFrom: ["visitor"],
         items: [
             {
                 title: "Orders",
@@ -81,6 +83,7 @@ const navMain: NavItem[] = [
         title: "Customers",
         url: "/customers",
         icon: Users,
+        hideFrom: ["visitor"],
         items: [
             {
                 title: "Customers",
@@ -96,6 +99,7 @@ const navMain: NavItem[] = [
         title: "Finance",
         url: "/transactions",
         icon: CreditCard,
+        hideFrom: ["visitor"],
         items: [
             {
                 title: "Transactions",
@@ -111,6 +115,7 @@ const navMain: NavItem[] = [
         title: "Employee & Payroll",
         url: "/employee",
         icon: Shield,
+        hideFrom: ["visitor"],
     },
     {
         title: "Chat",
@@ -121,6 +126,7 @@ const navMain: NavItem[] = [
         title: "System",
         url: "/audit",
         icon: ScrollText,
+        hideFrom: ["visitor"],
         items: [
             {
                 title: "Audit Log",

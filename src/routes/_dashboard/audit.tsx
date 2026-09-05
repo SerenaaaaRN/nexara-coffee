@@ -2,8 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AuditSkeleton } from "@/components/fallbacks/dashboard";
 import { AuditPage } from "@/features/audit/components/audit-page";
 import { auditLogsOptions } from "@/features/audit/hooks/useAuditLogs";
+import { requireAccessRSC } from "@/lib/with-auth.server";
 
 export const Route = createFileRoute("/_dashboard/audit")({
+    beforeLoad: () => requireAccessRSC("read", "system"),
     loader: ({ context: { queryClient } }) =>
         queryClient.ensureQueryData(auditLogsOptions()),
     head: () => ({

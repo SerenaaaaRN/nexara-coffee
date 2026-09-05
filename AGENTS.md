@@ -40,7 +40,7 @@ It is **not** a public company profile or landing page. It is an internal tool u
 | Cashier | Inputs daily setoran (cash deposits) and views branch data |
 | Barista | Views order queue, updates order status |
 | Franchise Owner | External partner, limited access to their own branch data (revenue, payout) |
-| Visitor | Default role after self-registration. All branches read-only, can edit own profile & password, chat: DM only (reply, cannot initiate). No create/update/delete on any business data |
+| Visitor | Default role after self-registration. Branches & Maps read-only, own profile & password, chat: own DMs (reply only, cannot initiate) + global channels. All other pages invisible (sidebar hidden + route guard to landing) |
 
 This dashboard is **all-in-one** — all daily operations are input directly through the dashboard. Real daily input uses the **setoran** (cash deposit) system — one setoran per branch per day.
 
@@ -276,7 +276,7 @@ Additional rules:
 13. **CSRF**: configured as `csrf: { enabled: true, origin: BETTER_AUTH_URL }`. Cross-origin requests rejected automatically.
 14. **Rate limiting**: sensitive endpoints (auth, role change) use `rateLimit(key, max, windowMs)` from `@/lib/rate-limit`. Returns 429 if exceeded.
 15. **Google OAuth redirect URI**: `http://localhost:5173/api/auth/callback/google`. Add `http://<IP>:5173/api/auth/callback/google` to Authorized redirect URIs in Google Cloud Console when developing via IP.
-16. **Visitor**: Default role for all new registrations (email + Google OAuth). All branches read-only, can edit own profile & password, chat read-only for group/branch channels, can reply in DM (cannot initiate new DMs). No create/update/delete on any business data.
+16. **Visitor**: Default role for all new registrations (email + Google OAuth). Branches & Maps read-only, own profile & password, chat: own DMs (reply only) + global channels. All other pages invisible (sidebar hidden + route guard to landing). No create/update/delete on any business data.
 17. **Session cookie cache**: `auth.ts` punya `session.cookieCache { enabled, maxAge: 300, strategy: "jwt", refreshCache: true }` → `auth.api.getSession()` diverifikasi dari cookie (HS256), **nol query DB** per pemanggilan. `session.user.role` ikut ter-cache untuk RBAC.
 
 ## RBAC — Permission Matrix
@@ -294,22 +294,22 @@ Additional rules:
 ### Permissions per Page
 | Page | Super Admin | Branch Manager | Cashier | Barista | Franchise Owner | Visitor |
 |---|---|---|---|---|---|
-| Overview & Analytics | F | R | R | R | R | R |
-| Kasir (Setoran) | F | F | C+R | — | R | R |
-| Orders | F | F | F | R+update | R | R |
-| Menu | F | R | R | R | — | R |
+| Overview & Analytics | F | R | R | R | R | — |
+| Kasir (Setoran) | F | F | C+R | — | R | — |
+| Orders | F | F | F | R+update | R | — |
+| Menu | F | R | R | R | — | — |
 | Branches & Mitra | F | R | — | — | R | R |
 | Maps | R | R | R | R | R | R |
-| Customers | F | R | R | — | — | R |
-| Reviews | F | R | — | — | — | R |
-| Transactions | F | R | F | — | — | R |
-| Employee & Payroll | F | F | — | — | — | R |
-| Payouts | F | — | — | — | R (request) | R |
-| Chat | F | F | F | F | F | DM reply |
-| Audit Log | F | R | — | — | — | R |
-| Notifications | F | R | R | R | R | R |
-| Settings | F | F | R+update | R+update | R+update | R+update |
-| AI Assistant (not yet implemented) | F | F | — | — | — | R |
+| Customers | F | R | R | — | — | — |
+| Reviews | F | R | — | — | — | — |
+| Transactions | F | R | F | — | — | — |
+| Employee & Payroll | F | F | — | — | — | — |
+| Payouts | F | — | — | — | R (request) | — |
+| Chat | F | F | F | F | F | DM+global |
+| Audit Log | F | R | — | — | — | — |
+| Notifications | F | R | R | R | R | — |
+| Settings | F | F | R+update | R+update | R+update | R+update (self) |
+| AI Assistant (not yet implemented) | F | F | — | — | — | — |
 
 ### RBAC Implementation
 - `can(role, action, resource)` — helper in `src/lib/rbac.ts`
