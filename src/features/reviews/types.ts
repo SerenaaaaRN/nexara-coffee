@@ -1,35 +1,22 @@
+import type {
+    BranchRow as DBBranch,
+    CustomerRow as DBCustomer,
+    ReviewRow as DBReview,
+} from "@database/types";
 import { z } from "zod";
+import type { ToCamelCase } from "@/utils/convert-types";
 
-export interface Review {
-    id: string;
-    branchId: string;
-    customerId: string | null;
-    orderId: string | null;
-    rating: number;
-    comment: string | null;
-    status: string;
-    reply: string | null;
-    createdAt: string;
-}
+export type Review = ToCamelCase<DBReview>;
 
-export interface ReviewRow extends Review {
+export type ReviewRow = Review & {
     branchName: string | null;
     customerName: string | null;
-}
+};
 
-export interface ReviewJoined {
-    id: string;
-    branch_id: string;
-    customer_id: string | null;
-    order_id: string | null;
-    rating: number;
-    comment: string | null;
-    status: string;
-    reply: string | null;
-    created_at: string;
-    branches: { id: string; name: string } | null;
-    customers: { id: string; full_name: string } | null;
-}
+export type ReviewJoined = DBReview & {
+    branches: Pick<DBBranch, "id" | "name"> | null;
+    customers: Pick<DBCustomer, "id" | "full_name"> | null;
+};
 
 export const replyReviewSchema = z.object({
     reply: z.string().max(1000).optional().or(z.literal("")),
