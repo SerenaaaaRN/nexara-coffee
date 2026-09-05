@@ -33,7 +33,7 @@ export function POSPage() {
     const { data: itemsRes } = useMenuItems();
 
     const categories = categoriesRes.success ? categoriesRes.data : [];
-    const items = itemsRes.success ? itemsRes.data : [];
+    const items = itemsRes?.success ? itemsRes.data : [];
     const activeBranchId =
         branch ?? dashboardData?.defaultBranchId ?? undefined;
 

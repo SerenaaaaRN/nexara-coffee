@@ -1,41 +1,16 @@
+import type { BranchRow as DBBranch, UserRow as DBUser } from "@database/types";
 import { z } from "zod";
+import type { ToCamelCase } from "@/utils/convert-types";
 
-export interface Branch {
-    id: string;
-    name: string;
-    address: string;
-    lat: string | null;
-    lng: string | null;
-    phone: string | null;
-    openingTime: string | null;
-    closingTime: string | null;
-    status: string;
-    ownershipType: string;
-    managerId: string | null;
-    createdAt: string;
-    updatedAt: string;
-}
+export type Branch = ToCamelCase<DBBranch>;
 
-export interface BranchRow extends Branch {
-    manager: { id: string; name: string; email: string } | null;
+export type BranchJoined = DBBranch & {
+    manager: Pick<DBUser, "id" | "name" | "email"> | null;
+};
+
+export type BranchRow = Branch & {
+    manager: Pick<DBUser, "id" | "name" | "email"> | null;
     employeeCount: number;
-}
-
-export type BranchJoined = {
-    id: string;
-    name: string;
-    address: string;
-    lat: string | null;
-    lng: string | null;
-    phone: string | null;
-    opening_time: string | null;
-    closing_time: string | null;
-    status: string;
-    ownership_type: string;
-    manager_id: string | null;
-    created_at: string;
-    updated_at: string;
-    manager: { id: string; name: string; email: string } | null;
 };
 
 const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;

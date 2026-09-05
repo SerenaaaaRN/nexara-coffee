@@ -1,15 +1,23 @@
+import type {
+    AuditLogRow as DBAuditLog,
+    BranchRow as DBBranch,
+    UserRow as DBUser,
+} from "@database/types";
 import { z } from "zod";
+import type { ToCamelCase } from "@/utils/convert-types";
 
-export interface AuditLog {
-    id: string;
-    actorId: string | null;
-    branchId: string | null;
-    action: string;
-    targetTable: string;
-    targetId: string | null;
+export type AuditLog = Pick<
+    ToCamelCase<DBAuditLog>,
+    | "id"
+    | "actorId"
+    | "branchId"
+    | "action"
+    | "targetTable"
+    | "targetId"
+    | "createdAt"
+> & {
     metadata: unknown;
-    createdAt: string;
-}
+};
 
 export type AuditMetadata =
     | string
@@ -19,24 +27,25 @@ export type AuditMetadata =
     | AuditMetadata[]
     | { [key: string]: AuditMetadata };
 
-export interface AuditLogRow extends Omit<AuditLog, "metadata"> {
+export type AuditLogRow = Pick<
+    AuditLog,
+    | "id"
+    | "actorId"
+    | "branchId"
+    | "action"
+    | "targetTable"
+    | "targetId"
+    | "createdAt"
+> & {
     metadata: AuditMetadata | null;
     actorName: string | null;
     branchName: string | null;
-}
+};
 
-export interface AuditLogJoined {
-    id: string;
-    actor_id: string | null;
-    branch_id: string | null;
-    action: string;
-    target_table: string;
-    target_id: string | null;
-    metadata: unknown;
-    created_at: string;
-    user: { id: string; name: string } | null;
-    branches: { id: string; name: string } | null;
-}
+export type AuditLogJoined = DBAuditLog & {
+    user: Pick<DBUser, "id" | "name"> | null;
+    branches: Pick<DBBranch, "id" | "name"> | null;
+};
 
 export const AUDIT_ACTIONS = ["create", "update", "delete", "approve"] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

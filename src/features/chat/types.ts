@@ -1,22 +1,22 @@
+import type {
+    BranchRow as DBBranch,
+    ChatChannelRow as DBChannel,
+    ChatMessageRow as DBChatMessage,
+    UserRow as DBUser,
+} from "@database/types";
 import { z } from "zod";
+import type { ToCamelCase } from "@/utils/convert-types";
 
-export interface Channel {
-    id: string;
-    type: string;
-    branchId: string | null;
-    name: string | null;
-    createdAt: string;
-}
+export type Channel = ToCamelCase<DBChannel>;
 
-export interface ChatMessage {
-    id: string;
-    channelId: string;
-    senderId: string;
-    content: string;
+export type ChatMessage = Pick<
+    ToCamelCase<DBChatMessage>,
+    "id" | "channelId" | "senderId" | "content"
+> & {
     createdAt: Date;
-}
+};
 
-export interface ChannelRow extends Channel {
+export type ChannelRow = Channel & {
     lastMessage: {
         content: string;
         senderName: string;
@@ -24,31 +24,21 @@ export interface ChannelRow extends Channel {
     } | null;
     memberCount: number;
     branchName: string | null;
-}
+};
 
-export interface MessageRow extends ChatMessage {
+export type MessageRow = ChatMessage & {
     senderName: string | null;
     senderImage: string | null;
     isOwn: boolean;
-}
+};
 
-export interface ChatChannelJoined {
-    id: string;
-    type: string;
-    branch_id: string | null;
-    name: string | null;
-    created_at: string;
-    branches: { id: string; name: string } | null;
-}
+export type ChatChannelJoined = DBChannel & {
+    branches: Pick<DBBranch, "id" | "name"> | null;
+};
 
-export interface ChatMessageJoined {
-    id: string;
-    channel_id: string;
-    sender_id: string;
-    content: string;
-    created_at: string;
-    sender: { id: string; name: string; image: string | null } | null;
-}
+export type ChatMessageJoined = DBChatMessage & {
+    sender: Pick<DBUser, "id" | "name" | "image"> | null;
+};
 
 export const sendMessageSchema = z.object({
     content: z.string().min(1, "Message cannot be empty").max(500),

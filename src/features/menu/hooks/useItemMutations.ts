@@ -5,6 +5,7 @@ import type {
     CreateMenuItemInput,
     MenuItem,
     MenuItemRow,
+    MenuItemVariant,
     UpdateMenuItemInput,
 } from "@/features/menu/types";
 import { menuKeys } from "@/features/query-keys";
@@ -63,9 +64,7 @@ export const createMenuItemFn = createServerFn({ method: "POST" })
                 name: item.name,
                 description: item.description,
                 price: item.price,
-                variants: item.variants as
-                    | { name: string; price: number }[]
-                    | null,
+                variants: item.variants as MenuItemVariant[] | null,
                 imageUrl: item.image_url,
                 isAvailable: item.is_available,
             } satisfies MenuItem,
@@ -142,9 +141,7 @@ export const updateMenuItemFn = createServerFn({ method: "POST" })
                 name: item.name,
                 description: item.description,
                 price: item.price,
-                variants: item.variants as
-                    | { name: string; price: number }[]
-                    | null,
+                variants: item.variants as MenuItemVariant[] | null,
                 imageUrl: item.image_url,
                 isAvailable: item.is_available,
             } satisfies MenuItem,
@@ -223,9 +220,7 @@ export const toggleMenuAvailabilityFn = createServerFn({ method: "POST" })
                 name: item.name,
                 description: item.description,
                 price: item.price,
-                variants: item.variants as
-                    | { name: string; price: number }[]
-                    | null,
+                variants: item.variants as MenuItemVariant[] | null,
                 imageUrl: item.image_url,
                 isAvailable: item.is_available,
             } satisfies MenuItem,

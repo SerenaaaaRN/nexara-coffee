@@ -1,66 +1,41 @@
+import type {
+    BranchRow as DBBranch,
+    CustomerRow as DBCustomer,
+    MenuItemRow as DBMenuItem,
+    OrderRow as DBOrder,
+    OrderItemRow as DBOrderItem,
+    UserRow as DBUser,
+} from "@database/types";
 import { z } from "zod";
+import type { ToCamelCase } from "@/utils/convert-types";
 import { ORDER_STATUSES, type OrderStatus } from "./data";
 
-export interface Order {
-    id: string;
-    branchId: string;
-    customerId: string | null;
-    orderNumber: string;
-    status: string;
-    totalAmount: string;
-    createdBy: string | null;
-    createdAt: string;
-}
+export type Order = ToCamelCase<DBOrder>;
 
-export interface OrderItem {
-    id: string;
-    orderId: string;
-    menuItemId: string | null;
-    nameSnapshot: string;
-    priceSnapshot: string;
-    variantSnapshot: string | null;
-    qty: number;
-    subtotal: string;
-}
+export type OrderItem = ToCamelCase<DBOrderItem>;
 
-export interface OrderRow extends Order {
+export type OrderRow = Order & {
     branchName: string | null;
     customerName: string | null;
     createdByName: string | null;
-}
+};
 
-export interface OrderDetail extends Order {
+export type OrderDetail = Order & {
     branchName: string | null;
     customerName: string | null;
     createdByName: string | null;
     items: (OrderItem & { menuItemName?: string | null })[];
-}
+};
 
-export interface OrderJoined {
-    id: string;
-    branch_id: string;
-    customer_id: string | null;
-    order_number: string;
-    status: string;
-    total_amount: string;
-    created_by: string | null;
-    created_at: string;
-    branches: { id: string; name: string } | null;
-    customers: { id: string; full_name: string } | null;
-    created_by_user: { id: string; name: string } | null;
-}
+export type OrderJoined = DBOrder & {
+    branches: Pick<DBBranch, "id" | "name"> | null;
+    customers: Pick<DBCustomer, "id" | "full_name"> | null;
+    created_by_user: Pick<DBUser, "id" | "name"> | null;
+};
 
-export interface OrderItemJoined {
-    id: string;
-    order_id: string;
-    menu_item_id: string | null;
-    name_snapshot: string;
-    price_snapshot: string;
-    variant_snapshot: string | null;
-    qty: number;
-    subtotal: string;
-    menu_items: { id: string; name: string } | null;
-}
+export type OrderItemJoined = DBOrderItem & {
+    menu_items: Pick<DBMenuItem, "id" | "name"> | null;
+};
 
 export const createOrderSchema = z.object({
     branchId: z.string().min(1, "Branch is required"),

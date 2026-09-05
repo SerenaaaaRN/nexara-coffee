@@ -26,34 +26,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useFindOrCreateCustomer } from "@/features/customers/hooks/useCustomerMutations";
 import { useCreateOrder } from "@/features/orders/hooks/useOrderMutations";
+import type {
+    POSCartItem,
+    POSClientProps,
+    POSMenuItem,
+} from "@/features/pos/types";
 import { useRecordTransaction } from "@/features/transactions/hooks/useTransactionMutations";
 import { PAYMENT_METHODS } from "@/features/transactions/types";
 import { formatCurrency } from "@/utils/format";
-
-interface Category {
-    id: string;
-    name: string;
-}
-
-interface MenuItem {
-    id: string;
-    categoryId: string;
-    name: string;
-    price: string;
-    imageUrl: string | null;
-}
-
-interface CartItem {
-    id: string;
-    menuItem: MenuItem;
-    quantity: number;
-}
-
-interface POSClientProps {
-    branchId: string | undefined;
-    categories: Category[];
-    items: MenuItem[];
-}
 
 export function POSClient({ branchId, categories, items }: POSClientProps) {
     const searchParams = useSearch({ from: "/pos" });
@@ -79,7 +59,7 @@ export function POSClient({ branchId, categories, items }: POSClientProps) {
         });
     };
 
-    const [cart, setCart] = useState<CartItem[]>([]);
+    const [cart, setCart] = useState<POSCartItem[]>([]);
     const [isPending, startTransition] = useTransition();
     const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
     const [paymentMethod, setPaymentMethod] =
@@ -108,7 +88,7 @@ export function POSClient({ branchId, categories, items }: POSClientProps) {
         });
     }, [items, search, activeCategory]);
 
-    const addToCart = (item: MenuItem) => {
+    const addToCart = (item: POSMenuItem) => {
         setCart((prev) => {
             const existing = prev.find((i) => i.menuItem.id === item.id);
             if (existing) {
