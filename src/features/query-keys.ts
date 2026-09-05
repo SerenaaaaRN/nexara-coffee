@@ -136,3 +136,9 @@ export const userKeys = {
     list: (filters?: Record<string, unknown>) =>
         filters ? ([...userKeys.lists(), filters] as const) : userKeys.lists(),
 };
+
+export const landingKeys = {
+    all: ["landing"] as const,
+    branches: () => [...landingKeys.all, "branches"] as const,
+    menu: () => [...landingKeys.all, "menu"] as const,
+};

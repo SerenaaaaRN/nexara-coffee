@@ -352,3 +352,35 @@ export function SettingsSkeleton() {
         </div>
     );
 }
+
+export function LandingSkeleton() {
+    return (
+        <div className="min-h-svh bg-background">
+            <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 md:px-6">
+                <Skeleton className="h-8 w-40" />
+                <div className="ml-auto flex gap-2">
+                    <Skeleton className="h-8 w-20 rounded-md" />
+                    <Skeleton className="h-8 w-20 rounded-md" />
+                </div>
+            </div>
+            <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 md:px-6 md:py-20 lg:grid-cols-2">
+                <div className="space-y-4">
+                    <Skeleton className="h-6 w-48 rounded-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-3/4" />
+                    <Skeleton className="h-5 w-full" />
+                    <div className="flex gap-2">
+                        <Skeleton className="h-10 w-32 rounded-md" />
+                        <Skeleton className="h-10 w-32 rounded-md" />
+                    </div>
+                </div>
+                <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+            </div>
+            <div className="mx-auto grid max-w-7xl gap-4 px-4 pb-12 md:grid-cols-3 md:px-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-24 rounded-xl" />
+                ))}
+            </div>
+        </div>
+    );
+}

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as PosRouteImport } from './routes/pos'
@@ -16,7 +17,6 @@ import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-pa
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthRegisterRouteImport } from './routes/_auth/register'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
-import { Route as DashboardIndexRouteImport } from './routes/_dashboard/index'
 import { Route as DashboardAuditRouteImport } from './routes/_dashboard/audit'
 import { Route as DashboardBranchesRouteImport } from './routes/_dashboard/branches'
 import { Route as DashboardChatRouteImport } from './routes/_dashboard/chat'
@@ -34,6 +34,11 @@ import { Route as DashboardSettingsRouteImport } from './routes/_dashboard/setti
 import { Route as DashboardTransactionsRouteImport } from './routes/_dashboard/transactions'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
@@ -66,11 +71,6 @@ const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
   getParentRoute: () => AuthRoute,
-} as any)
-const DashboardIndexRoute = DashboardIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardAuditRoute = DashboardAuditRouteImport.update({
   id: '/audit',
@@ -154,7 +154,7 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof DashboardIndexRoute
+  '/': typeof IndexRoute
   '/pos': typeof PosRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
@@ -178,7 +178,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof DashboardIndexRoute
+  '/': typeof IndexRoute
   '/pos': typeof PosRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
@@ -203,6 +203,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
   '/_dashboard': typeof DashboardRouteWithChildren
   '/pos': typeof PosRoute
@@ -225,7 +226,6 @@ export interface FileRoutesById {
   '/_dashboard/reviews': typeof DashboardReviewsRoute
   '/_dashboard/settings': typeof DashboardSettingsRoute
   '/_dashboard/transactions': typeof DashboardTransactionsRoute
-  '/_dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -279,6 +279,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
   id:
     | '__root__'
+    | '/'
     | '/_auth'
     | '/_dashboard'
     | '/pos'
@@ -301,11 +302,11 @@ export interface FileRouteTypes {
     | '/_dashboard/reviews'
     | '/_dashboard/settings'
     | '/_dashboard/transactions'
-    | '/_dashboard/'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
   PosRoute: typeof PosRoute
@@ -314,6 +315,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_auth': {
       id: '/_auth'
       path: ''
@@ -362,13 +370,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/reset-password'
       preLoaderRoute: typeof AuthResetPasswordRouteImport
       parentRoute: typeof AuthRoute
-    }
-    '/_dashboard/': {
-      id: '/_dashboard/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof DashboardIndexRouteImport
-      parentRoute: typeof DashboardRoute
     }
     '/_dashboard/audit': {
       id: '/_dashboard/audit'
@@ -517,7 +518,6 @@ interface DashboardRouteChildren {
   DashboardReviewsRoute: typeof DashboardReviewsRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardTransactionsRoute: typeof DashboardTransactionsRoute
-  DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
@@ -536,7 +536,6 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardReviewsRoute: DashboardReviewsRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardTransactionsRoute: DashboardTransactionsRoute,
-  DashboardIndexRoute: DashboardIndexRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
@@ -544,6 +543,7 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
   PosRoute: PosRoute,
