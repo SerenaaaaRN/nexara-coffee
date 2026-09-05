@@ -9,6 +9,7 @@ import type {
     MenuCategory,
     MenuItemJoined,
     MenuItemRow,
+    MenuItemVariant,
 } from "@/features/menu/types";
 import { menuKeys } from "@/features/query-keys";
 import { STALE } from "@/features/stale-time";
@@ -82,25 +83,26 @@ export const getMenuItemsFn = createServerFn({ method: "GET" })
         const rows: MenuItemRow[] = (
             (data ?? []) as unknown as MenuItemJoined[]
         )
-            .filter((r) => r.category !== null)
-            .map((r) => ({
-                id: r.id,
-                categoryId: r.category_id,
-                name: r.name,
-                description: r.description,
-                price: r.price,
-                variants: r.variants,
-                imageUrl: r.image_url,
-                isAvailable: r.is_available,
-                category: {
-                    // biome-ignore lint/style/noNonNullAssertion: <Trust me bro>
-                    id: r.category!.id,
-                    // biome-ignore lint/style/noNonNullAssertion: <Trust me bro>
-                    name: r.category!.name,
-                    // biome-ignore lint/style/noNonNullAssertion: <Trust me bro>
-                    displayOrder: r.category!.display_order,
-                },
-            }))
+            .map((r) =>
+                r.category === null
+                    ? null
+                    : {
+                          id: r.id,
+                          categoryId: r.category_id,
+                          name: r.name,
+                          description: r.description,
+                          price: r.price,
+                          variants: r.variants as MenuItemVariant[] | null,
+                          imageUrl: r.image_url,
+                          isAvailable: r.is_available,
+                          category: {
+                              id: r.category.id,
+                              name: r.category.name,
+                              displayOrder: r.category.display_order,
+                          },
+                      },
+            )
+            .filter((row): row is MenuItemRow => row !== null)
             .sort(
                 (a, b) =>
                     a.category.displayOrder - b.category.displayOrder ||
