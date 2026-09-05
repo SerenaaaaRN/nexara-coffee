@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Coffee } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 export const LandingFooter = () => {
     return (
@@ -14,9 +14,9 @@ export const LandingFooter = () => {
                         Temukan cabang Nexara Coffee terdekat di kotamu.
                     </p>
                     <div className="flex flex-wrap gap-2">
-                        <Button
-                            render={<a href="#cabang">Kunjungi Cabang</a>}
-                        />
+                        <a href="#cabang" className={buttonVariants()}>
+                            Kunjungi Cabang
+                        </a>
                     </div>
                 </div>
             </section>
@@ -33,21 +33,30 @@ export const LandingFooter = () => {
                         tiap cabang.
                     </p>
                     <nav className="flex flex-wrap gap-1 md:ml-auto">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            render={<a href="#menu">Menu</a>}
-                        />
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            render={<a href="#cabang">Cabang</a>}
-                        />
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            render={<Link to="/login">Masuk</Link>}
-                        />
+                        <a
+                            href="#menu"
+                            className={buttonVariants({
+                                variant: "ghost",
+                                size: "sm",
+                            })}>
+                            Menu
+                        </a>
+                        <a
+                            href="#cabang"
+                            className={buttonVariants({
+                                variant: "ghost",
+                                size: "sm",
+                            })}>
+                            Cabang
+                        </a>
+                        <Link
+                            to="/login"
+                            className={buttonVariants({
+                                variant: "ghost",
+                                size: "sm",
+                            })}>
+                            Masuk
+                        </Link>
                     </nav>
                 </div>
             </footer>

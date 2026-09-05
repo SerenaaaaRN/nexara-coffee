@@ -11,7 +11,11 @@ const scopeCache = new WeakMap<Request, Map<string, string[] | null>>();
  * dan komponen lain yang perlu membatasi akses ke cabang tertentu.
  *
  * Logic per role:
- * - `super_admin` / `visitor`  → bisa lihat SEMUA cabang (`null`)
+ * - `super_admin`              → bisa lihat SEMUA cabang (`null`)
+ * - `visitor`                  → bisa lihat SEMUA cabang (`null`), read-only.
+ *   Sengaja null (bukan `[]`): visitor boleh buka Branches & Mitra + Maps.
+ *   Pembatasan chat visitor (DM sendiri + global) dikerjakan eksplisit
+ *   di chat fns, bukan lewat scope ini.
  * - `branch_manager`           → cabang di mana dia adalah managernya
  * - `franchise_owner`          → cabang yang terdaftar di franchise_branches
  * - `cashier` / `barista`      → cabang dari employee_details
@@ -53,7 +57,13 @@ async function resolveBranchScope(
     userId: string,
     role: string,
 ): Promise<string[] | null> {
-    if (role === "super_admin" || role === "visitor") {
+    if (role === "super_admin") {
+        return null;
+    }
+
+    if (role === "visitor") {
+        // Visitor read-only seluruh cabang untuk Branches & Maps.
+        // Jangan ubah ke []: getBranchesFn return kosong saat ids=[].
         return null;
     }
 

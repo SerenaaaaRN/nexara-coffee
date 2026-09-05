@@ -1,6 +1,6 @@
 import { MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { LANDING_COPY } from "@/features/landing/data";
 
 interface LandingHeroProps {
@@ -24,19 +24,16 @@ export const LandingHero = ({ branchCount }: LandingHeroProps) => {
                         {LANDING_COPY.subheadline}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                            render={
-                                <a href="#menu">{LANDING_COPY.primaryCta}</a>
-                            }
-                        />
-                        <Button
-                            variant="outline"
-                            render={
-                                <a href="#cabang">
-                                    {LANDING_COPY.secondaryCta}
-                                </a>
-                            }
-                        />
+                        <a href="#menu" className={buttonVariants()}>
+                            {LANDING_COPY.primaryCta}
+                        </a>
+                        <a
+                            href="#cabang"
+                            className={buttonVariants({
+                                variant: "outline",
+                            })}>
+                            {LANDING_COPY.secondaryCta}
+                        </a>
                     </div>
                 </div>
                 <div className="overflow-hidden rounded-xl ring-1 ring-foreground/10">

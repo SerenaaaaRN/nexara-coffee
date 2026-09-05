@@ -16,18 +16,22 @@ import {
     SidebarMenuSubButton,
     SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import type { Resource } from "@/lib/rbac";
 
 const COLLAPSIBLE_KEY = "nexara-sidebar-collapsible";
+
+export type NavSubItem = {
+    title: string;
+    url: string;
+    resource?: Resource;
+};
 
 export type NavItem = {
     title: string;
     url: string;
     icon?: LucideIcon;
-    items?: {
-        title: string;
-        url: string;
-    }[];
-    hideFrom?: string[];
+    resource?: Resource;
+    items?: NavSubItem[];
 };
 
 type NavMainProps = {

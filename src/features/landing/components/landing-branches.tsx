@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Clock, MapPin, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { FALLBACK_BRANCHES } from "@/features/landing/data";
 import type { PublicBranch } from "@/features/landing/types";
 
@@ -32,10 +32,11 @@ export const LandingBranches = ({ branches }: LandingBranchesProps) => {
                             Mampir ke gerai terdekat di kotamu.
                         </p>
                     </div>
-                    <Button
-                        variant="outline"
-                        render={<Link to="/maps">Lihat Peta</Link>}
-                    />
+                    <Link
+                        to="/maps"
+                        className={buttonVariants({ variant: "outline" })}>
+                        Lihat Peta
+                    </Link>
                 </div>
                 {source.length > 0 ? (
                     <div className="divide-y rounded-xl ring-1 ring-foreground/10">

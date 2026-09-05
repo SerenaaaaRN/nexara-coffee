@@ -51,8 +51,10 @@ export const ChatPage = () => {
         [channels, activeChannelId],
     );
     const isDirectMessage = activeChannelInfo?.type === "direct";
+    const isGlobalChannel = activeChannelInfo?.type === "global";
     const canSendInChannel =
-        canSend && (userRole !== "visitor" || isDirectMessage);
+        canSend &&
+        (userRole !== "visitor" || isDirectMessage || isGlobalChannel);
 
     const channelName = activeChannelInfo
         ? activeChannelInfo.type === "direct"
