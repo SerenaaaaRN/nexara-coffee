@@ -1,5 +1,12 @@
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { Coffee, LogOut, Medal, ReceiptText, UserRound } from "lucide-react";
+import {
+    Coffee,
+    ExternalLink,
+    LogOut,
+    Medal,
+    ReceiptText,
+    UserRound,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { signOut, useSession } from "@/lib/auth-client";
@@ -29,9 +36,7 @@ export function MyPortalShell() {
                     </span>
                     <span className="font-medium">Nexara Coffee</span>
                     <span className="ml-1 hidden text-sm text-muted-foreground sm:inline">
-                        {session?.user?.name
-                            ? `· ${session.user.name}`
-                            : null}
+                        {session?.user?.name ? `· ${session.user.name}` : null}
                     </span>
                     <div className="ml-auto">
                         <Button
@@ -41,6 +46,15 @@ export function MyPortalShell() {
                             <LogOut className="size-4" />
                             Keluar
                         </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            render={
+                                <Link to="/">
+                                    <ExternalLink className="size-4" />
+                                    To Site
+                                </Link>
+                            }></Button>
                     </div>
                 </div>
             </header>

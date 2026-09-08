@@ -1,13 +1,33 @@
-import { Coffee } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Coffee, Star } from "lucide-react";
+import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {
     Empty,
     EmptyDescription,
     EmptyMedia,
     EmptyTitle,
 } from "@/components/ui/empty";
+import {
+    Field,
+    FieldContent,
+    FieldError,
+    FieldGroup,
+    FieldLabel,
+} from "@/components/ui/field";
 import {
     Table,
     TableBody,
@@ -16,12 +36,145 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    createMyReviewSchema,
+    useCreateMyReview,
+} from "@/features/customer-portal/hooks/useCustomerPortalMutations";
 import { useMyOrders } from "@/features/customer-portal/hooks/useCustomerPortalQueries";
+import type { MyOrder } from "@/features/customer-portal/types";
+import { cn } from "@/utils/cn";
 import { formatCurrency, formatDateTime } from "@/utils/format";
 import { getBadgeVariant, getStatusLabel } from "@/utils/status";
 
+function ReviewDialog({
+    order,
+    open,
+    onOpenChange,
+}: {
+    order: MyOrder | null;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const createReview = useCreateMyReview();
+    const {
+        control,
+        register,
+        handleSubmit,
+        reset,
+        formState: { errors },
+    } = useForm({
+        resolver: zodResolver(createMyReviewSchema.omit({ orderId: true })),
+        defaultValues: { rating: 5, comment: "" },
+    });
+
+    async function onSubmit(values: { rating: number; comment?: string }) {
+        if (!order) return;
+        const res = await createReview
+            .mutateAsync({
+                orderId: order.id,
+                rating: values.rating,
+                comment: values.comment ?? "",
+            })
+            .catch(() => null);
+        if (res?.success) {
+            toast.success("Ulasan terkirim, menunggu moderasi");
+            reset();
+            onOpenChange(false);
+        } else {
+            toast.error(
+                typeof res?.error === "string"
+                    ? res.error
+                    : "Gagal mengirim ulasan",
+            );
+        }
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Beri Ulasan</DialogTitle>
+                    <DialogDescription>
+                        {order
+                            ? `Order ${order.orderNumber} · ${order.branchName ?? "-"}`
+                            : null}
+                    </DialogDescription>
+                </DialogHeader>
+                <form
+                    onSubmit={handleSubmit(onSubmit)}
+                    className="flex flex-col gap-4">
+                    <FieldGroup>
+                        <Field data-invalid={!!errors.rating}>
+                            <FieldLabel>Rating</FieldLabel>
+                            <FieldContent>
+                                <Controller
+                                    control={control}
+                                    name="rating"
+                                    render={({ field }) => (
+                                        <div className="flex gap-1">
+                                            {[1, 2, 3, 4, 5].map((n) => (
+                                                <button
+                                                    key={n}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        field.onChange(n)
+                                                    }
+                                                    className="cursor-pointer p-1"
+                                                    aria-label={`${n} bintang`}>
+                                                    <Star
+                                                        className={cn(
+                                                            "size-6",
+                                                            n <= field.value
+                                                                ? "fill-yellow-400 text-yellow-400"
+                                                                : "text-muted-foreground",
+                                                        )}
+                                                    />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                />
+                                <FieldError errors={[errors.rating]} />
+                            </FieldContent>
+                        </Field>
+                        <Field data-invalid={!!errors.comment}>
+                            <FieldLabel htmlFor="comment">
+                                Komentar (opsional)
+                            </FieldLabel>
+                            <FieldContent>
+                                <Textarea
+                                    id="comment"
+                                    placeholder="Ceritakan pengalaman kamu..."
+                                    aria-invalid={!!errors.comment}
+                                    {...register("comment")}
+                                />
+                                <FieldError errors={[errors.comment]} />
+                            </FieldContent>
+                        </Field>
+                    </FieldGroup>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}>
+                            Batal
+                        </Button>
+                        <Button type="submit" disabled={createReview.isPending}>
+                            {createReview.isPending
+                                ? "Mengirim..."
+                                : "Kirim Ulasan"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export function MyOrdersPage() {
     const { data: response } = useMyOrders();
+    const [reviewTarget, setReviewTarget] = useState<MyOrder | null>(null);
 
     if (!response.success) throw new Error(response.error);
     const orders = response.data;
@@ -61,11 +214,7 @@ export function MyOrdersPage() {
                     value={orders.length}
                     icon={Coffee}
                 />
-                <StatCard
-                    label="Selesai"
-                    value={completed}
-                    icon={Coffee}
-                />
+                <StatCard label="Selesai" value={completed} icon={Coffee} />
             </div>
             <div className="rounded-lg border">
                 <Table>
@@ -75,7 +224,10 @@ export function MyOrdersPage() {
                             <TableHead>Cabang</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Total</TableHead>
-                            <TableHead className="text-right">Tanggal</TableHead>
+                            <TableHead className="text-right">
+                                Tanggal
+                            </TableHead>
+                            <TableHead className="text-right">Ulasan</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -84,9 +236,7 @@ export function MyOrdersPage() {
                                 <TableCell className="font-medium tabular-nums">
                                     {o.orderNumber}
                                 </TableCell>
-                                <TableCell>
-                                    {o.branchName ?? "-"}
-                                </TableCell>
+                                <TableCell>{o.branchName ?? "-"}</TableCell>
                                 <TableCell>
                                     <Badge variant={getBadgeVariant(o.status)}>
                                         {getStatusLabel(o.status)}
@@ -98,11 +248,34 @@ export function MyOrdersPage() {
                                 <TableCell className="text-right text-muted-foreground">
                                     {formatDateTime(o.createdAt)}
                                 </TableCell>
+                                <TableCell className="text-right">
+                                    {o.status === "completed" &&
+                                    !o.hasReview ? (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setReviewTarget(o)}>
+                                            <Star className="size-3" />
+                                            Beri Ulasan
+                                        </Button>
+                                    ) : o.hasReview ? (
+                                        <span className="text-xs text-muted-foreground">
+                                            Sudah diulas
+                                        </span>
+                                    ) : null}
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
             </div>
+            <ReviewDialog
+                order={reviewTarget}
+                open={!!reviewTarget}
+                onOpenChange={(open) => {
+                    if (!open) setReviewTarget(null);
+                }}
+            />
         </div>
     );
 }

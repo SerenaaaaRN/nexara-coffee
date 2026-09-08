@@ -7,7 +7,7 @@ import type {
     Order,
     updateStatusSchema,
 } from "@/features/orders/types";
-import { orderKeys } from "@/features/query-keys";
+import { myPortalKeys, orderKeys } from "@/features/query-keys";
 
 function toOrder(r: {
     id: string;
@@ -134,7 +134,7 @@ export const updateOrderStatusFn = createServerFn({ method: "POST" })
             await Promise.all([
                 supabaseAdmin
                     .from("orders")
-                    .select("branch_id, status")
+                    .select("branch_id, customer_id, status, total_amount")
                     .eq("id", parsed.orderId)
                     .limit(1)
                     .maybeSingle(),
@@ -184,6 +184,38 @@ export const updateOrderStatusFn = createServerFn({ method: "POST" })
                 success: false as const,
                 error: error?.message ?? "Order tidak ditemukan",
             };
+
+        // Akrual poin loyalty best-effort: hanya saat transisi ke completed
+        // dan order tercatat atas profil customer. completed itu terminal
+        // (tidak bisa diubah/dibatalkan lagi) jadi tidak ada dobel akrual.
+        // Kegagalan akrual tidak menggagalkan update status.
+        if (parsed.status === "completed" && existing.customer_id) {
+            try {
+                const { earnedPointsForTotal, tierForPoints } = await import(
+                    "@/features/customers/types"
+                );
+                const { data: profile } = await supabaseAdmin
+                    .from("customers")
+                    .select("loyalty_points")
+                    .eq("id", existing.customer_id)
+                    .limit(1)
+                    .maybeSingle();
+                if (profile) {
+                    const next =
+                        (profile.loyalty_points ?? 0) +
+                        earnedPointsForTotal(existing.total_amount);
+                    await supabaseAdmin
+                        .from("customers")
+                        .update({
+                            loyalty_points: next,
+                            loyalty_tier: tierForPoints(next),
+                        })
+                        .eq("id", existing.customer_id);
+                }
+            } catch (accrueError) {
+                console.error("Gagal akrual poin loyalty:", accrueError);
+            }
+        }
 
         const { getAblyRest } = await import("@/lib/ably.server");
         const ably = getAblyRest();
@@ -308,6 +340,10 @@ export function useUpdateOrderStatus() {
                 queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
                 queryClient.invalidateQueries({
                     queryKey: orderKeys.detail(vars.orderId),
+                });
+                // Poin/tier member bisa berubah saat completed → segarkan portal.
+                queryClient.invalidateQueries({
+                    queryKey: myPortalKeys.all,
                 });
             }
         },

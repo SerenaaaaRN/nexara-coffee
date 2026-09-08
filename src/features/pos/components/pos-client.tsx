@@ -65,6 +65,7 @@ export function POSClient({ branchId, categories, items }: POSClientProps) {
     const [paymentMethod, setPaymentMethod] =
         useState<(typeof PAYMENT_METHODS)[number]>("cash");
     const [customerName, setCustomerName] = useState("");
+    const [customerPhone, setCustomerPhone] = useState("");
 
     const findOrCreateCustomer = useFindOrCreateCustomer();
     const createOrder = useCreateOrder();
@@ -137,10 +138,14 @@ export function POSClient({ branchId, categories, items }: POSClientProps) {
             let customerId: string | undefined;
 
             try {
-                if (customerName.trim() !== "") {
-                    const custRes = await findOrCreateCustomer.mutateAsync(
-                        customerName.trim(),
-                    );
+                if (customerName.trim() !== "" || customerPhone.trim() !== "") {
+                    const custRes = await findOrCreateCustomer.mutateAsync({
+                        fullName:
+                            customerName.trim() !== ""
+                                ? customerName.trim()
+                                : customerPhone.trim(),
+                        phone: customerPhone.trim(),
+                    });
                     if (custRes.success) {
                         customerId = custRes.data.id;
                     } else {
@@ -183,6 +188,7 @@ export function POSClient({ branchId, categories, items }: POSClientProps) {
                     setChargeDialogOpen(false);
                     setPaymentMethod("cash");
                     setCustomerName("");
+                    setCustomerPhone("");
                 } else {
                     toast.warning(
                         "Order created but payment recording failed",
@@ -424,6 +430,19 @@ export function POSClient({ branchId, categories, items }: POSClientProps) {
                                 value={customerName}
                                 onChange={(e) =>
                                     setCustomerName(e.target.value)
+                                }
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                                No. HP Member (Optional)
+                            </Label>
+                            <Input
+                                placeholder="08xx untuk akumulasi poin member..."
+                                inputMode="tel"
+                                value={customerPhone}
+                                onChange={(e) =>
+                                    setCustomerPhone(e.target.value)
                                 }
                             />
                         </div>

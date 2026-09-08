@@ -86,13 +86,22 @@ export const createCustomerFn = createServerFn({ method: "POST" })
     });
 
 /**
- * Mencari customer berdasarkan nama, atau membuat baru jika tidak ada.
+ * Mencari customer berdasarkan HP (kalau diisi) lalu nama, atau membuat baru.
+ *
+ * Match berlapis: phone yang dinormalisasi dulu (identitas stabil untuk
+ * member), fallback ke nama persis seperti sebelumnya. Baris baru ikut
+ * menyimpan phone supaya tidak menumpuk baris tanpa identitas.
  *
  * @returns Data customer yang ditemukan atau dibuat
  */
 export const findOrCreateCustomerFn = createServerFn({ method: "POST" })
-    .validator(z.string().min(1).max(255))
-    .handler(async ({ data: fullName }) => {
+    .validator(
+        z.object({
+            fullName: z.string().min(1).max(255),
+            phone: z.string().max(32).optional().or(z.literal("")),
+        }),
+    )
+    .handler(async ({ data: { fullName, phone } }) => {
         const { requireAccessAction } = await import("@/lib/with-auth.server");
         const auth = await requireAccessAction("create", "customers");
         if (!auth.success)
@@ -124,6 +133,22 @@ export const findOrCreateCustomerFn = createServerFn({ method: "POST" })
             createdAt: c.created_at,
         });
 
+        const { normalizePhone } = await import("@/features/customers/types");
+        const digits = phone ? normalizePhone(phone) : "";
+
+        if (digits !== "") {
+            const { data: byPhone } = await supabaseAdmin
+                .from("customers")
+                .select()
+                .eq("phone", digits)
+                .limit(1)
+                .maybeSingle();
+
+            if (byPhone) {
+                return { success: true as const, data: toCustomer(byPhone) };
+            }
+        }
+
         const { data: existing } = await supabaseAdmin
             .from("customers")
             .select()
@@ -139,7 +164,11 @@ export const findOrCreateCustomerFn = createServerFn({ method: "POST" })
 
         const { data: created, error } = await supabaseAdmin
             .from("customers")
-            .insert({ id: crypto.randomUUID(), full_name: fullName })
+            .insert({
+                id: crypto.randomUUID(),
+                full_name: fullName,
+                phone: digits !== "" ? digits : null,
+            })
             .select()
             .single();
 
@@ -355,8 +384,8 @@ export const useCreateCustomer = () => {
 export const useFindOrCreateCustomer = () => {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: (fullName: string) =>
-            findOrCreateCustomerFn({ data: fullName }),
+        mutationFn: (input: { fullName: string; phone?: string }) =>
+            findOrCreateCustomerFn({ data: input }),
         onSuccess: () =>
             qc.invalidateQueries({ queryKey: customerKeys.lists() }),
     });

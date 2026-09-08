@@ -1,5 +1,5 @@
-import type { OrderRow } from "@/features/orders/types";
 import type { Customer } from "@/features/customers/types";
+import type { OrderRow } from "@/features/orders/types";
 
 /** Riwayat pesanan milik customer yang sedang login (read-only). */
 export type MyOrder = Pick<
@@ -11,7 +11,9 @@ export type MyOrder = Pick<
     | "status"
     | "totalAmount"
     | "createdAt"
->;
+> & {
+    hasReview: boolean;
+};
 
 /** Profil loyalty milik customer yang sedang login. */
 export type MyLoyalty = Pick<
