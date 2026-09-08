@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { type LoginInput, loginSchema } from "@/features/auth/types";
 import { signIn } from "@/lib/auth-client";
+import { getDefaultRouteForRole, type Role } from "@/lib/rbac";
 
 export function LoginForm() {
     const navigate = useNavigate();
@@ -43,7 +44,9 @@ export function LoginForm() {
             return;
         }
         toast.success(`Selamat datang kembali, ${data.user.name}!`);
-        navigate({ to: "/overview" });
+        navigate({
+            to: getDefaultRouteForRole((data.user as { role: Role }).role),
+        });
     }
 
     return (

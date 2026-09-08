@@ -19,7 +19,13 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { getSessionFn, loadDashboardFn } from "@/lib/auth-utils";
-import { type Action, can, type Resource, type Role } from "@/lib/rbac";
+import {
+    type Action,
+    can,
+    getDefaultRouteForRole,
+    type Resource,
+    type Role,
+} from "@/lib/rbac";
 
 const DASHBOARD_GUARDS = {
     "/overview": ["read", "reports"],
@@ -44,7 +50,9 @@ export const Route = createFileRoute("/_dashboard")({
                 location.pathname as keyof typeof DASHBOARD_GUARDS
             ];
         if (guard && !can(session.user.role as Role, guard[0], guard[1]))
-            throw redirect({ to: "/" });
+            throw redirect({
+                to: getDefaultRouteForRole(session.user.role as Role),
+            });
         return { session };
     },
     loader: async () => {
