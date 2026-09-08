@@ -14,7 +14,7 @@ import { STALE } from "@/features/stale-time";
  *
  * Data digabung dengan tabel user dan branches untuk menampilkan
  * informasi lengkap. Scope otomatis berdasarkan role:
- *   - super_admin/visitor → semua employee
+ *   - super_admin → semua employee
  *   - branch_manager → employee di branch yang dikelola
  *   - lainnya → hanya dirinya sendiri
  *

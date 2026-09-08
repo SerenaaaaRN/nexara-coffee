@@ -113,9 +113,6 @@ const PERMISSIONS: Record<Role, PermissionMap> = {
         maps: ["read"],
     },
     visitor: {
-        branches: ["read"],
-        maps: ["read"],
-        chat: ["read", "create"],
         users: ["read", "update"],
     },
 };

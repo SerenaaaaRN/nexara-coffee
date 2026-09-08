@@ -13,7 +13,7 @@ import { STALE } from "@/features/stale-time";
  *
  * Data digabung dengan tabel user (actor) dan branches untuk menampilkan
  * nama aktor dan cabang. Scope otomatis berdasarkan role:
- *   - super_admin/visitor → semua audit log
+ *   - super_admin → semua audit log
  *   - branch_manager → audit log di cabang yang dikelola + system-level
  *   - lainnya → hanya dirinya sendiri
  *

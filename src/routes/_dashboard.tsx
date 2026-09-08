@@ -45,6 +45,7 @@ export const Route = createFileRoute("/_dashboard")({
     beforeLoad: async ({ location }) => {
         const session = await getSessionFn();
         if (!session) throw redirect({ to: "/login" });
+        if (session.user.role === "visitor") throw redirect({ to: "/my" });
         const guard =
             DASHBOARD_GUARDS[
                 location.pathname as keyof typeof DASHBOARD_GUARDS

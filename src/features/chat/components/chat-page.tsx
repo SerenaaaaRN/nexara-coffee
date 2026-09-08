@@ -44,17 +44,13 @@ export const ChatPage = () => {
 
     const createDirectChannelMutation = useCreateDirectChannel();
     const canSend = can(userRole as Role, "create", "chat");
-    const canCreateChannel = userRole !== "visitor";
+    const canCreateChannel = can(userRole as Role, "create", "chat");
 
     const activeChannelInfo = useMemo(
         () => channels.find((c) => c.id === activeChannelId),
         [channels, activeChannelId],
     );
-    const isDirectMessage = activeChannelInfo?.type === "direct";
-    const isGlobalChannel = activeChannelInfo?.type === "global";
-    const canSendInChannel =
-        canSend &&
-        (userRole !== "visitor" || isDirectMessage || isGlobalChannel);
+    const canSendInChannel = canSend;
 
     const channelName = activeChannelInfo
         ? activeChannelInfo.type === "direct"

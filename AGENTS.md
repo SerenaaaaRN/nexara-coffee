@@ -20,7 +20,7 @@ These skills are installed and can be loaded with `skill` tool when working on r
 
 **Nexara** is an internal operational dashboard for a fictional multi-branch cafe network based in Palembang, Indonesia.
 
-It is **not** a public company profile or landing page. It is an internal tool used by head office admins, branch managers, cashiers, baristas, and franchise owners to operate the entire cafe network.
+It is primarily an internal tool used by head office admins, branch managers, cashiers, baristas, and franchise owners to operate the entire cafe network — plus a public landing page (`/`) and a customer self-service portal (`/my`) for registered members.
 
 ### Business Model
 - Head office sets menu standards, base prices, and brand guidelines
@@ -28,7 +28,7 @@ It is **not** a public company profile or landing page. It is an internal tool u
 - Branches have limited autonomy: they can manage stock, staff schedules, and request restock — but cannot change menu/pricing without HQ approval
 - Franchise branch revenue is shared according to a commission scheme, disbursed via the Payouts feature
 
-**Built:** overview dashboard (3 tabs, 8 charts, 2 tables), auth flow (login/register/forgot-reset password/Google OAuth), customers CRUD (card grid + sheet detail), kasir & setoran harian (input + approve/reject + POS reconciliation), orders (queue + status management + Ably realtime), POS (cart + checkout), chat (realtime messaging, DM, branch channels, Ably integration), maps (MapLibre GL, branch markers, popup, search), menu CRUD (grid, categories, Cloudinary image upload, RHF forms), branches CRUD (table + form + franchise owner assignment), employee CRUD (TanStack Table + shadcn + FilterToolbar), reviews (list + moderate), transactions (list + filter), payouts (list + approve), notifications (list + mark read), audit log (timeline with search, action/table filter, expandable metadata).
+**Built:** overview dashboard (3 tabs, 8 charts, 2 tables), auth flow (login/register/forgot-reset password/Google OAuth), customers CRUD (card grid + sheet detail), kasir & setoran harian (input + approve/reject + POS reconciliation), orders (queue + status management + Ably realtime), POS (cart + checkout + optional member phone lookup), chat (realtime messaging, DM, branch channels, Ably integration — staff only), maps (MapLibre GL, branch markers, popup, search), menu CRUD (grid, categories, Cloudinary image upload, RHF forms), branches CRUD (table + form + franchise owner assignment), employee CRUD (TanStack Table + shadcn + FilterToolbar), reviews (list + moderate + customer self-review per completed order), transactions (list + filter), payouts (list + approve), notifications (list + mark read), audit log (timeline with search, action/table filter, expandable metadata), customer portal `/my` (order history incl. offline cashier-recorded orders, loyalty member card, account self-service, per-order review dialog).
 
 **Not yet implemented:** AI Assistant page.
 
@@ -40,7 +40,7 @@ It is **not** a public company profile or landing page. It is an internal tool u
 | Cashier | Inputs daily setoran (cash deposits) and views branch data |
 | Barista | Views order queue, updates order status |
 | Franchise Owner | External partner, limited access to their own branch data (revenue, payout) |
-| Visitor | Default role after self-registration. Branches & Maps read-only, own profile & password, chat: own DMs (reply only, cannot initiate) + global channels. All other pages invisible (sidebar hidden + route guard to landing) |
+| Visitor | Default role after self-registration = customer. Lives in the `/my` customer portal (own orders, loyalty member card, account self-service, self-review). Locked out of `_dashboard`, `/pos`, and chat entirely (route guard to `/my`) |
 
 This dashboard is **all-in-one** — all daily operations are input directly through the dashboard. Real daily input uses the **setoran** (cash deposit) system — one setoran per branch per day.
 
@@ -53,6 +53,16 @@ Setoran is a **manual cash declaration** — it is NOT automatically derived fro
 - **Reconciliation**: `getExpectedCashFn` (`kasir/hooks/useKasirQueries.ts`) queries `transactions` table grouped by `paymentMethod`, filtered by `DATE(createdAt)`. The result auto-fills the setoran form's `amount` so the cashier only confirms or adjusts.
 - **Form UX** (`kasir-form-dialog.tsx`): shows a `KasirPosSummary` card with Total/Cash/QRIS/Debit/Credit breakdown + difference indicator. Amount auto-fills to `cashTotal` unless the user manually edits it.
 - **Detail dialog** (`kasir-detail-dialog.tsx`): shows POS Comparison section (Declared vs Expected Cash vs Difference/Surplus/Shortage) to help approvers spot discrepancies.
+
+### Customer Portal (`/my`) & Loyalty
+
+Visitor = customer. Separate layout (`routes/my.tsx` + `my/` children, own shell + tab nav) — never enters `_dashboard`.
+
+- **Identity vs CRM**: `user` (Better Auth login) vs `customers` (business profile: name, phone, segment, points, tier). Linked by nullable `customers.user_id → user.id` (`UNIQUE`, `ON DELETE SET NULL`). POS walk-in rows stay `user_id = NULL` forever — by design, never converted to accounts. Accounts are born only via `/register`.
+- **Attribution**: portal queries match `created_by = uid OR customer_id IN (own profile ids)` — offline cashier-recorded orders appear. POS member lookup by **phone** (`findOrCreateCustomerFn` matches normalized phone first, then exact name); new POS rows store phone.
+- **Accrual** (`useOrderMutations.ts`, best-effort, never blocks status update): on transition to `completed` (terminal — no double accrual, cancel of completed rejected) with non-null `customer_id` → `+floor(total / 10_000)` points, tier recomputed. Constants in `customers/types.ts`: `POINTS_PER_RP`, `TIER_THRESHOLDS` (silver 100 / gold 500 / platinum 1000), `tierForPoints()`, `earnedPointsForTotal()`, `normalizePhone()`.
+- **Self-review**: `createMyReviewFn` (own-scope, completed own order only, 1 order = 1 review via `order_id` check, `status: "pending"` for staff moderation). No DB migration needed — `reviews` schema already sufficient. No global `reviews` perm for visitor.
+- New reviews must also invalidate `myPortalKeys.all` (portal cache) alongside `orderKeys`.
 
 ## Project Structure
 
@@ -90,7 +100,13 @@ src/
 │   │   ├── audit.tsx                # /audit
 │   │   ├── notifications.tsx        # /notifications
 │   │   └── settings.tsx             # /settings
-│   ├── pos.tsx                      # /pos (separate layout, no sidebar)
+│   ├── pos.tsx                      # /pos (separate layout, no sidebar, staff roles only)
+│   ├── my.tsx                       # /my customer portal layout (visitor only, own shell + tab nav)
+│   ├── my/                          # Folder — children inherit my layout
+│   │   ├── index.tsx                # /my → redirects to /my/orders
+│   │   ├── orders.tsx               # /my/orders (own order history + review dialog)
+│   │   ├── member.tsx               # /my/member (loyalty card)
+│   │   └── account.tsx              # /my/account (profile + password self-service)
 │   └── api/
 │       └── auth/$.ts                # Better Auth handler (catch-all)
 ├── components/
@@ -267,7 +283,7 @@ Additional rules:
 3. **Server function/RSC**: call `auth.api.getSession({ headers: await getWebRequest()?.headers })`
 4. **Client**: use `createAuthClient()` from `better-auth/react`, all methods
 5. **Google OAuth**: Provider in `socialProviders.google`. Redirect URI: `http://localhost:5173/api/auth/callback/google`.
-7. **Default role visitor**: `role` column defaults to `"visitor"`. New registrations (email + Google OAuth) automatically get `visitor` role.
+7. **Default role visitor**: `role` column defaults to `"visitor"` (= customer). New registrations (email + Google OAuth) automatically get `visitor` role.
 8. **Auth simplification**: No email OTP flow. Standard `signUp.email()` with password directly.
 9. **CSRF**: Better Auth: `csrf: { enabled: true, origin: BETTER_AUTH_URL }`.
 10. **Rate limiting**: sensitive endpoints use `rateLimit(key, max, windowMs)`.
@@ -276,7 +292,7 @@ Additional rules:
 13. **CSRF**: configured as `csrf: { enabled: true, origin: BETTER_AUTH_URL }`. Cross-origin requests rejected automatically.
 14. **Rate limiting**: sensitive endpoints (auth, role change) use `rateLimit(key, max, windowMs)` from `@/lib/rate-limit`. Returns 429 if exceeded.
 15. **Google OAuth redirect URI**: `http://localhost:5173/api/auth/callback/google`. Add `http://<IP>:5173/api/auth/callback/google` to Authorized redirect URIs in Google Cloud Console when developing via IP.
-16. **Visitor**: Default role for all new registrations (email + Google OAuth). Branches & Maps read-only, own profile & password, chat: own DMs (reply only) + global channels. All other pages invisible (sidebar hidden + route guard to landing). No create/update/delete on any business data.
+16. **Visitor**: Default role for all new registrations (email + Google OAuth). Branches & Maps read-only, own profile & password, chat: own DMs (reply only) + global channels. All other pages invisible (sidebar hidden + route guard to landing). No create/update/delete on any business data. — **SUPERSEDED: visitor = customer, lives in `/my` portal, locked out of `_dashboard`/`/pos`/chat (see "Customer Portal" section).**
 17. **Session cookie cache**: `auth.ts` punya `session.cookieCache { enabled, maxAge: 300, strategy: "jwt", refreshCache: true }` → `auth.api.getSession()` diverifikasi dari cookie (HS256), **nol query DB** per pemanggilan. `session.user.role` ikut ter-cache untuk RBAC.
 
 ## RBAC — Permission Matrix
@@ -289,7 +305,7 @@ Additional rules:
 | `franchise_owner` | 2 | One/more owned branches |
 | `cashier` | 3 | Single branch |
 | `barista` | 4 | Single branch |
-| `visitor` | 5 | All branches (read-only, default role) |
+| `visitor` | 5 | Own data only (customer portal `/my`, default role) |
 
 ### Permissions per Page
 | Page | Super Admin | Branch Manager | Cashier | Barista | Franchise Owner | Visitor |
@@ -298,25 +314,30 @@ Additional rules:
 | Kasir (Setoran) | F | F | C+R | — | R | — |
 | Orders | F | F | F | R+update | R | — |
 | Menu | F | R | R | R | — | — |
-| Branches & Mitra | F | R | — | — | R | R |
-| Maps | R | R | R | R | R | R |
+| Branches & Mitra | F | R | — | — | R | — |
+| Maps | R | R | R | R | R | — |
 | Customers | F | R | R | — | — | — |
-| Reviews | F | R | — | — | — | — |
+| Reviews | F | R | — | — | — | — (self-review via `/my` portal only) |
 | Transactions | F | R | F | — | — | — |
 | Employee & Payroll | F | F | — | — | — | — |
 | Payouts | F | — | — | — | R (request) | — |
-| Chat | F | F | F | F | F | DM+global |
+| Chat | F | F | F | F | F | — |
 | Audit Log | F | R | — | — | — | — |
 | Notifications | F | R | R | R | R | — |
-| Settings | F | F | R+update | R+update | R+update | R+update (self) |
+| Settings | F | F | R+update | R+update | R+update | — (use `/my/account` instead) |
+| Customer Portal (`/my`) | — | — | — | — | — | F (own orders, loyalty, account, reviews) |
 | AI Assistant (not yet implemented) | F | F | — | — | — | — |
 
 ### RBAC Implementation
 - `can(role, action, resource)` — helper in `src/lib/rbac.ts`
+- `getDefaultRouteForRole(role)` — post-login / guard fallback: staff → `/overview`, visitor → `/my`
 - `requireAccess(action, resource)` — for API routes, throws 403
 - `requireAccessAction(action, resource)` — for server functions, returns discriminated union
 - `requireAccessRSC(action, resource)` — for route loaders, redirects on failure
-- Branch scope via `src/utils/branch-scope.ts` → `getAccessibleBranchIds(userId, role)`
+- Branch scope via `src/utils/branch-scope.ts` → `getAccessibleBranchIds(userId, role)` (no visitor case — unknown roles get `[]`)
+- Visitor lockout: `_dashboard.tsx` and `my.tsx` `beforeLoad` redirect by role (`_dashboard` rejects visitor → `/my`, `/my` rejects staff → `/overview`, `/pos` allows super_admin/branch_manager/cashier only)
+- Customer portal own-scope pattern: portal server fns use `getSession()` + filter by `session.user.id` (never grant visitor global `orders`/`customers`/`reviews` perms). Visitor matrix keeps only `users: ["read","update"]` (portal account self-service via `updateProfileFn`)
+- RBAC is staff-only by design — no visitor branches in feature code (chat visitor checks removed)
 
 ## Data Fetching Pattern
 
@@ -351,6 +372,7 @@ Uses centralized constants from `src/features/stale-time.ts`:
 | High-write | 0 | 5min | kasir, orders |
 | Realtime | 0 (initial via query) | 5min | chat, notifications |
 | Settings | FREQUENT (30s) | 5min | settings |
+| Customer portal | FREQUENT (30s) | 5min | my/orders, my/loyalty (`myPortalKeys`) |
 
 **Key:** TanStack Query replaces all Next.js caching (`"use cache"`, `unstable_cache`, `updateTag`). Invalidation is explicit via `queryClient.invalidateQueries()`. No more `"use server"` directive — `createServerFn` handles it.
 
@@ -385,7 +407,7 @@ All tables use TanStack Table for headless logic + shadcn Table for styling:
 - **Hierarchical structure**: `['entity']` → `['entity', id]` → `['entity', id, 'sub']`
 - **JSON-serializable only**: strings, numbers, booleans, plain objects. No functions, class instances, Symbols, or Date objects (use ISO strings)
 - **Centralized in `src/features/query-keys.ts`**: all query keys are defined as structured objects (e.g., `menuKeys.all`, `menuKeys.lists()`, `menuKeys.detail(id)`)
-- **Pattern for this project**: `['menu']`, `['menu', itemId]`, `['kasir', { branchId, date }]`, `['kasir', 'expected-cash', branchId, date]`, `['chat', channelId, 'messages']`
+- **Pattern for this project**: `['menu']`, `['menu', itemId]`, `['kasir', { branchId, date }]`, `['kasir', 'expected-cash', branchId, date]`, `['chat', channelId, 'messages']`, `['my', 'orders']` / `['my', 'loyalty']` (`myPortalKeys`)
 
 ### staleTime & gcTime
 
@@ -399,6 +421,7 @@ Centralized constants at `src/features/stale-time.ts`:
 | High-write (kasir, orders) | 0 | 5min |
 | Low-write (settings) | FREQUENT (30s) | 5min |
 | Realtime (chat, notifications) | 0 | 5min |
+| Customer portal (my/orders, my/loyalty) | FREQUENT (30s) | 5min |
 
 - `staleTime: 0` = always refetch on mount
 - `staleTime: Infinity` = never refetch (manual invalidation only)
@@ -436,6 +459,7 @@ All IDs use text with `crypto.randomUUID()`. All FKs must be indexed manually.
 
 See `database/schema/` for full schemas. Key entities:
 - `user` (Better Auth), `account`, `session`, `verification`
+- `customers.user_id → user.id` (nullable, UNIQUE, `ON DELETE SET NULL`) — links login identity to CRM profile
 - `branches`, `franchise_branches` (junction)
 - `menu_categories`, `menu_items`
 - `orders`, `order_items`, `daily_setorans`, `transactions`
@@ -539,6 +563,7 @@ No `<Suspense>` boundaries in page components. Route loader (`ensureQueryData`) 
 | `ReviewsSkeleton` | `dashboard.tsx` | reviews |
 | `TransactionsSkeleton` | `dashboard.tsx` | transactions |
 | `PayoutsSkeleton` | `dashboard.tsx` | payouts |
+| `MyPortalSkeleton` | `dashboard.tsx` | my (layout + orders/member/account) |
 
 ### Error & NotFound Components
 
