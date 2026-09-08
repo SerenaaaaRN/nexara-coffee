@@ -6,7 +6,7 @@ import { getSessionFn } from "@/lib/auth-utils";
 export const Route = createFileRoute("/_auth/reset-password")({
     beforeLoad: async () => {
         const session = await getSessionFn();
-        if (session) throw redirect({ to: "/" });
+        if (session) throw redirect({ to: "/overview" });
     },
     validateSearch: (search: Record<string, string | undefined>) => ({
         token: search.token,

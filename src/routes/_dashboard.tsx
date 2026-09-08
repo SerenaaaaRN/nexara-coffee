@@ -19,11 +19,32 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { getSessionFn, loadDashboardFn } from "@/lib/auth-utils";
+import { type Action, can, type Resource, type Role } from "@/lib/rbac";
+
+const DASHBOARD_GUARDS = {
+    "/overview": ["read", "reports"],
+    "/orders": ["read", "orders"],
+    "/kasir": ["read", "setoran"],
+    "/menu": ["read", "menu"],
+    "/customers": ["read", "customers"],
+    "/reviews": ["read", "reviews"],
+    "/transactions": ["read", "finance"],
+    "/payouts": ["read", "payouts"],
+    "/employee": ["read", "employee"],
+    "/audit": ["read", "system"],
+    "/notifications": ["read", "notifications"],
+} as const satisfies Record<string, readonly [Action, Resource]>;
 
 export const Route = createFileRoute("/_dashboard")({
-    beforeLoad: async () => {
+    beforeLoad: async ({ location }) => {
         const session = await getSessionFn();
         if (!session) throw redirect({ to: "/login" });
+        const guard =
+            DASHBOARD_GUARDS[
+                location.pathname as keyof typeof DASHBOARD_GUARDS
+            ];
+        if (guard && !can(session.user.role as Role, guard[0], guard[1]))
+            throw redirect({ to: "/" });
         return { session };
     },
     loader: async () => {

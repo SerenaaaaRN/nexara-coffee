@@ -182,7 +182,10 @@ export function RegisterForm() {
                     type="button"
                     className="w-full"
                     onClick={() =>
-                        signIn.social({ provider: "google", callbackURL: "/" })
+                        signIn.social({
+                            provider: "google",
+                            callbackURL: "/overview",
+                        })
                     }>
                     <img
                         src="/icons/google.svg"
