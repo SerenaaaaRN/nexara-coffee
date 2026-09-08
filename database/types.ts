@@ -107,6 +107,7 @@ export interface CustomerRow {
   segment: string;
   loyalty_points: number;
   loyalty_tier: string;
+  user_id: string | null;
   created_at: string;
 }
 

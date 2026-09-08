@@ -142,3 +142,9 @@ export const landingKeys = {
     branches: () => [...landingKeys.all, "branches"] as const,
     menu: () => [...landingKeys.all, "menu"] as const,
 };
+
+export const myPortalKeys = {
+    all: ["my"] as const,
+    orders: () => [...myPortalKeys.all, "orders"] as const,
+    loyalty: () => [...myPortalKeys.all, "loyalty"] as const,
+};

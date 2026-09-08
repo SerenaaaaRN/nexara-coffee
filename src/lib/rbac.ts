@@ -140,8 +140,8 @@ export function hasLevel(role: Role, minRole: Role): boolean {
 
 /**
  * Route default pasca-login / fallback guard per role.
- * Role yang bisa baca reports → /overview, sisanya (visitor) → /branches.
+ * Role yang bisa baca reports → /overview, sisanya (visitor/customer) → /my.
  */
-export function getDefaultRouteForRole(role: Role): "/overview" | "/branches" {
-    return can(role, "read", "reports") ? "/overview" : "/branches";
+export function getDefaultRouteForRole(role: Role): "/overview" | "/my" {
+    return can(role, "read", "reports") ? "/overview" : "/my";
 }

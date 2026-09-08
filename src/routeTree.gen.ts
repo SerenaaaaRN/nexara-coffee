@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
+import { Route as MyRouteImport } from './routes/my'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
@@ -32,6 +33,10 @@ import { Route as DashboardPayoutsRouteImport } from './routes/_dashboard/payout
 import { Route as DashboardReviewsRouteImport } from './routes/_dashboard/reviews'
 import { Route as DashboardSettingsRouteImport } from './routes/_dashboard/settings'
 import { Route as DashboardTransactionsRouteImport } from './routes/_dashboard/transactions'
+import { Route as MyIndexRouteImport } from './routes/my/index'
+import { Route as MyAccountRouteImport } from './routes/my/account'
+import { Route as MyMemberRouteImport } from './routes/my/member'
+import { Route as MyOrdersRouteImport } from './routes/my/orders'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -45,6 +50,11 @@ const AuthRoute = AuthRouteImport.update({
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/_dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyRoute = MyRouteImport.update({
+  id: '/my',
+  path: '/my',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosRoute = PosRouteImport.update({
@@ -147,6 +157,26 @@ const DashboardTransactionsRoute = DashboardTransactionsRouteImport.update({
   path: '/transactions',
   getParentRoute: () => DashboardRoute,
 } as any)
+const MyIndexRoute = MyIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MyRoute,
+} as any)
+const MyAccountRoute = MyAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => MyRoute,
+} as any)
+const MyMemberRoute = MyMemberRouteImport.update({
+  id: '/member',
+  path: '/member',
+  getParentRoute: () => MyRoute,
+} as any)
+const MyOrdersRoute = MyOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => MyRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -155,6 +185,7 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/my': typeof MyRouteWithChildren
   '/pos': typeof PosRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
@@ -175,6 +206,10 @@ export interface FileRoutesByFullPath {
   '/reviews': typeof DashboardReviewsRoute
   '/settings': typeof DashboardSettingsRoute
   '/transactions': typeof DashboardTransactionsRoute
+  '/my/account': typeof MyAccountRoute
+  '/my/member': typeof MyMemberRoute
+  '/my/orders': typeof MyOrdersRoute
+  '/my/': typeof MyIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -199,6 +234,10 @@ export interface FileRoutesByTo {
   '/reviews': typeof DashboardReviewsRoute
   '/settings': typeof DashboardSettingsRoute
   '/transactions': typeof DashboardTransactionsRoute
+  '/my/account': typeof MyAccountRoute
+  '/my/member': typeof MyMemberRoute
+  '/my/orders': typeof MyOrdersRoute
+  '/my': typeof MyIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -206,6 +245,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_auth': typeof AuthRouteWithChildren
   '/_dashboard': typeof DashboardRouteWithChildren
+  '/my': typeof MyRouteWithChildren
   '/pos': typeof PosRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
@@ -226,12 +266,17 @@ export interface FileRoutesById {
   '/_dashboard/reviews': typeof DashboardReviewsRoute
   '/_dashboard/settings': typeof DashboardSettingsRoute
   '/_dashboard/transactions': typeof DashboardTransactionsRoute
+  '/my/account': typeof MyAccountRoute
+  '/my/member': typeof MyMemberRoute
+  '/my/orders': typeof MyOrdersRoute
+  '/my/': typeof MyIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/my'
     | '/pos'
     | '/forgot-password'
     | '/login'
@@ -252,6 +297,10 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/settings'
     | '/transactions'
+    | '/my/account'
+    | '/my/member'
+    | '/my/orders'
+    | '/my/'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -276,12 +325,17 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/settings'
     | '/transactions'
+    | '/my/account'
+    | '/my/member'
+    | '/my/orders'
+    | '/my'
     | '/api/auth/$'
   id:
     | '__root__'
     | '/'
     | '/_auth'
     | '/_dashboard'
+    | '/my'
     | '/pos'
     | '/_auth/forgot-password'
     | '/_auth/login'
@@ -302,6 +356,10 @@ export interface FileRouteTypes {
     | '/_dashboard/reviews'
     | '/_dashboard/settings'
     | '/_dashboard/transactions'
+    | '/my/account'
+    | '/my/member'
+    | '/my/orders'
+    | '/my/'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -309,6 +367,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
+  MyRoute: typeof MyRouteWithChildren
   PosRoute: typeof PosRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -334,6 +393,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my': {
+      id: '/my'
+      path: '/my'
+      fullPath: '/my'
+      preLoaderRoute: typeof MyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pos': {
@@ -476,6 +542,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardTransactionsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/my/': {
+      id: '/my/'
+      path: '/'
+      fullPath: '/my/'
+      preLoaderRoute: typeof MyIndexRouteImport
+      parentRoute: typeof MyRoute
+    }
+    '/my/account': {
+      id: '/my/account'
+      path: '/account'
+      fullPath: '/my/account'
+      preLoaderRoute: typeof MyAccountRouteImport
+      parentRoute: typeof MyRoute
+    }
+    '/my/member': {
+      id: '/my/member'
+      path: '/member'
+      fullPath: '/my/member'
+      preLoaderRoute: typeof MyMemberRouteImport
+      parentRoute: typeof MyRoute
+    }
+    '/my/orders': {
+      id: '/my/orders'
+      path: '/orders'
+      fullPath: '/my/orders'
+      preLoaderRoute: typeof MyOrdersRouteImport
+      parentRoute: typeof MyRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -542,10 +636,27 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
   DashboardRouteChildren,
 )
 
+interface MyRouteChildren {
+  MyAccountRoute: typeof MyAccountRoute
+  MyMemberRoute: typeof MyMemberRoute
+  MyOrdersRoute: typeof MyOrdersRoute
+  MyIndexRoute: typeof MyIndexRoute
+}
+
+const MyRouteChildren: MyRouteChildren = {
+  MyAccountRoute: MyAccountRoute,
+  MyMemberRoute: MyMemberRoute,
+  MyOrdersRoute: MyOrdersRoute,
+  MyIndexRoute: MyIndexRoute,
+}
+
+const MyRouteWithChildren = MyRoute._addFileChildren(MyRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
+  MyRoute: MyRouteWithChildren,
   PosRoute: PosRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
