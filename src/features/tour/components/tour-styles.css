@@ -79,3 +79,10 @@
 .driver-popover.nexara-tour .driver-popover-close-btn {
     color: var(--muted-foreground);
 }
+
+@media (max-width: 480px) {
+    .driver-popover.nexara-tour {
+        min-width: 0;
+        max-width: calc(100vw - 32px);
+    }
+}

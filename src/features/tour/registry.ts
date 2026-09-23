@@ -78,9 +78,21 @@ export const TOURS: Record<TourId, TourDef> = {
         title: "Tur Halaman POS",
         buildSteps: (role) => stepsFor(role, ["pos"], true),
     },
+    sambutan: {
+        id: "sambutan",
+        title: "Tur Portal Member",
+        buildSteps: (role) =>
+            stepsFor(
+                role,
+                ["portal", "my-orders", "my-member", "my-account"],
+                false,
+            ),
+    },
 };
 
-const ROUTE_OVERRIDES: Partial<Record<TourId, string>> = {};
+const ROUTE_OVERRIDES: Partial<Record<TourId, string>> = {
+    sambutan: "/my",
+};
 
 /**
  * Mapping route → tur, diderivasi dari TOURS (single source of truth).

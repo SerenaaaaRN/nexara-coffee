@@ -12,9 +12,18 @@ export type TourGroup =
     | "menu"
     | "chat"
     | "settings"
-    | "pos";
+    | "pos"
+    | "portal"
+    | "my-orders"
+    | "my-member"
+    | "my-account";
 
-export type TourHandoffTarget = "/orders" | "/kasir";
+export type TourHandoffTarget =
+    | "/orders"
+    | "/kasir"
+    | "/my/orders"
+    | "/my/member"
+    | "/my/account";
 
 export interface TourStepDef {
     id: string;
@@ -38,7 +47,8 @@ export type TourId =
     | "menu"
     | "chat"
     | "settings"
-    | "pos";
+    | "pos"
+    | "sambutan";
 
 export interface TourDef {
     id: TourId;
