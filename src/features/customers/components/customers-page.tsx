@@ -68,9 +68,7 @@ export const CustomersPage = () => {
 
             <div className="flex flex-col gap-4">
                 {customers.length > 0 ? (
-                    <div
-                        data-tour="customers-stats"
-                        className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                         <StatCard
                             label="Total Customers"
                             value={filtered.length}
@@ -83,9 +81,7 @@ export const CustomersPage = () => {
                     </div>
                 ) : null}
 
-                <div
-                    data-tour="customers-toolbar"
-                    className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     <Input
                         placeholder="Search customers..."
                         value={search}

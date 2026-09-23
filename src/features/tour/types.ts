@@ -10,16 +10,7 @@ export type TourGroup =
     | "kasir"
     | "outro"
     | "menu"
-    | "transactions"
-    | "branches"
-    | "maps"
-    | "customers"
-    | "reviews"
-    | "employee"
-    | "payouts"
     | "chat"
-    | "audit"
-    | "notifications"
     | "settings"
     | "pos";
 
@@ -45,16 +36,7 @@ export type TourId =
     | "orders"
     | "kasir"
     | "menu"
-    | "transactions"
-    | "branches"
-    | "maps"
-    | "customers"
-    | "reviews"
-    | "employee"
-    | "payouts"
     | "chat"
-    | "audit"
-    | "notifications"
     | "settings"
     | "pos";
 

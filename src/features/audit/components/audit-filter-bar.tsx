@@ -55,9 +55,7 @@ export const AuditFilterBar = ({
 
     return (
         <>
-            <div
-                data-tour="audit-toolbar"
-                className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
                     <Input

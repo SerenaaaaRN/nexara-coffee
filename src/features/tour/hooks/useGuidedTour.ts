@@ -98,6 +98,11 @@ export const useGuidedTour = (
                     }
                     clearSavedResume();
                     markTourDone(activeTourRef.current);
+                    if (activeTourRef.current === "pengenalan") {
+                        markTourDone("overview");
+                        markTourDone("orders");
+                        markTourDone("kasir");
+                    }
                 },
                 steps,
             });

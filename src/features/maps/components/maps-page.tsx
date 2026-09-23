@@ -105,9 +105,7 @@ export const MapsPage = () => {
                 subtitle="Explore branch locations, ownership types, and operational details."
             />
 
-            <div
-                data-tour="maps-canvas"
-                className="relative flex-1 w-full overflow-hidden rounded-lg border bg-muted min-h-100">
+            <div className="relative flex-1 w-full overflow-hidden rounded-lg border bg-muted min-h-100">
                 <MapLibreMap
                     viewport={viewport}
                     onViewportChange={setViewport}

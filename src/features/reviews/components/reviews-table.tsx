@@ -104,7 +104,7 @@ export function ReviewsTable() {
     return (
         <div className="flex flex-col gap-4">
             {allReviews.length === 0 ? (
-                <Empty data-tour="reviews-content">
+                <Empty>
                     <EmptyMedia variant="icon">
                         <MessageSquareQuote />
                     </EmptyMedia>
@@ -115,9 +115,7 @@ export function ReviewsTable() {
                 </Empty>
             ) : (
                 <>
-                    <div
-                        data-tour="reviews-stats"
-                        className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
+                    <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
                         <StatCard
                             label="Average Rating"
                             value={averageRating}
@@ -128,18 +126,15 @@ export function ReviewsTable() {
                         <StatCard label="Approved" value={approvedCount} />
                     </div>
 
-                    <div data-tour="reviews-toolbar">
-                        <FilterToolbar
-                            tableState={tableState}
-                            searchPlaceholder={searchPlaceholder}
-                            filters={filterConfigs}
-                            total={allReviews.length}
-                            filtered={filteredCount}
-                        />
-                    </div>
+                    <FilterToolbar
+                        tableState={tableState}
+                        searchPlaceholder={searchPlaceholder}
+                        filters={filterConfigs}
+                        total={allReviews.length}
+                        filtered={filteredCount}
+                    />
 
-                    <div data-tour="reviews-content">
-                        <Table>
+                    <Table>
                         <TableHeader>
                             {table.getHeaderGroups().map((hg) => (
                                 <TableRow key={hg.id}>
@@ -194,7 +189,6 @@ export function ReviewsTable() {
                             ))}
                         </TableBody>
                     </Table>
-                    </div>
 
                     <div className="flex items-center justify-between">
                         <p className="text-sm text-muted-foreground">

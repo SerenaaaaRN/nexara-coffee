@@ -1,9 +1,10 @@
 # TOUR.md — Guided Tour Dashboard Nexara (driver.js)
 
 > Dokumen perencanaan + implementasi tur terpandu dashboard internal.
-> Status: **Fase 1 + Opsi A + Fase 2 (menu/transactions/branches) + Fase 3 selesai —
-> seluruh halaman dashboard internal + `/pos` punya tur sendiri. Portal `/my`
-> sengaja tidak disentuh (beda branch).**
+> Status: **8 tur — `pengenalan` + 7 tur halaman (overview, orders, kasir,
+> menu, chat, settings, pos). Tur generik pola tabel (transactions, branches,
+> maps, customers, reviews, employee, payouts, audit, notifications) sengaja
+> dipotong agar tidak mengulang. Portal `/my` tidak disentuh (beda branch).**
 > Library: `driver.js@^1.8.0` (sudah ada di `package.json`, tanpa install tambahan).
 > Referensi API: `.agents/skills/driverjs-tours/` (SKILL.md + `references/`).
 > Aturan validasi: pemilik repo validasi sendiri — agen tidak menjalankan
@@ -50,16 +51,7 @@ Satu tur 40+ langkah tidak dipakai. Sebagai gantinya ada registry tur:
 | `orders` | Konten orders saja (2 langkah) | Tombol Help saat di `/orders` |
 | `kasir` | Konten kasir saja (1–2 langkah, role-filtered) | Tombol Help saat di `/kasir` |
 | `menu` | Konten menu saja (2–3 langkah; tambah-item hanya `create menu`) | Tombol Help saat di `/menu` |
-| `transactions` | Konten transactions saja (2 langkah; barista terskip — tanpa `read finance`) | Tombol Help saat di `/transactions` |
-| `branches` | Daftar + tambah (super_admin) + detail (2–3 langkah) | Tombol Help saat di `/branches` |
-| `maps` | Cari + kanvas peta + legenda (3 langkah, semua staff) | Tombol Help saat di `/maps` |
-| `customers` | Stats + toolbar + grid kartu (3 langkah; tanpa `read customers` → fallback pengenalan) | Tombol Help saat di `/customers` |
-| `reviews` | Stats + toolbar + daftar (3 langkah; anchor ganda Empty vs tabel) | Tombol Help saat di `/reviews` |
-| `employee` | Stats + toolbar + tambah (2–3 langkah; hanya super_admin & branch_manager bisa buka halaman) | Tombol Help saat di `/employee` |
-| `payouts` | Stats + toolbar + daftar (3 langkah; anchor ganda Empty vs tabel) | Tombol Help saat di `/payouts` |
 | `chat` | Inbox + percakapan + form kirim (2–3 langkah; form hanya `create chat`) | Tombol Help saat di `/chat` |
-| `audit` | Toolbar + linimasa (2 langkah; hanya super_admin & branch_manager) | Tombol Help saat di `/audit` |
-| `notifications` | Tab filter + daftar (2 langkah; anchor ganda Empty vs list) | Tombol Help saat di `/notifications` |
 | `settings` | Nav + foto + klik Account + password + klik Appearance + tema (7 langkah; user pindah bagian dengan klik sesuai panduan) | Tombol Help saat di `/settings` |
 | `pos` | Katalog + keranjang + tombol Charge (3 langkah; hanya super_admin/branch_manager/cashier; launcher di-mount di header POS) | Tombol Help saat di `/pos` |
 
@@ -79,11 +71,14 @@ instance `driver()` hanya dibuat di effect/event handler (aman SSR),
   langkah untuk role tersebut (helper `isPageTourDue`), dan resume handoff
   selalu prioritas. Dismiss (Esc/backdrop/×) tercatat selesai sehingga tak
   muncul lagi.
+- Anti-redundansi: pengenalan mencakup konten overview/orders/kasir, jadi
+  saat pengenalan selesai, ketiga tur halaman itu ikut ditandai selesai
+  (`useGuidedTour.onDestroyed`) — auto-nya tak mengulang, replay manual via
+  Help tetap bisa.
 
 - Flag selesai per tur: `nexara-tour-{id}-done` (fungsi `doneKeyFor`)
-  (`pengenalan`, `overview`, `orders`, `kasir`, `menu`, `transactions`,
-  `branches`, `maps`, `customers`, `reviews`, `employee`, `payouts`, `chat`,
-  `audit`, `notifications`, `settings`, `pos`).
+  (`pengenalan`, `overview`, `orders`, `kasir`, `menu`, `chat`, `settings`,
+  `pos`).
   Flag model lama `nexara-tour-v1-done` tetap dihormati untuk `pengenalan`.
 - Resume handoff: `localStorage["nexara-tour-step"]` berisi `tourId:index`
   (fungsi `saveResume`/`getSavedResume`); format lama (angka polos) dianggap
@@ -143,22 +138,9 @@ super_admin melihat semua 14 langkah.
 | `features/kasir/components/kasir-page.tsx` | `kasir-content`, `kasir-record` (cabang kosong) |
 | `features/kasir/components/kasir-table.tsx` | `kasir-record` (cabang tabel) |
 | `features/menu/components/menu-page.tsx` | `menu-stats`, `menu-tabs`, `menu-add` (tambah-item) |
-| `features/transactions/components/transactions-table.tsx` | `transactions-content`, `transactions-stats`, wrapper `transactions-toolbar` |
-| `features/branches/components/branch-list-panel.tsx` | `branches-list`, `branches-add` |
-| `features/branches/components/branches-page.tsx` | `branches-detail` (kolom detail) |
-| `features/maps/components/maps-page.tsx` | `maps-canvas` (kontainer peta) |
-| `features/maps/components/branch-sidebar-panel.tsx` | `maps-search`, `maps-legend` |
-| `features/customers/components/customers-page.tsx` | `customers-stats` (cabang ada-data), `customers-toolbar` |
-| `features/customers/components/customer-grid.tsx` | `customers-grid` (ketiga cabang: kosong, filter-kosong, grid) |
-| `features/reviews/components/reviews-table.tsx` | `reviews-stats`, wrapper `reviews-toolbar`, wrapper `reviews-content` + `Empty` cabang kosong |
-| `features/employee/components/employee-table.tsx` | `employee-stats`, wrapper `employee-toolbar`, `employee-add` (kedua cabang) |
-| `features/payouts/components/payouts-table.tsx` | `payouts-stats`, wrapper `payouts-toolbar`, wrapper `payouts-content` + `Empty` cabang kosong |
 | `features/chat/components/chat-channel-list.tsx` | `chat-inbox` |
 | `features/chat/components/chat-layout.tsx` | `chat-conversation` (kedua cabang: panel aktif + placeholder) |
 | `features/chat/components/chat-panel.tsx` | `chat-form` (cabang bisa-kirim) |
-| `features/audit/components/audit-filter-bar.tsx` | `audit-toolbar` |
-| `features/audit/components/audit-page.tsx` | `audit-list` (kedua cabang: Empty + ScrollArea) |
-| `features/notifications/components/notifications-list.tsx` | `notifications-tabs`, `notifications-list` (Empty + ScrollArea) |
 | `features/settings/components/settings-page.tsx` | `settings-nav` (aside, stabil mobile+desktop), `settings-content` |
 | `features/settings/components/profile-form-section.tsx` | `settings-avatar` (hanya saat bagian Profile aktif) |
 | `features/settings/components/account-form-section.tsx` | `settings-password` (hanya saat bagian Account aktif) |
@@ -188,12 +170,10 @@ semua cabang render-nya.**
   tur pengenalan → resume di halaman benar; Esc → flag selesai per-tour +
   replay via tombol.
 - Auto per halaman: user baru selesaikan pengenalan → buka `/chat` pertama
-  kali → tur chat muncul sendiri; kunjungan berikutnya tidak. Barista buka
-  `/transactions` → tidak ada auto (nol langkah untuk role itu).
+  kali → tur chat muncul sendiri; kunjungan berikutnya tidak.
 - Reset: hapus `nexara-tour-{id}-done` di localStorage
-  (`pengenalan`, `overview`, `orders`, `kasir`, `menu`, `transactions`,
-  `branches`, `maps`, `customers`, `reviews`, `employee`, `payouts`, `chat`,
-  `audit`, `notifications`, `settings`, `pos`).
+  (`pengenalan`, `overview`, `orders`, `kasir`, `menu`, `chat`, `settings`,
+  `pos`).
 
 ## 8. Backlog (belum dikerjakan)
 
@@ -201,13 +181,15 @@ Portal `/my` (visitor) **sengaja tidak disentuh** — beda branch, bukan
 dashboard internal. Bila nanti dibutuhkan, polanya sama (mount launcher di
 `my-portal-shell` + grup/tur per tab), tanpa mengubah mekanisme yang ada.
 
-## 9. Catatan Fase 3 (tur tersisa dashboard + POS)
+## 9. Catatan tur POS & pemotongan tur generik
 
 - `/pos` tidak ikut layout `_dashboard`, jadi `<TourLauncher />` di-mount
-  terpisah di header `pos-page.tsx`. Auto-start pengenalan tetap global;
-  tur `pos` hanya manual via tombol Help.
+  terpisah di header `pos-page.tsx` (auto per-halaman ikut berlaku di sana).
 - Tidak ada handoff menuju/pindah dari `/pos` (guard role antar-layout akan
   me-redirect) — semua tur halaman konten saja, tanpa `navigateTo`.
+- 9 tur berpola generik (stats → toolbar → tabel) dipotong: transactions,
+  branches, maps, customers, reviews, employee, payouts, audit, notifications.
+  Halaman tanpa tur sendiri fallback ke tur pengenalan via tombol Help.
 - `settings-nav` dipasang di `<aside>` (bukan nav desktop) agar stabil di
   mobile + desktop — nav desktop `hidden` di mobile sehingga selector ganda
   akan menunjuk elemen tersembunyi.

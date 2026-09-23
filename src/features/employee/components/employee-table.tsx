@@ -62,9 +62,7 @@ export const EmployeeTable = ({
             {employees.length === 0 ? (
                 <>
                     <div className="flex justify-end">
-                        <Button
-                            data-tour="employee-add"
-                            onClick={() => onCreateOpen(true)}>
+                        <Button onClick={() => onCreateOpen(true)}>
                             <Plus className="me-2" /> Add Employee
                         </Button>
                     </div>
@@ -81,9 +79,7 @@ export const EmployeeTable = ({
             ) : (
                 <>
                     <div className="flex items-start justify-between gap-4">
-                        <div
-                            data-tour="employee-stats"
-                            className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
+                        <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
                             <StatCard label="Total" value={filteredCount} />
                             <StatCard label="Branches" value={branchCount} />
                             <StatCard
@@ -91,21 +87,17 @@ export const EmployeeTable = ({
                                 value={formatCurrency(totalSalary)}
                             />
                         </div>
-                        <Button
-                            data-tour="employee-add"
-                            onClick={() => onCreateOpen(true)}>
+                        <Button onClick={() => onCreateOpen(true)}>
                             <Plus className="size-4" /> Add Employee
                         </Button>
                     </div>
-                    <div data-tour="employee-toolbar">
-                        <FilterToolbar
-                            tableState={tableState}
-                            searchPlaceholder={searchPlaceholder}
-                            filters={filterConfigs}
-                            total={employees.length}
-                            filtered={filteredCount}
-                        />
-                    </div>
+                    <FilterToolbar
+                        tableState={tableState}
+                        searchPlaceholder={searchPlaceholder}
+                        filters={filterConfigs}
+                        total={employees.length}
+                        filtered={filteredCount}
+                    />
                     <Table>
                         <TableHeader>
                             {table.getHeaderGroups().map((hg) => (

@@ -196,7 +196,6 @@ export function NotificationsList({
             </div>
 
             <Tabs
-                data-tour="notifications-tabs"
                 value={filter}
                 onValueChange={(v) => {
                     setFilter(v as FilterMode);
@@ -224,7 +223,7 @@ export function NotificationsList({
             </Tabs>
 
             {filtered.length === 0 ? (
-                <Empty data-tour="notifications-list">
+                <Empty>
                     <EmptyMedia variant="icon">
                         {filter === "unread" ? (
                             <MailOpen className="size-8" />
@@ -246,9 +245,7 @@ export function NotificationsList({
                     </EmptyDescription>
                 </Empty>
             ) : (
-                <ScrollArea
-                    data-tour="notifications-list"
-                    className="h-[calc(100vh-20rem)]">
+                <ScrollArea className="h-[calc(100vh-20rem)]">
                     <div className="flex flex-col gap-0">
                         {grouped.map((group) => (
                             <div key={group.label}>

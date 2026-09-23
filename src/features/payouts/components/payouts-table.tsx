@@ -84,7 +84,7 @@ export function PayoutsTable({ canApprove }: PayoutsTableProps) {
     return (
         <div className="flex flex-col gap-4">
             {allPayouts.length === 0 ? (
-                <Empty data-tour="payouts-content">
+                <Empty>
                     <EmptyMedia variant="icon">
                         <CircleDollarSign />
                     </EmptyMedia>
@@ -96,9 +96,7 @@ export function PayoutsTable({ canApprove }: PayoutsTableProps) {
                 </Empty>
             ) : (
                 <>
-                    <div
-                        data-tour="payouts-stats"
-                        className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
+                    <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
                         <StatCard
                             label="Total Requested"
                             value={formatCurrency(totalAmount)}
@@ -120,18 +118,15 @@ export function PayoutsTable({ canApprove }: PayoutsTableProps) {
                         />
                     </div>
 
-                    <div data-tour="payouts-toolbar">
-                        <FilterToolbar
-                            tableState={tableState}
-                            searchPlaceholder={searchPlaceholder}
-                            filters={filterConfigs}
-                            total={allPayouts.length}
-                            filtered={filteredCount}
-                        />
-                    </div>
+                    <FilterToolbar
+                        tableState={tableState}
+                        searchPlaceholder={searchPlaceholder}
+                        filters={filterConfigs}
+                        total={allPayouts.length}
+                        filtered={filteredCount}
+                    />
 
-                    <div data-tour="payouts-content">
-                        <Table>
+                    <Table>
                         <TableHeader>
                             {table.getHeaderGroups().map((hg) => (
                                 <TableRow key={hg.id}>
@@ -186,7 +181,6 @@ export function PayoutsTable({ canApprove }: PayoutsTableProps) {
                             ))}
                         </TableBody>
                     </Table>
-                    </div>
 
                     {filteredCount > 0 && (
                         <div className="flex items-center justify-between">

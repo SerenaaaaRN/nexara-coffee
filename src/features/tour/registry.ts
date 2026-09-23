@@ -64,55 +64,10 @@ export const TOURS: Record<TourId, TourDef> = {
         title: "Tur Halaman Menu",
         buildSteps: (role) => stepsFor(role, ["menu"], true),
     },
-    transactions: {
-        id: "transactions",
-        title: "Tur Halaman Transactions",
-        buildSteps: (role) => stepsFor(role, ["transactions"], true),
-    },
-    branches: {
-        id: "branches",
-        title: "Tur Halaman Branches",
-        buildSteps: (role) => stepsFor(role, ["branches"], true),
-    },
-    maps: {
-        id: "maps",
-        title: "Tur Halaman Maps",
-        buildSteps: (role) => stepsFor(role, ["maps"], true),
-    },
-    customers: {
-        id: "customers",
-        title: "Tur Halaman Customers",
-        buildSteps: (role) => stepsFor(role, ["customers"], true),
-    },
-    reviews: {
-        id: "reviews",
-        title: "Tur Halaman Reviews",
-        buildSteps: (role) => stepsFor(role, ["reviews"], true),
-    },
-    employee: {
-        id: "employee",
-        title: "Tur Halaman Employee",
-        buildSteps: (role) => stepsFor(role, ["employee"], true),
-    },
-    payouts: {
-        id: "payouts",
-        title: "Tur Halaman Payouts",
-        buildSteps: (role) => stepsFor(role, ["payouts"], true),
-    },
     chat: {
         id: "chat",
         title: "Tur Halaman Chat",
         buildSteps: (role) => stepsFor(role, ["chat"], true),
-    },
-    audit: {
-        id: "audit",
-        title: "Tur Halaman Audit",
-        buildSteps: (role) => stepsFor(role, ["audit"], true),
-    },
-    notifications: {
-        id: "notifications",
-        title: "Tur Halaman Notifications",
-        buildSteps: (role) => stepsFor(role, ["notifications"], true),
     },
     settings: {
         id: "settings",

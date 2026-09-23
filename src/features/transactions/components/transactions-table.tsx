@@ -82,7 +82,7 @@ export function TransactionsTable({ canRefund }: TransactionsTableProps) {
     }
 
     return (
-        <div className="flex flex-col gap-4" data-tour="transactions-content">
+        <div className="flex flex-col gap-4">
             {transactions.length === 0 ? (
                 <Empty>
                     <EmptyMedia variant="icon">
@@ -95,9 +95,7 @@ export function TransactionsTable({ canRefund }: TransactionsTableProps) {
                 </Empty>
             ) : (
                 <>
-                    <div
-                        className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4"
-                        data-tour="transactions-stats">
+                    <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
                         <StatCard
                             label="Total Revenue"
                             value={formatCurrency(totalAmount)}
@@ -119,15 +117,13 @@ export function TransactionsTable({ canRefund }: TransactionsTableProps) {
                             icon={CreditCard}
                         />
                     </div>
-                    <div data-tour="transactions-toolbar">
-                        <FilterToolbar
-                            tableState={tableState}
-                            searchPlaceholder={searchPlaceholder}
-                            filters={filterConfigs}
-                            total={transactions.length}
-                            filtered={filteredCount}
-                        />
-                    </div>
+                    <FilterToolbar
+                        tableState={tableState}
+                        searchPlaceholder={searchPlaceholder}
+                        filters={filterConfigs}
+                        total={transactions.length}
+                        filtered={filteredCount}
+                    />
 
                     <Table>
                         <TableHeader>
