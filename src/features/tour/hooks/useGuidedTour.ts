@@ -82,7 +82,7 @@ export const useGuidedTour = (
                 doneBtnText: "Selesai",
                 popoverClass: "nexara-tour",
                 allowClose: true,
-                smoothScroll: true,
+                smoothScroll: false,
                 stagePadding: 8,
                 stageRadius: 8,
                 skipMissingElement: true,

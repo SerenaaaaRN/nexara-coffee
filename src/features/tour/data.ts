@@ -62,8 +62,19 @@ export const ALL_STEPS: TourStepDef[] = [
         element: '[data-tour="overview-tabs"]',
         title: "Tab analisis",
         description:
-            "Beralih antara Revenue, Orders, dan Analytics untuk melihat grafik yang berbeda.",
+            "Tiga tab — Revenue, Orders, Analytics — masing-masing berisi grafik berbeda.",
         side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "reports"),
+    },
+    {
+        id: "overview-revenue",
+        group: "overview",
+        element: '[data-tour="overview-revenue"]',
+        title: "Tab Revenue",
+        description:
+            "Pendapatan per cabang dan komposisi metode bayar sekilas.",
+        side: "top",
         waitForElement: 5000,
         visibleFor: (role) => can(role, "read", "reports"),
     },

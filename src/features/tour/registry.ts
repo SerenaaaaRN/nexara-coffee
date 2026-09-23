@@ -46,8 +46,7 @@ export const TOURS: Record<TourId, TourDef> = {
     overview: {
         id: "overview",
         title: "Tur Halaman Overview",
-        buildSteps: (role) =>
-            stepsFor(role, ["shell", "header", "overview"], true),
+        buildSteps: (role) => stepsFor(role, ["overview"], true),
     },
     orders: {
         id: "orders",

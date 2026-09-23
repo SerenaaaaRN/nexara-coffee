@@ -46,8 +46,8 @@ Satu tur 40+ langkah tidak dipakai. Sebagai gantinya ada registry tur:
 
 | TourId | Isi | Pemicu |
 |---|---|---|
-| `pengenalan` | 14 langkah multi-halaman (intro → … → kasir → outro), satu-satunya yang punya langkah handoff | Auto-start sekali + tombol Help di halaman tanpa tur sendiri |
-| `overview` | Shell (3) + header (1) + overview (2) = 6 langkah — satu-satunya tur halaman yang menyertakan shell karena overview adalah halaman pertama user | Tombol Help saat di `/overview` |
+| `pengenalan` | 15 langkah multi-halaman (intro → … → kasir → outro), satu-satunya yang punya langkah handoff | Auto-start sekali + tombol Help di halaman tanpa tur sendiri |
+| `overview` | Shell (3) + header (1) + overview (3) = 7 langkah — satu-satunya tur halaman yang menyertakan shell karena overview adalah halaman pertama user | Tombol Help saat di `/overview` |
 | `orders` | Konten orders saja (2 langkah) | Tombol Help saat di `/orders` |
 | `kasir` | Konten kasir saja (1–2 langkah, role-filtered) | Tombol Help saat di `/kasir` |
 | `menu` | Konten menu saja (2–3 langkah; tambah-item hanya `create menu`) | Tombol Help saat di `/menu` |
@@ -89,7 +89,7 @@ instance `driver()` hanya dibuat di effect/event handler (aman SSR),
   mapping route terderivasi otomatis dari key `TOURS` (konvensi `/${id}`,
   exception via `ROUTE_OVERRIDES`), mekanisme handoff/resume tak berubah.
 
-## 3. Daftar Langkah (14, Bahasa Indonesia)
+## 3. Daftar Langkah (15, Bahasa Indonesia)
 
 | # | id | Grup | Anchor | Khusus role |
 |---|---|---|---|---|
@@ -99,18 +99,19 @@ instance `driver()` hanya dibuat di effect/event handler (aman SSR),
 | 4 | shell-user | shell | `nav-user` | semua |
 | 5 | header-actions | header | `header-actions` | semua |
 | 6 | overview-stats | overview | `overview-stats` | `read reports` |
-| 7 | overview-tabs | overview | `overview-tabs` | `read reports` |
-| 8 | handoff-orders | orders | `sidebar-nav` → navigate `/orders` | `read orders` |
-| 9 | orders-stats | orders | `orders-stats` | `read orders` |
-| 10 | orders-toolbar | orders | `orders-toolbar` | `read orders` |
-| 11 | handoff-kasir | kasir | `sidebar-nav` → navigate `/kasir` | `read setoran` |
-| 12 | kasir-content | kasir | `kasir-content` | `read setoran` |
-| 13 | kasir-record | kasir | `kasir-record` | `create setoran` |
-| 14 | outro | outro | centered | semua |
+| 7 | overview-tabs | overview | `overview-tabs` (TabsList saja, bukan seluruh blok) | `read reports` |
+| 8 | overview-revenue | overview | `overview-revenue` (grid dalam, tanpa tren) | `read reports` |
+| 9 | handoff-orders | orders | `sidebar-nav` → navigate `/orders` | `read orders` |
+| 10 | orders-stats | orders | `orders-stats` | `read orders` |
+| 11 | orders-toolbar | orders | `orders-toolbar` | `read orders` |
+| 12 | handoff-kasir | kasir | `sidebar-nav` → navigate `/kasir` | `read setoran` |
+| 13 | kasir-content | kasir | `kasir-content` | `read setoran` |
+| 14 | kasir-record | kasir | `kasir-record` | `create setoran` |
+| 15 | outro | outro | centered | semua |
 
 Implikasi per role: barista (tanpa `read setoran`) melewati grup kasir +
-handoff-nya; franchise_owner (tanpa `create setoran`) melewati step 13;
-super_admin melihat semua 14 langkah.
+handoff-nya; franchise_owner (tanpa `create setoran`) melewati step 14;
+super_admin melihat semua 15 langkah.
 
 ## 4. Mekanisme Handoff Antar-Halaman (resumable)
 
@@ -133,7 +134,7 @@ super_admin melihat semua 14 langkah.
 | `routes/_dashboard.tsx` | `header-actions` + render `<TourLauncher />` di sebelah `ThemeSheet` |
 | `components/layout/app-sidebar.tsx` | `team-switcher`, `sidebar-nav`, `nav-user` |
 | `features/overview/components/overview-stats.tsx` | `overview-stats` (termasuk skeleton) |
-| `features/overview/components/overview-page.tsx` | `overview-tabs` (Tabs teruskan props ✓) |
+| `features/overview/components/overview-page.tsx` | `overview-tabs` (TabsList saja), `overview-revenue` (grid dalam) |
 | `features/orders/components/orders-page.tsx` | `orders-stats`, wrapper `orders-toolbar` |
 | `features/kasir/components/kasir-page.tsx` | `kasir-content`, `kasir-record` (cabang kosong) |
 | `features/kasir/components/kasir-table.tsx` | `kasir-record` (cabang tabel) |

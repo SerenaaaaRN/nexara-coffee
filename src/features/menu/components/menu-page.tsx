@@ -322,11 +322,10 @@ export function MenuPage() {
                     <StatCard label="Categories" value={categories.length} />
                 </div>
 
-                <Tabs
-                    value={activeTab}
-                    onValueChange={handleTabChange}
-                    data-tour="menu-tabs">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
+                <Tabs value={activeTab} onValueChange={handleTabChange}>
+                    <div
+                        className="flex flex-wrap items-center justify-between gap-3"
+                        data-tour="menu-tabs">
                         <TabsList className="flex-wrap">
                             <TabsTrigger value="all">
                                 All ({items.length})

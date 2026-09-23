@@ -25,7 +25,9 @@ const routeApi = getRouteApi("/_dashboard/overview");
 function RevenueTab({ d }: { d: OverviewData }) {
     return (
         <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+            <div
+                data-tour="overview-revenue"
+                className="grid gap-4 md:grid-cols-[2fr_1fr]">
                 <RevenueByBranchChart data={d.branchRevenue} />
                 <PaymentMethodChart data={d.paymentMethods} />
             </div>
@@ -82,8 +84,8 @@ export function OverviewPage() {
 
             <StatCards stats={d.stats} />
 
-            <Tabs value={tab} onValueChange={setTab} data-tour="overview-tabs">
-                <TabsList>
+            <Tabs value={tab} onValueChange={setTab}>
+                <TabsList data-tour="overview-tabs">
                     <TabsTrigger value="revenue">Revenue</TabsTrigger>
                     <TabsTrigger value="orders">Orders</TabsTrigger>
                     <TabsTrigger value="analytics">Analytics</TabsTrigger>
