@@ -82,7 +82,7 @@ export function OverviewPage() {
 
             <StatCards stats={d.stats} />
 
-            <Tabs value={tab} onValueChange={setTab}>
+            <Tabs value={tab} onValueChange={setTab} data-tour="overview-tabs">
                 <TabsList>
                     <TabsTrigger value="revenue">Revenue</TabsTrigger>
                     <TabsTrigger value="orders">Orders</TabsTrigger>

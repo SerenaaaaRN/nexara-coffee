@@ -1,0 +1,67 @@
+/* Tema popover tur Nexara — mengikuti token shadcn agar adaptif ke semua theme. */
+
+.driver-popover.nexara-tour {
+    background: var(--popover);
+    color: var(--popover-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    font-family: var(--theme-font-sans);
+}
+
+.driver-popover.nexara-tour .driver-popover-title {
+    color: var(--foreground);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.driver-popover.nexara-tour .driver-popover-description {
+    color: var(--popover-foreground);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.driver-popover.nexara-tour .driver-popover-arrow {
+    border-color: var(--popover);
+}
+
+.driver-popover-side-top.nexara-tour .driver-popover-arrow {
+    border-top-color: var(--popover);
+}
+
+.driver-popover-side-bottom.nexara-tour .driver-popover-arrow {
+    border-bottom-color: var(--popover);
+}
+
+.driver-popover-side-left.nexara-tour .driver-popover-arrow {
+    border-left-color: var(--popover);
+}
+
+.driver-popover-side-right.nexara-tour .driver-popover-arrow {
+    border-right-color: var(--popover);
+}
+
+.driver-popover.nexara-tour .driver-popover-progress-text {
+    color: var(--muted-foreground);
+    font-size: 12px;
+}
+
+.driver-popover.nexara-tour .driver-popover-prev-btn {
+    background: var(--secondary);
+    color: var(--secondary-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    text-shadow: none;
+}
+
+.driver-popover.nexara-tour .driver-popover-next-btn {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    text-shadow: none;
+}
+
+.driver-popover.nexara-tour .driver-popover-close-btn {
+    color: var(--muted-foreground);
+}

@@ -122,13 +122,14 @@ const KasirContent = () => {
         !!effectiveBranchId && (role ? can(role, "create", "setoran") : false);
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4" data-tour="kasir-content">
             {setorans.length === 0 ? (
                 <>
                     <div className="flex justify-end">
                         <Button
                             onClick={() => setCreateOpen(true)}
-                            disabled={!canRecord}>
+                            disabled={!canRecord}
+                            data-tour="kasir-record">
                             <Plus data-icon="inline-start" /> Record Setoran
                         </Button>
                     </div>

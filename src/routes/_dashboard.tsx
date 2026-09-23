@@ -18,6 +18,7 @@ import {
     SidebarProvider,
     SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { TourLauncher } from "@/features/tour/components/tour-launcher";
 import { getSessionFn, loadDashboardFn } from "@/lib/auth-utils";
 import {
     type Action,
@@ -97,7 +98,10 @@ function HeaderLayout() {
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" />
                 <DynamicBreadcrumb />
-                <div className="ml-auto flex items-center gap-1">
+                <div
+                    className="ml-auto flex items-center gap-1"
+                    data-tour="header-actions">
+                    <TourLauncher />
                     <ThemeSheet />
                     <HeaderBranchSwitcher />
                 </div>
