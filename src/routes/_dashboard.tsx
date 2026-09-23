@@ -18,8 +18,15 @@ import {
     SidebarProvider,
     SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { TourLauncher } from "@/features/tour/components/tour-launcher";
 import { getSessionFn, loadDashboardFn } from "@/lib/auth-utils";
-import { type Action, can, type Resource, type Role } from "@/lib/rbac";
+import {
+    type Action,
+    can,
+    getDefaultRouteForRole,
+    type Resource,
+    type Role,
+} from "@/lib/rbac";
 
 const DASHBOARD_GUARDS = {
     "/overview": ["read", "reports"],
@@ -39,12 +46,15 @@ export const Route = createFileRoute("/_dashboard")({
     beforeLoad: async ({ location }) => {
         const session = await getSessionFn();
         if (!session) throw redirect({ to: "/login" });
+        if (session.user.role === "visitor") throw redirect({ to: "/my" });
         const guard =
             DASHBOARD_GUARDS[
                 location.pathname as keyof typeof DASHBOARD_GUARDS
             ];
         if (guard && !can(session.user.role as Role, guard[0], guard[1]))
-            throw redirect({ to: "/" });
+            throw redirect({
+                to: getDefaultRouteForRole(session.user.role as Role),
+            });
         return { session };
     },
     loader: async () => {
@@ -88,7 +98,10 @@ function HeaderLayout() {
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" />
                 <DynamicBreadcrumb />
-                <div className="ml-auto flex items-center gap-1">
+                <div
+                    className="ml-auto flex items-center gap-1"
+                    data-tour="header-actions">
+                    <TourLauncher />
                     <ThemeSheet />
                     <HeaderBranchSwitcher />
                 </div>

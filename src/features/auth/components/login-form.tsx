@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Github } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { type LoginInput, loginSchema } from "@/features/auth/types";
 import { signIn } from "@/lib/auth-client";
+import { getDefaultRouteForRole, type Role } from "@/lib/rbac";
 
 export function LoginForm() {
     const navigate = useNavigate();
@@ -43,7 +44,9 @@ export function LoginForm() {
             return;
         }
         toast.success(`Selamat datang kembali, ${data.user.name}!`);
-        navigate({ to: "/overview" });
+        navigate({
+            to: getDefaultRouteForRole((data.user as { role: Role }).role),
+        });
     }
 
     return (
@@ -138,20 +141,6 @@ export function LoginForm() {
                                 height={15}
                             />
                             Login with Google
-                        </Button>
-                    </Field>
-                    <Field>
-                        <Button
-                            variant="outline"
-                            type="button"
-                            onClick={() =>
-                                signIn.social({
-                                    provider: "github",
-                                    callbackURL: "/overview",
-                                })
-                            }>
-                            <Github />
-                            Login with Github
                         </Button>
                     </Field>
                     <Field>

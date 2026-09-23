@@ -1,0 +1,88 @@
+/* Tema popover tur Nexara — mengikuti token shadcn */
+
+.driver-popover.nexara-tour {
+    background: var(--popover);
+    color: var(--popover-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    font-family: var(--theme-font-sans);
+    min-width: 300px;
+    max-width: 440px;
+    padding: 16px 20px 16px;
+}
+
+.driver-popover.nexara-tour .driver-popover-title {
+    color: var(--foreground);
+    font-size: 19px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.driver-popover.nexara-tour .driver-popover-description {
+    color: var(--popover-foreground);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.driver-popover.nexara-tour .driver-popover-arrow {
+    border-color: var(--popover);
+}
+
+.driver-popover-side-top.nexara-tour .driver-popover-arrow {
+    border-top-color: var(--popover);
+}
+
+.driver-popover-side-bottom.nexara-tour .driver-popover-arrow {
+    border-bottom-color: var(--popover);
+}
+
+.driver-popover-side-left.nexara-tour .driver-popover-arrow {
+    border-left-color: var(--popover);
+}
+
+.driver-popover-side-right.nexara-tour .driver-popover-arrow {
+    border-right-color: var(--popover);
+}
+
+.driver-popover.nexara-tour .driver-popover-progress-text {
+    color: var(--muted-foreground);
+    font-size: 13px;
+}
+
+.driver-popover.nexara-tour .driver-popover-footer {
+    margin-top: 14px;
+}
+
+.driver-popover.nexara-tour .driver-popover-prev-btn,
+.driver-popover.nexara-tour .driver-popover-next-btn {
+    font-size: 14px;
+    padding: 8px 16px;
+}
+
+.driver-popover.nexara-tour .driver-popover-prev-btn {
+    background: var(--secondary);
+    color: var(--secondary-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    text-shadow: none;
+}
+
+.driver-popover.nexara-tour .driver-popover-next-btn {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    text-shadow: none;
+}
+
+.driver-popover.nexara-tour .driver-popover-close-btn {
+    color: var(--muted-foreground);
+}
+
+@media (max-width: 480px) {
+    .driver-popover.nexara-tour {
+        min-width: 0;
+        max-width: calc(100vw - 32px);
+    }
+}

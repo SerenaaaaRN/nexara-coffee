@@ -107,6 +107,7 @@ export interface CustomerRow {
   segment: string;
   loyalty_points: number;
   loyalty_tier: string;
+  user_id: string | null;
   created_at: string;
 }
 
@@ -281,6 +282,13 @@ export interface Database {
           p_start_date: string;
         };
         Returns: Json;
+      };
+      get_customer_order_counts: {
+        Args: Record<string, never>;
+        Returns: {
+          customer_id: string;
+          order_count: number;
+        }[];
       };
     };
     Enums: Record<string, never>;

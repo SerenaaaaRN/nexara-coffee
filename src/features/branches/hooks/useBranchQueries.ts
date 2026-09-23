@@ -8,7 +8,7 @@ import { STALE } from "@/features/stale-time";
  * Mengambil daftar semua cabang dengan detail manajer.
  *
  * Data di-filter berdasarkan hak akses user (branch scope). Jika user memiliki
- * akses ke semua cabang (super_admin/visitor), semua cabang dikembalikan.
+ * akses ke semua cabang (super_admin), semua cabang dikembalikan.
  * Data digabung dengan tabel user untuk mendapatkan nama dan email manajer.
  *
  * @returns {BranchRow[]} Daftar cabang dengan informasi manajer

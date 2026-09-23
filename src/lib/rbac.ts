@@ -113,9 +113,6 @@ const PERMISSIONS: Record<Role, PermissionMap> = {
         maps: ["read"],
     },
     visitor: {
-        branches: ["read"],
-        maps: ["read"],
-        chat: ["read", "create"],
         users: ["read", "update"],
     },
 };
@@ -136,4 +133,12 @@ export function can(role: Role, action: Action, resource: Resource): boolean {
  */
 export function hasLevel(role: Role, minRole: Role): boolean {
     return (ROLE_HIERARCHY[role] ?? 999) <= ROLE_HIERARCHY[minRole];
+}
+
+/**
+ * Route default pasca-login / fallback guard per role.
+ * Role yang bisa baca reports → /overview, sisanya (visitor/customer) → /my.
+ */
+export function getDefaultRouteForRole(role: Role): "/overview" | "/my" {
+    return can(role, "read", "reports") ? "/overview" : "/my";
 }

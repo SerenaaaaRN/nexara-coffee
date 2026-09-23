@@ -27,10 +27,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    useCreateCustomer,
-    useUpdateCustomer,
-} from "@/features/customers/hooks/useCustomerMutations";
+import { useUpdateCustomer } from "@/features/customers/hooks/useCustomerMutations";
 import {
     CUSTOMER_SEGMENTS,
     type CustomerRow,
@@ -56,7 +53,7 @@ type CustomerFormFields = Pick<
 type CustomerFormDialogProps = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    customer?: CustomerFormFields;
+    customer: CustomerFormFields;
     onSuccess: () => void;
 };
 
@@ -66,7 +63,6 @@ export const CustomerFormDialog = ({
     customer,
     onSuccess,
 }: CustomerFormDialogProps) => {
-    const createMutation = useCreateCustomer();
     const updateMutation = useUpdateCustomer();
 
     const { form, resetForm } = useFormDialog(createCustomerSchema, {
@@ -87,35 +83,27 @@ export const CustomerFormDialog = ({
 
     useEffect(() => {
         if (open) {
-            if (customer) {
-                resetForm({
-                    fullName: customer.fullName,
-                    email: customer.email ?? "",
-                    phone: customer.phone ?? "",
-                    segment: customer.segment as FormData["segment"],
-                    loyaltyPoints: customer.loyaltyPoints,
-                    loyaltyTier:
-                        customer.loyaltyTier as FormData["loyaltyTier"],
-                });
-            } else {
-                resetForm();
-            }
+            resetForm({
+                fullName: customer.fullName,
+                email: customer.email ?? "",
+                phone: customer.phone ?? "",
+                segment: customer.segment as FormData["segment"],
+                loyaltyPoints: customer.loyaltyPoints,
+                loyaltyTier: customer.loyaltyTier as FormData["loyaltyTier"],
+            });
         }
     }, [open, customer, resetForm]);
 
     const onSubmit = async (data: FormData) => {
-        const res = customer
-            ? await updateMutation.mutateAsync({ id: customer.id, ...data })
-            : await createMutation.mutateAsync(data);
+        const res = await updateMutation.mutateAsync({
+            id: customer.id,
+            ...data,
+        });
         if (res.success) {
-            toast.success(customer ? "Customer updated" : "Customer created");
+            toast.success("Customer updated");
             onSuccess();
         } else {
-            toast.error(
-                customer
-                    ? "Failed to update customer"
-                    : "Failed to create customer",
-            );
+            toast.error("Failed to update customer");
         }
     };
 
@@ -123,13 +111,9 @@ export const CustomerFormDialog = ({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>
-                        {customer ? "Edit Customer" : "Add Customer"}
-                    </DialogTitle>
+                    <DialogTitle>Edit Customer</DialogTitle>
                     <DialogDescription>
-                        {customer
-                            ? "Update customer details below."
-                            : "Fill in the details to add a new customer."}
+                        Update customer details below.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -293,7 +277,7 @@ export const CustomerFormDialog = ({
                             {isSubmitting ? (
                                 <Loader2 data-icon="inline-start" />
                             ) : null}
-                            {customer ? "Update" : "Create"}
+                            Update
                         </Button>
                     </DialogFooter>
                 </form>

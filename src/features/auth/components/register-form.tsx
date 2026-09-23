@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Github } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -194,10 +194,6 @@ export function RegisterForm() {
                         height={15}
                     />
                     Sign up with Google
-                </Button>
-                <Button variant="outline" type="button" className="w-full">
-                    <Github />
-                    Sign up with GitHub
                 </Button>
             </div>
 

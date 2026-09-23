@@ -12,45 +12,7 @@ import type {
 const RATE = { messages: 30, users: 20 } as const;
 
 /**
- * Mengecek apakah seorang visitor boleh mengakses suatu channel.
- *
- * Visitor hanya boleh membuka channel global dan DM yang ia ikuti.
- * Channel cabang selalu ditolak untuk visitor.
- *
- * @param channelId - ID channel yang dicek
- * @param userId - ID visitor
- * @returns true jika channel global atau DM milik visitor
- */
-export async function isChannelVisibleToVisitor(
-    channelId: string,
-    userId: string,
-): Promise<boolean> {
-    const { supabaseAdmin } = await import("@database/server");
-
-    const { data: channel } = await supabaseAdmin
-        .from("chat_channels")
-        .select("id, type")
-        .eq("id", channelId)
-        .maybeSingle();
-
-    if (!channel) return false;
-    if (channel.type === "global") return true;
-    if (channel.type !== "direct") return false;
-
-    const { data: membership } = await supabaseAdmin
-        .from("chat_channel_members")
-        .select("id")
-        .eq("channel_id", channelId)
-        .eq("user_id", userId)
-        .maybeSingle();
-
-    return membership !== null;
-}
-
-/**
  * Mengambil daftar channel chat yang dapat diakses oleh user.
- *
- * Visitor hanya melihat channel global dan DM yang ia ikuti.
  *
  * @returns Daftar channel (termasuk pesan terakhir dan jumlah member).
  */
@@ -100,10 +62,8 @@ export const getUserChannelsFn = createServerFn({ method: "GET" }).handler(
 
         const channelRows = (channels ?? []) as unknown as ChatChannelJoined[];
 
-        const isVisitor = auth.session.user.role === "visitor";
         const visible = channelRows.filter((c) => {
             if (c.type === "direct") return myChannelIds.has(c.id);
-            if (isVisitor) return c.type === "global";
             if (branchIds === null) return true;
             if (branchIds.length === 0) return c.type === "global";
             return (
@@ -183,8 +143,6 @@ export const getUserChannelsFn = createServerFn({ method: "GET" }).handler(
 /**
  * Mengambil daftar pesan dari suatu channel.
  *
- * Visitor hanya boleh membaca channel global dan DM miliknya.
- *
  * @param channelId - ID channel chat
  * @param before - Opsional, batas waktu (cursor) untuk mengambil pesan yang lebih lama
  * @param limit - Opsional, batas jumlah pesan yang diambil (default 50)
@@ -216,15 +174,6 @@ export const getChannelMessagesFn = createServerFn({ method: "GET" })
         }
 
         const { supabaseAdmin } = await import("@database/server");
-
-        if (auth.session.user.role === "visitor") {
-            const allowed = await isChannelVisibleToVisitor(
-                channelId,
-                auth.session.user.id,
-            );
-            if (!allowed)
-                return { success: false as const, error: "Forbidden" };
-        }
 
         let messagesQuery = supabaseAdmin
             .from("chat_messages")
@@ -266,8 +215,6 @@ export const getChannelMessagesFn = createServerFn({ method: "GET" })
 /**
  * Mengambil daftar seluruh user (kecuali diri sendiri) yang bisa dihubungi via Direct Message.
  *
- * Visitor tidak boleh memulai DM sehingga selalu ditolak di sini.
- *
  * @returns Daftar user (id, name, email, image)
  */
 export const getAvailableUsersFn = createServerFn({ method: "GET" }).handler(
@@ -276,9 +223,6 @@ export const getAvailableUsersFn = createServerFn({ method: "GET" }).handler(
         const auth = await requireAccessAction("read", "chat");
         if (!auth.success)
             return { success: false as const, error: auth.error };
-
-        if (auth.session.user.role === "visitor")
-            return { success: false as const, error: "Forbidden" };
 
         const { rateLimit } = await import("@/lib/rate-limit");
         if (

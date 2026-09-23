@@ -66,7 +66,8 @@ function SelectContent({
         <SelectPrimitive.Portal>
             <SelectPrimitive.Positioner
                 alignItemWithTrigger={position === "item-aligned"}
-                align={align}>
+                align={align}
+                className="z-60 outline-none">
                 <SelectPrimitive.Popup
                     data-slot="select-content"
                     data-align-trigger={position === "item-aligned"}

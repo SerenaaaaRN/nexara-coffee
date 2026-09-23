@@ -9,6 +9,7 @@ CREATE TABLE "customers" (
   "segment" text DEFAULT 'regular' NOT NULL,
   "loyalty_points" integer DEFAULT 0 NOT NULL,
   "loyalty_tier" text DEFAULT 'bronze' NOT NULL,
+  "user_id" text,
   "created_at" timestamp DEFAULT now() NOT NULL
 );
 
@@ -30,6 +31,9 @@ ALTER TABLE "reviews" ADD CONSTRAINT "reviews_customer_id_customers_id_fk"
   FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "reviews" ADD CONSTRAINT "reviews_order_id_orders_id_fk"
   FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "customers" ADD CONSTRAINT "customers_user_id_user_id_fk"
+  FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
 
 CREATE INDEX "reviews_branch_id_idx" ON "reviews" USING btree ("branch_id");
 CREATE INDEX "reviews_customer_id_idx" ON "reviews" USING btree ("customer_id");
+CREATE UNIQUE INDEX "customers_user_id_idx" ON "customers" USING btree ("user_id");

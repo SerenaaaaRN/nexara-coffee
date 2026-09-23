@@ -150,7 +150,9 @@ function OrdersContent() {
                 </Empty>
             ) : (
                 <>
-                    <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
+                    <div
+                        className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4"
+                        data-tour="orders-stats">
                         <StatCard
                             label="Total Orders"
                             value={filteredRows.length}
@@ -173,23 +175,29 @@ function OrdersContent() {
                         />
                     </div>
 
-                    <FilterToolbar
-                        tableState={tableState}
-                        searchPlaceholder={searchPlaceholder}
-                        filters={filterConfigs}
-                        total={orders.length}
-                        filtered={filteredRows.length}>
-                        <Tabs
-                            value={search.view ?? "table"}
-                            onValueChange={(v) =>
-                                onViewChange(v as "table" | "board")
-                            }>
-                            <TabsList>
-                                <TabsTrigger value="table">Table</TabsTrigger>
-                                <TabsTrigger value="board">Board</TabsTrigger>
-                            </TabsList>
-                        </Tabs>
-                    </FilterToolbar>
+                    <div data-tour="orders-toolbar">
+                        <FilterToolbar
+                            tableState={tableState}
+                            searchPlaceholder={searchPlaceholder}
+                            filters={filterConfigs}
+                            total={orders.length}
+                            filtered={filteredRows.length}>
+                            <Tabs
+                                value={search.view ?? "table"}
+                                onValueChange={(v) =>
+                                    onViewChange(v as "table" | "board")
+                                }>
+                                <TabsList>
+                                    <TabsTrigger value="table">
+                                        Table
+                                    </TabsTrigger>
+                                    <TabsTrigger value="board">
+                                        Board
+                                    </TabsTrigger>
+                                </TabsList>
+                            </Tabs>
+                        </FilterToolbar>
+                    </div>
 
                     {(search.view ?? "table") === "table" ? (
                         <div className="flex flex-col gap-4">

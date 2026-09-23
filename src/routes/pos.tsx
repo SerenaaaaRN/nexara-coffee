@@ -9,6 +9,7 @@ import {
 } from "@/features/menu/hooks/useMenuQueries";
 import { POSPage } from "@/features/pos/components/pos-page";
 import { getSessionFn, loadDashboardFn } from "@/lib/auth-utils";
+import { getDefaultRouteForRole, type Role } from "@/lib/rbac";
 
 const posSearchSchema = z.object({
     branch: z.string().optional(),
@@ -27,7 +28,9 @@ export const Route = createFileRoute("/pos")({
             role !== "branch_manager" &&
             role !== "cashier"
         ) {
-            throw redirect({ to: "/overview" });
+            throw redirect({
+                to: getDefaultRouteForRole(role as Role),
+            });
         }
         return { session };
     },

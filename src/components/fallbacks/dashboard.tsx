@@ -353,6 +353,33 @@ export function SettingsSkeleton() {
     );
 }
 
+export function MyPortalSkeleton() {
+    return (
+        <div className="min-h-svh bg-background">
+            <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-4 md:px-6">
+                <Skeleton className="h-8 w-40" />
+                <div className="ml-auto">
+                    <Skeleton className="h-8 w-20 rounded-md" />
+                </div>
+            </div>
+            <div className="mx-auto max-w-5xl px-4 md:px-6">
+                <div className="flex gap-1 py-4">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton key={i} className="h-9 w-28 rounded-md" />
+                    ))}
+                </div>
+                <Separator className="mb-6" />
+                <SkeletonHeader />
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton key={i} className="h-20 rounded-xl" />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function LandingSkeleton() {
     return (
         <div className="min-h-svh bg-background">
