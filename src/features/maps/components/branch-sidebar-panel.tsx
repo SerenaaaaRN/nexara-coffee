@@ -59,7 +59,9 @@ export const BranchSidebarPanel = memo(
         };
         return (
             <>
-                <div className="absolute left-2 top-2 z-10 flex w-[calc(100%-1rem)] flex-col gap-2 md:left-4 md:top-4 md:w-80">
+                <div
+                    data-tour="maps-search"
+                    className="absolute left-2 top-2 z-10 flex w-[calc(100%-1rem)] flex-col gap-2 md:left-4 md:top-4 md:w-80">
                     <div className="flex items-center gap-2 rounded-lg border bg-background/95 p-2 shadow-lg backdrop-blur">
                         <div className="relative flex-1">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -159,7 +161,9 @@ export const BranchSidebarPanel = memo(
                     ) : null}
                 </div>
 
-                <div className="pointer-events-none absolute right-4 top-4 z-10 rounded-md border bg-background/90 p-2 shadow-sm backdrop-blur md:right-6 md:top-6">
+                <div
+                    data-tour="maps-legend"
+                    className="pointer-events-none absolute right-4 top-4 z-10 rounded-md border bg-background/90 p-2 shadow-sm backdrop-blur md:right-6 md:top-6">
                     <div className="mb-1.5 px-1 text-xs font-semibold">
                         Legend
                     </div>

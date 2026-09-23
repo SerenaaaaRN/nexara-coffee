@@ -30,7 +30,7 @@ export const CustomerGrid = ({
 }: CustomerGridProps) => {
     if (customers.length === 0) {
         return (
-            <Empty>
+            <Empty data-tour="customers-grid">
                 <EmptyMedia variant="icon">
                     <Users />
                 </EmptyMedia>
@@ -44,7 +44,7 @@ export const CustomerGrid = ({
 
     if (filtered.length === 0) {
         return (
-            <Empty>
+            <Empty data-tour="customers-grid">
                 <EmptyMedia variant="icon">
                     <Users />
                 </EmptyMedia>
@@ -58,7 +58,9 @@ export const CustomerGrid = ({
 
     return (
         <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+                data-tour="customers-grid"
+                className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {filtered.map((c) => (
                     <button
                         type="button"

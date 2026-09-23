@@ -3,23 +3,37 @@ import { CircleHelp } from "lucide-react";
 import { useEffect, useRef } from "react";
 import "driver.js/dist/driver.css";
 import { Button } from "@/components/ui/button";
-import {
-    getSavedResume,
-    isTourDone,
-    TOURS,
-    tourForPathname,
-} from "@/features/tour/data";
 import { useGuidedTour } from "@/features/tour/hooks/useGuidedTour";
-import type { TourHandoffTarget } from "@/features/tour/types";
+import { TOURS, tourForPathname } from "@/features/tour/registry";
+import { getSavedResume, isTourDone } from "@/features/tour/storage";
+import type { TourHandoffTarget, TourId } from "@/features/tour/types";
 import { useSession } from "@/lib/auth-client";
 import type { Role } from "@/lib/rbac";
 import "./tour-styles.css";
 
 /**
+ * Tur halaman layak auto-start: pengenalan sudah selesai (anti tabrakan),
+ * tak ada resume handoff yang menunggu, ada langkah untuk role ini, belum
+ * pernah selesai/dismiss, dan belum di-auto sesi ini.
+ */
+const isPageTourDue = (
+    role: Role,
+    tourId: TourId,
+    autoStarted: Set<TourId>,
+): boolean =>
+    isTourDone("pengenalan") &&
+    getSavedResume() === null &&
+    tourId !== "pengenalan" &&
+    !autoStarted.has(tourId) &&
+    TOURS[tourId].buildSteps(role).length > 0 &&
+    !isTourDone(tourId);
+
+/**
  * Tombol bantuan icon-only di header dashboard. Context-aware: menjalankan
  * tur pendek halaman aktif, fallback ke tur
- * pengenalan di halaman lain. Tur pengenalan auto-start sekali; tur
- * per-halaman hanya manual agar tak mengganggu.
+ * pengenalan di halaman lain. Tur pengenalan auto-start sekali; tiap tur
+ * per-halaman juga auto-start sekali (kunjungan pertama) setelah pengenalan
+ * selesai — dismiss (Esc/backdrop/×) tercatat selesai via markTourDone.
  */
 export const TourLauncher = () => {
     const { data: session } = useSession();
@@ -29,6 +43,7 @@ export const TourLauncher = () => {
         select: (location) => location.pathname,
     });
     const autoStartedRef = useRef(false);
+    const autoPageRef = useRef<Set<TourId>>(new Set());
 
     const { startTour } = useGuidedTour(role, (to: TourHandoffTarget) => {
         void navigate({ to });
@@ -53,6 +68,19 @@ export const TourLauncher = () => {
         const timer = setTimeout(() => startTour("pengenalan", 0), 800);
         return () => clearTimeout(timer);
     }, [role, startTour]);
+
+    // Auto sekali per tur halaman, dijalankan tiap pindah halaman.
+    useEffect(() => {
+        if (
+            !role ||
+            !pathname ||
+            !isPageTourDue(role, candidate, autoPageRef.current)
+        )
+            return;
+        autoPageRef.current.add(candidate);
+        const timer = setTimeout(() => startTour(candidate, 0), 800);
+        return () => clearTimeout(timer);
+    }, [role, pathname, candidate, startTour]);
 
     return (
         <Button

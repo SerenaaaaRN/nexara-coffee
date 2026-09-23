@@ -1,18 +1,17 @@
 import { type Driver, type DriveStep, driver } from "driver.js";
 import { useCallback, useEffect, useRef } from "react";
+import { TOURS } from "@/features/tour/registry";
 import {
     clearSavedResume,
     markTourDone,
     saveResume,
-    TOURS,
-} from "@/features/tour/data";
+} from "@/features/tour/storage";
 import type { TourId } from "@/features/tour/types";
 import type { Role } from "@/lib/rbac";
 
 /**
- * Hook instance driver.js untuk tur dashboard. Membuat instance saat
- * `startTour` dipanggil (bukan di module top-level, aman untuk SSR) dan
- * menghancurkannya saat unmount agar overlay tak tertinggal pindah rute.
+ * Hook instance driver.js untuk tur dashboard.
+ *
  */
 export const useGuidedTour = (
     role: Role | undefined,
@@ -25,7 +24,6 @@ export const useGuidedTour = (
     const onNavigateRef = useRef(onNavigate);
     onNavigateRef.current = onNavigate;
 
-    /** Hancurkan tur aktif bila ada. */
     const destroyTour = useCallback(() => {
         driverRef.current?.destroy();
         driverRef.current = null;
@@ -47,17 +45,18 @@ export const useGuidedTour = (
             const steps: DriveStep[] = defs.map((def, idx) => ({
                 element: def.element,
                 waitForElement: def.waitForElement,
+                advanceOnClick: def.advanceOnClick,
                 popover: {
                     title: def.title,
                     description: def.description,
                     side: def.side,
                     align: def.align,
+                    nextBtnText: idx < defs.length - 1 ? "Lanjut" : undefined,
                     ...(def.navigateTo
                         ? {
                               onNextClick: (_el, _step, opts) => {
                                   const tour = driverRef.current;
                                   if (!tour || !def.navigateTo) return;
-                                  // Sudah di halaman tujuan: lanjut biasa.
                                   if (
                                       window.location.pathname ===
                                       def.navigateTo
@@ -89,7 +88,6 @@ export const useGuidedTour = (
                 skipMissingElement: true,
                 onDestroyed: () => {
                     driverRef.current = null;
-                    // Handoff / unmount: jangan tandai selesai, simpan resume.
                     if (navigatingRef.current) {
                         navigatingRef.current = false;
                         return;

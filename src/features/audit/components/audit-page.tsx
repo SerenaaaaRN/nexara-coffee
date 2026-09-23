@@ -59,7 +59,7 @@ export const AuditPage = () => {
                     />
 
                     {filtered.length === 0 ? (
-                        <div className="py-12">
+                        <div className="py-12" data-tour="audit-list">
                             <Empty>
                                 <EmptyMedia variant="icon">
                                     <Search className="size-6" />
@@ -73,7 +73,9 @@ export const AuditPage = () => {
                             </Empty>
                         </div>
                     ) : (
-                        <ScrollArea className="h-[calc(100vh-22rem)] pr-4">
+                        <ScrollArea
+                            data-tour="audit-list"
+                            className="h-[calc(100vh-22rem)] pr-4">
                             <div className="flex flex-col gap-6">
                                 {grouped.map((group) => (
                                     <div key={group.label}>

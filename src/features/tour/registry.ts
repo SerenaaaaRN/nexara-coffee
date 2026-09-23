@@ -1,0 +1,144 @@
+import type {
+    TourDef,
+    TourGroup,
+    TourId,
+    TourStepDef,
+} from "@/features/tour/types";
+import type { Role } from "@/lib/rbac";
+import { ALL_STEPS } from "./data";
+
+/**
+ * Ambil langkah dari grup tertentu. Tur per-halaman membuang langkah handoff
+ * (tak perlu pindah halaman); tur pengenalan memakai semuanya.
+ */
+const stepsFor = (
+    role: Role,
+    groups: TourGroup[],
+    excludeHandoff: boolean,
+): TourStepDef[] =>
+    ALL_STEPS.filter(
+        (step) =>
+            groups.includes(step.group) &&
+            (!excludeHandoff || !step.navigateTo) &&
+            (step.visibleFor?.(role) ?? true),
+    );
+
+/** Registry tur: pengenalan multi-halaman + tur pendek per halaman. */
+export const TOURS: Record<TourId, TourDef> = {
+    pengenalan: {
+        id: "pengenalan",
+        title: "Tur Pengenalan Nexara",
+        buildSteps: (role) =>
+            stepsFor(
+                role,
+                [
+                    "intro",
+                    "shell",
+                    "header",
+                    "overview",
+                    "orders",
+                    "kasir",
+                    "outro",
+                ],
+                false,
+            ),
+    },
+    overview: {
+        id: "overview",
+        title: "Tur Halaman Overview",
+        buildSteps: (role) =>
+            stepsFor(role, ["shell", "header", "overview"], true),
+    },
+    orders: {
+        id: "orders",
+        title: "Tur Halaman Orders",
+        buildSteps: (role) => stepsFor(role, ["orders"], true),
+    },
+    kasir: {
+        id: "kasir",
+        title: "Tur Halaman Kasir",
+        buildSteps: (role) => stepsFor(role, ["kasir"], true),
+    },
+    menu: {
+        id: "menu",
+        title: "Tur Halaman Menu",
+        buildSteps: (role) => stepsFor(role, ["menu"], true),
+    },
+    transactions: {
+        id: "transactions",
+        title: "Tur Halaman Transactions",
+        buildSteps: (role) => stepsFor(role, ["transactions"], true),
+    },
+    branches: {
+        id: "branches",
+        title: "Tur Halaman Branches",
+        buildSteps: (role) => stepsFor(role, ["branches"], true),
+    },
+    maps: {
+        id: "maps",
+        title: "Tur Halaman Maps",
+        buildSteps: (role) => stepsFor(role, ["maps"], true),
+    },
+    customers: {
+        id: "customers",
+        title: "Tur Halaman Customers",
+        buildSteps: (role) => stepsFor(role, ["customers"], true),
+    },
+    reviews: {
+        id: "reviews",
+        title: "Tur Halaman Reviews",
+        buildSteps: (role) => stepsFor(role, ["reviews"], true),
+    },
+    employee: {
+        id: "employee",
+        title: "Tur Halaman Employee",
+        buildSteps: (role) => stepsFor(role, ["employee"], true),
+    },
+    payouts: {
+        id: "payouts",
+        title: "Tur Halaman Payouts",
+        buildSteps: (role) => stepsFor(role, ["payouts"], true),
+    },
+    chat: {
+        id: "chat",
+        title: "Tur Halaman Chat",
+        buildSteps: (role) => stepsFor(role, ["chat"], true),
+    },
+    audit: {
+        id: "audit",
+        title: "Tur Halaman Audit",
+        buildSteps: (role) => stepsFor(role, ["audit"], true),
+    },
+    notifications: {
+        id: "notifications",
+        title: "Tur Halaman Notifications",
+        buildSteps: (role) => stepsFor(role, ["notifications"], true),
+    },
+    settings: {
+        id: "settings",
+        title: "Tur Halaman Settings",
+        buildSteps: (role) => stepsFor(role, ["settings"], true),
+    },
+    pos: {
+        id: "pos",
+        title: "Tur Halaman POS",
+        buildSteps: (role) => stepsFor(role, ["pos"], true),
+    },
+};
+
+const ROUTE_OVERRIDES: Partial<Record<TourId, string>> = {};
+
+/**
+ * Mapping route → tur, diderivasi dari TOURS (single source of truth).
+ */
+const routeTourMap: [string, TourId][] = (Object.keys(TOURS) as TourId[])
+    .filter((id) => id !== "pengenalan")
+    .map((id) => [ROUTE_OVERRIDES[id] ?? `/${id}`, id] as [string, TourId])
+    .sort((a, b) => b[0].length - a[0].length);
+
+/** Petakan pathname aktif ke tur per-halaman; default tur pengenalan. */
+export const tourForPathname = (pathname: string): TourId =>
+    routeTourMap.find(([prefix]) => pathname.startsWith(prefix))?.[1] ??
+    "pengenalan";
+
+export const isKnownTourId = (value: string): value is TourId => value in TOURS;

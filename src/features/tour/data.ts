@@ -1,23 +1,7 @@
-import type {
-    TourDef,
-    TourGroup,
-    TourId,
-    TourStepDef,
-} from "@/features/tour/types";
-import { can, type Role } from "@/lib/rbac";
+import type { TourStepDef } from "@/features/tour/types";
+import { can } from "@/lib/rbac";
 
-/** Flag "tur pernah selesai" model lama (sebelum registry per-tour). */
-const LEGACY_DONE_KEY = "nexara-tour-v1-done";
-
-/** Kunci indeks resume untuk handoff antar-halaman. */
-export const TOUR_STEP_KEY = "nexara-tour-step";
-
-/** Kunci flag selesai per tur, mis. `nexara-tour-kasir-done`. */
-export const doneKeyFor = (tourId: TourId): string =>
-    `nexara-tour-${tourId}-done`;
-
-/** Semua langkah tur pengenalan dalam Bahasa Indonesia, urut intro ke outro. */
-const ALL_STEPS: TourStepDef[] = [
+export const ALL_STEPS: TourStepDef[] = [
     {
         id: "intro",
         group: "intro",
@@ -247,139 +231,356 @@ const ALL_STEPS: TourStepDef[] = [
         waitForElement: 5000,
         visibleFor: (role) => can(role, "read", "branches"),
     },
+    {
+        id: "maps-search",
+        group: "maps",
+        element: '[data-tour="maps-search"]',
+        title: "Cari cabang",
+        description:
+            "Cari cabang berdasarkan nama, lalu buka daftar untuk melompat ke lokasinya di peta.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "maps"),
+    },
+    {
+        id: "maps-canvas",
+        group: "maps",
+        element: '[data-tour="maps-canvas"]',
+        title: "Peta cabang",
+        description:
+            "Jelajahi lokasi semua cabang. Klik marker untuk melihat jam buka, kontak, dan manajer.",
+        side: "top",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "maps"),
+    },
+    {
+        id: "maps-legend",
+        group: "maps",
+        element: '[data-tour="maps-legend"]',
+        title: "Legenda",
+        description:
+            "Biru berarti cabang milik perusahaan, oranye berarti mitra franchise.",
+        side: "left",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "maps"),
+    },
+    {
+        id: "customers-stats",
+        group: "customers",
+        element: '[data-tour="customers-stats"]',
+        title: "Ringkasan pelanggan",
+        description:
+            "Total pelanggan, total order, dan akumulasi poin loyalty.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "customers"),
+    },
+    {
+        id: "customers-toolbar",
+        group: "customers",
+        element: '[data-tour="customers-toolbar"]',
+        title: "Cari & filter",
+        description:
+            "Cari pelanggan dan filter berdasarkan segmen atau tier loyalty.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "customers"),
+    },
+    {
+        id: "customers-grid",
+        group: "customers",
+        element: '[data-tour="customers-grid"]',
+        title: "Kartu pelanggan",
+        description:
+            "Klik kartu untuk melihat detail, riwayat order, dan mengelola poin loyalty.",
+        side: "top",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "customers"),
+    },
+    {
+        id: "reviews-stats",
+        group: "reviews",
+        element: '[data-tour="reviews-stats"]',
+        title: "Ringkasan ulasan",
+        description:
+            "Rating rata-rata, total ulasan, serta jumlah yang menunggu dan disetujui.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "reviews"),
+    },
+    {
+        id: "reviews-toolbar",
+        group: "reviews",
+        element: '[data-tour="reviews-toolbar"]',
+        title: "Cari & filter",
+        description: "Cari ulasan dan filter berdasarkan status atau rating.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "reviews"),
+    },
+    {
+        id: "reviews-content",
+        group: "reviews",
+        element: '[data-tour="reviews-content"]',
+        title: "Daftar ulasan",
+        description:
+            "Moderasi ulasan pelanggan di sini — balas ulasan langsung dari tiap baris.",
+        side: "top",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "reviews"),
+    },
+    {
+        id: "employee-stats",
+        group: "employee",
+        element: '[data-tour="employee-stats"]',
+        title: "Ringkasan karyawan",
+        description: "Total karyawan, sebaran cabang, dan total gaji pokok.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "employee"),
+    },
+    {
+        id: "employee-toolbar",
+        group: "employee",
+        element: '[data-tour="employee-toolbar"]',
+        title: "Cari & filter",
+        description: "Cari karyawan dan filter berdasarkan role atau cabang.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "employee"),
+    },
+    {
+        id: "employee-add",
+        group: "employee",
+        element: '[data-tour="employee-add"]',
+        title: "Tambah karyawan",
+        description:
+            "Tempatkan user ke cabang beserta gaji pokok dan tanggal masuknya.",
+        side: "bottom",
+        align: "end",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "create", "employee"),
+    },
+    {
+        id: "payouts-stats",
+        group: "payouts",
+        element: '[data-tour="payouts-stats"]',
+        title: "Ringkasan payout",
+        description:
+            "Total yang diminta, yang disetujui, dan pengajuan yang menunggu.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "payouts"),
+    },
+    {
+        id: "payouts-toolbar",
+        group: "payouts",
+        element: '[data-tour="payouts-toolbar"]',
+        title: "Cari & filter",
+        description: "Cari pengajuan dan filter berdasarkan status.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "payouts"),
+    },
+    {
+        id: "payouts-content",
+        group: "payouts",
+        element: '[data-tour="payouts-content"]',
+        title: "Daftar pengajuan",
+        description:
+            "Tinjau pengajuan bagi hasil mitra, lalu setujui yang sudah valid.",
+        side: "top",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "payouts"),
+    },
+    {
+        id: "chat-inbox",
+        group: "chat",
+        element: '[data-tour="chat-inbox"]',
+        title: "Kotak masuk",
+        description:
+            "Semua channel global, cabang, dan pesan langsung ada di sini. Cari percakapan lewat kolom search.",
+        side: "right",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "chat"),
+    },
+    {
+        id: "chat-conversation",
+        group: "chat",
+        element: '[data-tour="chat-conversation"]',
+        title: "Ruang percakapan",
+        description:
+            "Baca dan ikuti diskusi channel yang sedang aktif di panel ini.",
+        side: "left",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "chat"),
+    },
+    {
+        id: "chat-form",
+        group: "chat",
+        element: '[data-tour="chat-form"]',
+        title: "Kirim pesan",
+        description:
+            "Ketik pesan di sini lalu tekan kirim — terkirim real-time ke semua anggota channel.",
+        side: "top",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "create", "chat"),
+    },
+    {
+        id: "audit-toolbar",
+        group: "audit",
+        element: '[data-tour="audit-toolbar"]',
+        title: "Cari & filter",
+        description:
+            "Cari aktivitas berdasarkan pelaku, cabang, atau tabel — lalu filter per aksi.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "system"),
+    },
+    {
+        id: "audit-list",
+        group: "audit",
+        element: '[data-tour="audit-list"]',
+        title: "Linimasa audit",
+        description:
+            "Semua perubahan tercatat di sini. Klik item untuk melihat detail metadata-nya.",
+        side: "top",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "system"),
+    },
+    {
+        id: "notifications-tabs",
+        group: "notifications",
+        element: '[data-tour="notifications-tabs"]',
+        title: "Filter notifikasi",
+        description: "Beralih antara semua, belum dibaca, dan sudah dibaca.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "notifications"),
+    },
+    {
+        id: "notifications-list",
+        group: "notifications",
+        element: '[data-tour="notifications-list"]',
+        title: "Daftar notifikasi",
+        description:
+            "Klik notifikasi untuk menandainya dibaca, atau tandai semua sekaligus.",
+        side: "top",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "notifications"),
+    },
+    {
+        id: "settings-nav",
+        group: "settings",
+        element: '[data-tour="settings-nav"]',
+        title: "Bagian pengaturan",
+        description:
+            "Pindah antar bagian Profile, Account, Appearance, dan User Management.",
+        side: "right",
+        waitForElement: 5000,
+    },
+    {
+        id: "settings-content",
+        group: "settings",
+        element: '[data-tour="settings-content"]',
+        title: "Form pengaturan",
+        description:
+            "Kelola profil, password, dan tampilan akun kamu di sini. Pindah bagian lewat navigasi untuk melihat panduan tiap form.",
+        side: "left",
+        waitForElement: 5000,
+    },
+    {
+        id: "settings-avatar",
+        group: "settings",
+        element: '[data-tour="settings-avatar"]',
+        title: "Foto profil",
+        description:
+            "Klik avatar atau tombol kamera untuk memilih foto baru (JPEG, PNG, WebP, atau GIF, maks 5MB), lalu tekan Save Avatar.",
+        side: "right",
+        waitForElement: 5000,
+    },
+    {
+        id: "settings-goto-account",
+        group: "settings",
+        element: '[data-tour="settings-goto-account"]',
+        title: "Buka bagian Account",
+        description:
+            "Klik tombol Account untuk lanjut ke panduan ubah password.",
+        side: "right",
+        waitForElement: 5000,
+        advanceOnClick: true,
+    },
+    {
+        id: "settings-password",
+        group: "settings",
+        element: '[data-tour="settings-password"]',
+        title: "Ubah password",
+        description:
+            "Isi password lama, password baru, dan konfirmasinya, lalu simpan.",
+        side: "right",
+        waitForElement: 5000,
+    },
+    {
+        id: "settings-goto-appearance",
+        group: "settings",
+        element: '[data-tour="settings-goto-appearance"]',
+        title: "Buka bagian Appearance",
+        description:
+            "Klik tombol Appearance untuk lanjut ke panduan ubah tema.",
+        side: "right",
+        waitForElement: 5000,
+        advanceOnClick: true,
+    },
+    {
+        id: "settings-theme",
+        group: "settings",
+        element: '[data-tour="settings-theme"]',
+        title: "Ubah tema",
+        description:
+            "Pilih salah satu tema, atau tekan tombol D untuk berganti tema dengan cepat.",
+        side: "top",
+        waitForElement: 5000,
+    },
+    {
+        id: "pos-catalog",
+        group: "pos",
+        element: '[data-tour="pos-catalog"]',
+        title: "Katalog menu",
+        description:
+            "Cari menu dan filter per kategori, lalu klik kartu untuk menambah ke order.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) =>
+            role === "super_admin" ||
+            role === "branch_manager" ||
+            role === "cashier",
+    },
+    {
+        id: "pos-cart",
+        group: "pos",
+        element: '[data-tour="pos-cart"]',
+        title: "Order berjalan",
+        description:
+            "Item yang dipilih terkumpul di sini — atur jumlah atau hapus sebelum bayar.",
+        side: "left",
+        waitForElement: 5000,
+        visibleFor: (role) =>
+            role === "super_admin" ||
+            role === "branch_manager" ||
+            role === "cashier",
+    },
+    {
+        id: "pos-charge",
+        group: "pos",
+        element: '[data-tour="pos-charge"]',
+        title: "Bayar order",
+        description:
+            "Tekan tombol ini untuk memilih metode bayar dan mencatat nomor HP member.",
+        side: "top",
+        waitForElement: 5000,
+        visibleFor: (role) =>
+            role === "super_admin" ||
+            role === "branch_manager" ||
+            role === "cashier",
+    },
 ];
-
-/**
- * Ambil langkah dari grup tertentu. Tur per-halaman membuang langkah handoff
- * (tak perlu pindah halaman); tur pengenalan memakai semuanya.
- */
-const stepsFor = (
-    role: Role,
-    groups: TourGroup[],
-    excludeHandoff: boolean,
-): TourStepDef[] =>
-    ALL_STEPS.filter(
-        (step) =>
-            groups.includes(step.group) &&
-            (!excludeHandoff || !step.navigateTo) &&
-            (step.visibleFor?.(role) ?? true),
-    );
-
-/** Registry tur: pengenalan multi-halaman + tur pendek per halaman. */
-export const TOURS: Record<TourId, TourDef> = {
-    pengenalan: {
-        id: "pengenalan",
-        title: "Tur Pengenalan Nexara",
-        buildSteps: (role) =>
-            stepsFor(
-                role,
-                [
-                    "intro",
-                    "shell",
-                    "header",
-                    "overview",
-                    "orders",
-                    "kasir",
-                    "outro",
-                ],
-                false,
-            ),
-    },
-    overview: {
-        id: "overview",
-        title: "Tur Halaman Overview",
-        buildSteps: (role) =>
-            stepsFor(role, ["shell", "header", "overview"], true),
-    },
-    orders: {
-        id: "orders",
-        title: "Tur Halaman Orders",
-        buildSteps: (role) => stepsFor(role, ["orders"], true),
-    },
-    kasir: {
-        id: "kasir",
-        title: "Tur Halaman Kasir",
-        buildSteps: (role) => stepsFor(role, ["kasir"], true),
-    },
-    menu: {
-        id: "menu",
-        title: "Tur Halaman Menu",
-        buildSteps: (role) => stepsFor(role, ["menu"], true),
-    },
-    transactions: {
-        id: "transactions",
-        title: "Tur Halaman Transactions",
-        buildSteps: (role) => stepsFor(role, ["transactions"], true),
-    },
-    branches: {
-        id: "branches",
-        title: "Tur Halaman Branches",
-        buildSteps: (role) => stepsFor(role, ["branches"], true),
-    },
-};
-
-/** Petakan pathname aktif ke tur per-halaman; default tur pengenalan. */
-export const tourForPathname = (pathname: string): TourId => {
-    if (pathname.startsWith("/orders")) return "orders";
-    if (pathname.startsWith("/kasir")) return "kasir";
-    if (pathname.startsWith("/overview")) return "overview";
-    if (pathname.startsWith("/menu")) return "menu";
-    if (pathname.startsWith("/transactions")) return "transactions";
-    if (pathname.startsWith("/branches")) return "branches";
-    return "pengenalan";
-};
-
-export interface SavedResume {
-    tourId: TourId;
-    index: number;
-}
-
-const isKnownTourId = (value: string): value is TourId => value in TOURS;
-
-/**
- * Baca resume handoff (`tourId:index`). Format lama (angka polos) dianggap
- * milik tur pengenalan agar resume sebelum update registry tetap jalan.
- */
-export const getSavedResume = (): SavedResume | null => {
-    if (typeof window === "undefined") return null;
-    const raw = window.localStorage.getItem(TOUR_STEP_KEY);
-    if (raw === null) return null;
-    const sep = raw.indexOf(":");
-    if (sep === -1) {
-        const index = Number.parseInt(raw, 10);
-        if (Number.isNaN(index)) return null;
-        return { tourId: "pengenalan", index };
-    }
-    const tourId = raw.slice(0, sep);
-    const index = Number.parseInt(raw.slice(sep + 1), 10);
-    if (!isKnownTourId(tourId) || Number.isNaN(index)) return null;
-    return { tourId, index };
-};
-
-/** Simpan resume sebelum pindah halaman (handoff). */
-export const saveResume = (tourId: TourId, index: number): void => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(TOUR_STEP_KEY, `${tourId}:${index}`);
-};
-
-/** Hapus resume (tur selesai normal / keluar). */
-export const clearSavedResume = (): void => {
-    if (typeof window === "undefined") return;
-    window.localStorage.removeItem(TOUR_STEP_KEY);
-};
-
-/** True bila tur ini pernah selesai (termasuk flag model lama). */
-export const isTourDone = (tourId: TourId): boolean => {
-    if (typeof window === "undefined") return true;
-    if (window.localStorage.getItem(doneKeyFor(tourId)) === "1") return true;
-    return (
-        tourId === "pengenalan" &&
-        window.localStorage.getItem(LEGACY_DONE_KEY) === "1"
-    );
-};
-
-/** Tandai tur ini selesai agar auto-start tak mengganggu lagi. */
-export const markTourDone = (tourId: TourId): void => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(doneKeyFor(tourId), "1");
-};
