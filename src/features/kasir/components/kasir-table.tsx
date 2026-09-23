@@ -117,7 +117,10 @@ export const KasirTable = ({
                         value={filteredRows.length}
                     />
                 </div>
-                <Button onClick={onRecord} disabled={!canRecord}>
+                <Button
+                    onClick={onRecord}
+                    disabled={!canRecord}
+                    data-tour="kasir-record">
                     <Plus data-icon="inline-start" /> Record Setoran
                 </Button>
             </div>

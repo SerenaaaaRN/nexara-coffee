@@ -196,13 +196,13 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
 
     return (
         <Sidebar collapsible="icon" {...props}>
-            <SidebarHeader>
+            <SidebarHeader data-tour="team-switcher">
                 <TeamSwitcher teams={apps} />
             </SidebarHeader>
-            <SidebarContent>
+            <SidebarContent data-tour="sidebar-nav">
                 <NavMain items={visibleItems} />
             </SidebarContent>
-            <SidebarFooter>
+            <SidebarFooter data-tour="nav-user">
                 <NavUser />
             </SidebarFooter>
             <SidebarRail />
