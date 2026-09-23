@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { TourLauncher } from "@/features/tour/components/tour-launcher";
 import { signOut, useSession } from "@/lib/auth-client";
 import { cn } from "@/utils/cn";
 
@@ -39,6 +40,7 @@ export function MyPortalShell() {
                         {session?.user?.name ? `· ${session.user.name}` : null}
                     </span>
                     <div className="ml-auto">
+                        <TourLauncher />
                         <Button
                             variant="ghost"
                             size="sm"
@@ -59,7 +61,7 @@ export function MyPortalShell() {
                 </div>
             </header>
             <div className="mx-auto max-w-5xl px-4 md:px-6">
-                <nav className="flex gap-1 py-4">
+                <nav className="flex gap-1 py-4" data-tour="my-tabs">
                     {TABS.map((tab) => (
                         <Link
                             key={tab.to}

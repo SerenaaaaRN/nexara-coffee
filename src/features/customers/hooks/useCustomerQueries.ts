@@ -36,8 +36,9 @@ export const getCustomersFn = createServerFn({ method: "GET" }).handler(
             return { success: false as const, error: customerError.message };
 
         const orderCounts = new Map<string, number>();
-        const { data: countRows, error: countError } =
-            await supabaseAdmin.rpc("get_customer_order_counts");
+        const { data: countRows, error: countError } = await supabaseAdmin.rpc(
+            "get_customer_order_counts",
+        );
         if (countError)
             return { success: false as const, error: countError.message };
         for (const r of countRows ?? []) {
@@ -59,7 +60,7 @@ export const getCustomersFn = createServerFn({ method: "GET" }).handler(
         }));
 
         return { success: true as const, data: rows };
-    },  
+    },
 );
 
 /** @see {@link getCustomersFn} */
