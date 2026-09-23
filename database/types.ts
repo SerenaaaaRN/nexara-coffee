@@ -283,6 +283,13 @@ export interface Database {
         };
         Returns: Json;
       };
+      get_customer_order_counts: {
+        Args: Record<string, never>;
+        Returns: {
+          customer_id: string;
+          order_count: number;
+        }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

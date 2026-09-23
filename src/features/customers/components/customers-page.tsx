@@ -1,6 +1,5 @@
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
-import { useState } from "react";
+import { StatCard } from "#/components/shared/stat-card";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { CustomerFormDialog } from "@/features/customers/components/customer-form-dialog";
 import { CustomerGrid } from "@/features/customers/components/customer-grid";
 import { CustomerSheet } from "@/features/customers/components/customer-sheet";
 import { useCustomerFilters } from "@/features/customers/hooks/useCustomerFilters";
@@ -26,7 +24,6 @@ export const CustomersPage = () => {
     const { customer } = routeApi.useSearch();
     const navigate = useNavigate();
     const { data } = useCustomers();
-    const [createOpen, setCreateOpen] = useState(false);
 
     if (!data.success) throw new Error(data.error);
     const customers = data.data;
@@ -72,30 +69,15 @@ export const CustomersPage = () => {
             <div className="flex flex-col gap-4">
                 {customers.length > 0 ? (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                        <div className="rounded-lg border bg-card p-3">
-                            <p className="text-xs text-muted-foreground">
-                                Total Customers
-                            </p>
-                            <p className="text-xl font-bold tabular-nums">
-                                {filtered.length}
-                            </p>
-                        </div>
-                        <div className="rounded-lg border bg-card p-3">
-                            <p className="text-xs text-muted-foreground">
-                                Total Orders
-                            </p>
-                            <p className="text-xl font-bold tabular-nums">
-                                {totalOrders}
-                            </p>
-                        </div>
-                        <div className="rounded-lg border bg-card p-3">
-                            <p className="text-xs text-muted-foreground">
-                                Loyalty Points
-                            </p>
-                            <p className="text-xl font-bold tabular-nums">
-                                {totalPoints.toLocaleString("id-ID")}
-                            </p>
-                        </div>
+                        <StatCard
+                            label="Total Customers"
+                            value={filtered.length}
+                        />
+                        <StatCard label="Total Orders" value={totalOrders} />
+                        <StatCard
+                            label="Loyalty Points"
+                            value={totalPoints.toLocaleString("id-ID")}
+                        />
                     </div>
                 ) : null}
 
@@ -159,10 +141,6 @@ export const CustomersPage = () => {
                             </SelectGroup>
                         </SelectContent>
                     </Select>
-                    <div className="flex-1" />
-                    <Button onClick={() => setCreateOpen(true)}>
-                        <Plus className="size-4" /> Add Customer
-                    </Button>
                 </div>
 
                 {hasFilters ? (
@@ -185,12 +163,6 @@ export const CustomersPage = () => {
                     filtered={filtered}
                     selectedId={customer}
                     onSelect={onSelect}
-                />
-
-                <CustomerFormDialog
-                    open={createOpen}
-                    onOpenChange={setCreateOpen}
-                    onSuccess={() => setCreateOpen(false)}
                 />
 
                 {selectedCustomer ? (
