@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Coffee, Star } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { SectionHeader } from "@/components/shared/section-header";
@@ -173,15 +173,32 @@ function ReviewDialog({
 }
 
 export function MyOrdersPage() {
-    const { data: response } = useMyOrders();
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+        useMyOrders();
     const [reviewTarget, setReviewTarget] = useState<MyOrder | null>(null);
+    const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-    if (!response.success) throw new Error(response.error);
-    const orders = response.data;
+    const firstPage = data.pages[0];
+    if (!firstPage?.success)
+        throw new Error(firstPage?.error ?? "Gagal memuat pesanan");
+    const total = firstPage.data.total;
+    const completedTotal = firstPage.data.completedTotal;
+    const orders = data.pages.flatMap((p) => (p.success ? p.data.rows : []));
 
-    const completed = orders.filter((o) => o.status === "completed").length;
+    useEffect(() => {
+        const el = loadMoreRef.current;
+        if (!el || !hasNextPage || isFetchingNextPage) return;
+        const io = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) fetchNextPage();
+            },
+            { rootMargin: "400px" },
+        );
+        io.observe(el);
+        return () => io.disconnect();
+    }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-    if (orders.length === 0) {
+    if (total === 0) {
         return (
             <div className="space-y-6">
                 <SectionHeader
@@ -209,12 +226,12 @@ export function MyOrdersPage() {
                 subtitle="Riwayat pesanan kamu di Nexara Coffee."
             />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <StatCard label="Total Pesanan" value={total} icon={Coffee} />
                 <StatCard
-                    label="Total Pesanan"
-                    value={orders.length}
+                    label="Selesai"
+                    value={completedTotal}
                     icon={Coffee}
                 />
-                <StatCard label="Selesai" value={completed} icon={Coffee} />
             </div>
             <div className="rounded-lg border">
                 <Table>
@@ -269,6 +286,15 @@ export function MyOrdersPage() {
                     </TableBody>
                 </Table>
             </div>
+            {hasNextPage ? (
+                <div ref={loadMoreRef} className="flex justify-center py-4">
+                    <span className="text-sm text-muted-foreground">
+                        {isFetchingNextPage
+                            ? "Memuat pesanan..."
+                            : "Scroll untuk memuat pesanan berikutnya"}
+                    </span>
+                </div>
+            ) : null}
             <ReviewDialog
                 order={reviewTarget}
                 open={!!reviewTarget}

@@ -1,22 +1,41 @@
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import {
+    infiniteQueryOptions,
+    queryOptions,
+    useSuspenseInfiniteQuery,
+    useSuspenseQuery,
+} from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import type { MyLoyalty, MyOrder } from "@/features/customer-portal/types";
+import { z } from "zod";
+import type {
+    MyLoyalty,
+    MyOrder,
+    MyOrdersPage,
+} from "@/features/customer-portal/types";
 import { myPortalKeys } from "@/features/query-keys";
 import { STALE } from "@/features/stale-time";
 
+const myOrdersPageSchema = z.object({
+    page: z.number().int().min(0).optional(),
+    pageSize: z.number().int().min(1).max(50).optional(),
+});
+
 /**
- * Mengambil riwayat pesanan milik customer yang sedang login.
+ * Mengambil satu halaman riwayat pesanan milik customer yang sedang login.
  *
  * Scope own gabungan (tanpa butuh permission `orders:read` global):
  * - order yang dibuat sendiri (`created_by = session.user.id`), ATAU
  * - order yang dicatat kasir atas profil customer miliknya
- *   (`customer_id` milik baris `customers` dengan `user_id` sendiri).
- * Jadi belanja offline tetap muncul di /my/orders.
  *
- * @returns {MyOrder[]} Daftar pesanan milik sendiri, terbaru dulu
+ * Offset-based (`.range()`) per `pageSize` — tiap halaman maksimal 20 ID
+ * sehingga query `reviews.in(order_id, ...)` tidak meledak jadi URL >8KB
+ * (400 Bad Request saat order 700+).
+ *
+ * @param d - page (0-based) dan pageSize opsional
+ * @returns {MyOrdersPage} Baris halaman + nextPage + total + completedTotal
  */
-export const getMyOrdersFn = createServerFn({ method: "GET" }).handler(
-    async () => {
+export const getMyOrdersFn = createServerFn({ method: "GET" })
+    .validator((d: z.infer<typeof myOrdersPageSchema>) => d)
+    .handler(async ({ data: params }) => {
         const { getSession } = await import("@/lib/with-auth.server");
         const session = await getSession();
         if (!session?.user)
@@ -24,6 +43,8 @@ export const getMyOrdersFn = createServerFn({ method: "GET" }).handler(
 
         const { supabaseAdmin } = await import("@database/server");
         const uid = session.user.id;
+        const page = params.page ?? 0;
+        const pageSize = params.pageSize ?? 20;
 
         const { data: owned, error: ownedError } = await supabaseAdmin
             .from("customers")
@@ -34,26 +55,49 @@ export const getMyOrdersFn = createServerFn({ method: "GET" }).handler(
             return { success: false as const, error: ownedError.message };
 
         const ownedIds = (owned ?? []).map((c) => c.id);
+        const scopeOr =
+            ownedIds.length > 0
+                ? `created_by.eq.${uid},customer_id.in.(${ownedIds.join(",")})`
+                : null;
 
         let ordersQuery = supabaseAdmin
             .from("orders")
             .select(
                 "id, branch_id, customer_id, order_number, status, total_amount, created_at, branches!orders_branch_id_branches_id_fk(id, name)",
             )
-            .order("created_at", { ascending: false });
+            .order("created_at", { ascending: false })
+            .range(page * pageSize, (page + 1) * pageSize - 1);
 
-        if (ownedIds.length > 0) {
-            ordersQuery = ordersQuery.or(
-                `created_by.eq.${uid},customer_id.in.(${ownedIds.join(",")})`,
-            );
-        } else {
-            ordersQuery = ordersQuery.eq("created_by", uid);
-        }
+        if (scopeOr) ordersQuery = ordersQuery.or(scopeOr);
+        else ordersQuery = ordersQuery.eq("created_by", uid);
 
-        const { data, error } = await ordersQuery;
-        if (error) return { success: false as const, error: error.message };
+        const buildCount = (completedOnly: boolean) => {
+            let q = supabaseAdmin
+                .from("orders")
+                .select("id", { count: "exact", head: true });
+            if (scopeOr) q = q.or(scopeOr);
+            else q = q.eq("created_by", uid);
+            if (completedOnly) q = q.eq("status", "completed");
+            return q;
+        };
 
-        const orderIds = (data ?? []).map((r) => r.id);
+        const [ordersRes, totalRes, completedRes] = await Promise.all([
+            ordersQuery,
+            buildCount(false),
+            buildCount(true),
+        ]);
+
+        if (ordersRes.error)
+            return { success: false as const, error: ordersRes.error.message };
+        if (totalRes.error)
+            return { success: false as const, error: totalRes.error.message };
+        if (completedRes.error)
+            return {
+                success: false as const,
+                error: completedRes.error.message,
+            };
+
+        const orderIds = (ordersRes.data ?? []).map((r) => r.id);
         const reviewed = new Set<string>();
         if (orderIds.length > 0) {
             const { data: reviewRows, error: reviewError } = await supabaseAdmin
@@ -68,7 +112,7 @@ export const getMyOrdersFn = createServerFn({ method: "GET" }).handler(
         }
 
         const rows: MyOrder[] = (
-            (data ?? []) as unknown as {
+            (ordersRes.data ?? []) as unknown as {
                 id: string;
                 branch_id: string;
                 customer_id: string | null;
@@ -89,9 +133,15 @@ export const getMyOrdersFn = createServerFn({ method: "GET" }).handler(
             hasReview: reviewed.has(r.id),
         }));
 
-        return { success: true as const, data: rows };
-    },
-);
+        const data: MyOrdersPage = {
+            rows,
+            nextPage: rows.length === pageSize ? page + 1 : null,
+            total: totalRes.count ?? 0,
+            completedTotal: completedRes.count ?? 0,
+        };
+
+        return { success: true as const, data };
+    });
 
 /**
  * Mengambil profil loyalty milik customer yang sedang login.
@@ -187,10 +237,16 @@ export const getMyLoyaltyFn = createServerFn({ method: "GET" }).handler(
 );
 
 /** @see {@link getMyOrdersFn} */
-export const myOrdersOptions = () =>
-    queryOptions({
+export const myOrdersInfiniteOptions = () =>
+    infiniteQueryOptions({
         queryKey: myPortalKeys.orders(),
-        queryFn: () => getMyOrdersFn(),
+        queryFn: ({ pageParam }) =>
+            getMyOrdersFn({ data: { page: pageParam } }),
+        initialPageParam: 0,
+        getNextPageParam: (lastPage) =>
+            lastPage.success
+                ? (lastPage.data.nextPage ?? undefined)
+                : undefined,
         staleTime: STALE.FREQUENT,
     });
 
@@ -204,7 +260,7 @@ export const myLoyaltyOptions = () =>
 
 /** @see {@link getMyOrdersFn} */
 export function useMyOrders() {
-    return useSuspenseQuery(myOrdersOptions());
+    return useSuspenseInfiniteQuery(myOrdersInfiniteOptions());
 }
 
 /** @see {@link getMyLoyaltyFn} */

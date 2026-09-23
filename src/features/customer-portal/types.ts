@@ -15,6 +15,13 @@ export type MyOrder = Pick<
     hasReview: boolean;
 };
 
+export type MyOrdersPage = {
+    rows: MyOrder[];
+    nextPage: number | null;
+    total: number;
+    completedTotal: number;
+};
+
 /** Profil loyalty milik customer yang sedang login. */
 export type MyLoyalty = Pick<
     Customer,

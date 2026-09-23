@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Github } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -141,20 +141,6 @@ export function LoginForm() {
                                 height={15}
                             />
                             Login with Google
-                        </Button>
-                    </Field>
-                    <Field>
-                        <Button
-                            variant="outline"
-                            type="button"
-                            onClick={() =>
-                                signIn.social({
-                                    provider: "github",
-                                    callbackURL: "/overview",
-                                })
-                            }>
-                            <Github />
-                            Login with Github
                         </Button>
                     </Field>
                     <Field>
