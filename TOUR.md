@@ -41,6 +41,9 @@ Satu tur 40+ langkah tidak dipakai. Sebagai gantinya ada registry tur:
 | `overview` | Shell (3) + header (1) + overview (2) = 6 langkah — satu-satunya tur halaman yang menyertakan shell karena overview adalah halaman pertama user | Tombol Help saat di `/overview` |
 | `orders` | Konten orders saja (2 langkah) | Tombol Help saat di `/orders` |
 | `kasir` | Konten kasir saja (1–2 langkah, role-filtered) | Tombol Help saat di `/kasir` |
+| `menu` | Konten menu saja (2–3 langkah; tambah-item hanya `create menu`) | Tombol Help saat di `/menu` |
+| `transactions` | Konten transactions saja (2 langkah; barista terskip — tanpa `read finance`) | Tombol Help saat di `/transactions` |
+| `branches` | Daftar + tambah (super_admin) + detail (2–3 langkah) | Tombol Help saat di `/branches` |
 
 Hanya tur `overview` yang menyertakan grup `shell` + `header`. Tur halaman lain
 konten saja (tanpa intro/outro/handoff).
@@ -52,7 +55,9 @@ instance `driver()` hanya dibuat di effect/event handler (aman SSR),
 
 ### 2b. Flag & resume per tour
 
-- Flag selesai per tur: `nexara-tour-{id}-done` (fungsi `doneKeyFor`).
+- Flag selesai per tur: `nexara-tour-{id}-done` (fungsi `doneKeyFor`)
+  (`pengenalan`, `overview`, `orders`, `kasir`, `menu`, `transactions`,
+  `branches`).
   Flag model lama `nexara-tour-v1-done` tetap dihormati untuk `pengenalan`.
 - Resume handoff: `localStorage["nexara-tour-step"]` berisi `tourId:index`
   (fungsi `saveResume`/`getSavedResume`); format lama (angka polos) dianggap
@@ -110,6 +115,10 @@ super_admin melihat semua 14 langkah.
 | `features/orders/components/orders-page.tsx` | `orders-stats`, wrapper `orders-toolbar` |
 | `features/kasir/components/kasir-page.tsx` | `kasir-content`, `kasir-record` (cabang kosong) |
 | `features/kasir/components/kasir-table.tsx` | `kasir-record` (cabang tabel) |
+| `features/menu/components/menu-page.tsx` | `menu-stats`, `menu-tabs`, `menu-add` (tambah-item) |
+| `features/transactions/components/transactions-table.tsx` | `transactions-content`, `transactions-stats`, wrapper `transactions-toolbar` |
+| `features/branches/components/branch-list-panel.tsx` | `branches-list`, `branches-add` |
+| `features/branches/components/branches-page.tsx` | `branches-detail` (kolom detail) |
 
 ## 6. Pelajaran Insiden
 
@@ -132,14 +141,15 @@ semua cabang render-nya.**
   tur pengenalan → resume di halaman benar; Esc → flag selesai per-tour +
   replay via tombol.
 - Reset: hapus `nexara-tour-{id}-done` di localStorage
-  (`pengenalan`, `overview`, `orders`, `kasir`).
+  (`pengenalan`, `overview`, `orders`, `kasir`, `menu`, `transactions`,
+  `branches`).
 
-## 8. Backlog Fase 2 (belum dikerjakan)
+## 8. Backlog (belum dikerjakan)
 
 Halaman tanpa tur sendiri (tombol Help di sana menjalankan tur pengenalan):
-Menu, Branches, Maps, Customers, Reviews, Transactions, Employee, Payouts,
-Chat, Audit, Notifications, Settings, POS (`/pos`), portal `/my`.
-Cara menambah: langkah baru di `ALL_STEPS` dengan `group` baru + 1 entry di
-`TOURS` + 1 cabang di `tourForPathname` + anchor `data-tour` — mekanisme
-handoff/resume tidak perlu diubah. Keputusan: tidak di-append ke satu tur
-panjang (melebihi batas retensi); tiap halaman punya tur pendek 2–4 langkah.
+Maps, Customers, Reviews, Employee, Payouts, Chat, Audit, Notifications,
+Settings, POS (`/pos`), portal `/my`. Cara menambah: langkah baru di `ALL_STEPS`
+dengan `group` baru + 1 entry di `TOURS` + 1 cabang di `tourForPathname` +
+anchor `data-tour` — mekanisme handoff/resume tidak perlu diubah. Keputusan:
+tidak di-append ke satu tur panjang (melebihi batas retensi); tiap halaman punya
+tur pendek 2–4 langkah.

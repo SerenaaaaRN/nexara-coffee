@@ -157,6 +157,96 @@ const ALL_STEPS: TourStepDef[] = [
         description:
             "Anda siap mengoperasikan Nexara. Klik ikon bantuan di header kapan saja untuk mengulang tur ini.",
     },
+    {
+        id: "menu-stats",
+        group: "menu",
+        element: '[data-tour="menu-stats"]',
+        title: "Ringkasan menu",
+        description:
+            "Total item, yang tersedia, yang disembunyikan, dan jumlah kategori sekilas.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "menu"),
+    },
+    {
+        id: "menu-tabs",
+        group: "menu",
+        element: '[data-tour="menu-tabs"]',
+        title: "Tab kategori",
+        description:
+            "Filter item per kategori. Kelola daftar kategori lewat tombol Manage dan Add Category.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "menu"),
+    },
+    {
+        id: "menu-add",
+        group: "menu",
+        element: '[data-tour="menu-add"]',
+        title: "Tambah item",
+        description:
+            "Tambahkan item baru lengkap dengan foto, harga, dan varian dari sini.",
+        side: "bottom",
+        align: "end",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "create", "menu"),
+    },
+    {
+        id: "transactions-stats",
+        group: "transactions",
+        element: '[data-tour="transactions-stats"]',
+        title: "Ringkasan keuangan",
+        description:
+            "Total omzet, transaksi completed, refund, dan jumlah transaksi.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "finance"),
+    },
+    {
+        id: "transactions-toolbar",
+        group: "transactions",
+        element: '[data-tour="transactions-toolbar"]',
+        title: "Cari & filter",
+        description:
+            "Cari transaksi dan filter kolom untuk rekonsiliasi keuangan.",
+        side: "bottom",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "finance"),
+    },
+    {
+        id: "branches-list",
+        group: "branches",
+        element: '[data-tour="branches-list"]',
+        title: "Daftar cabang",
+        description:
+            "Cari dan pilih cabang untuk melihat detailnya. Ikon status menandai cabang aktif.",
+        side: "right",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "branches"),
+    },
+    {
+        id: "branches-add",
+        group: "branches",
+        element: '[data-tour="branches-add"]',
+        title: "Tambah cabang",
+        description:
+            "Daftarkan cabang baru beserta tipe kepemilikan dan pemilik franchisenya.",
+        side: "bottom",
+        align: "end",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "create", "branches"),
+    },
+    {
+        id: "branches-detail",
+        group: "branches",
+        element: '[data-tour="branches-detail"]',
+        title: "Detail cabang",
+        description:
+            "Pilih cabang dari daftar untuk melihat detail, info pemilik, dan aksi kelola di sini.",
+        side: "left",
+        waitForElement: 5000,
+        visibleFor: (role) => can(role, "read", "branches"),
+    },
 ];
 
 /**
@@ -198,7 +288,8 @@ export const TOURS: Record<TourId, TourDef> = {
     overview: {
         id: "overview",
         title: "Tur Halaman Overview",
-        buildSteps: (role) => stepsFor(role, ["shell", "header", "overview"], true),
+        buildSteps: (role) =>
+            stepsFor(role, ["shell", "header", "overview"], true),
     },
     orders: {
         id: "orders",
@@ -210,6 +301,21 @@ export const TOURS: Record<TourId, TourDef> = {
         title: "Tur Halaman Kasir",
         buildSteps: (role) => stepsFor(role, ["kasir"], true),
     },
+    menu: {
+        id: "menu",
+        title: "Tur Halaman Menu",
+        buildSteps: (role) => stepsFor(role, ["menu"], true),
+    },
+    transactions: {
+        id: "transactions",
+        title: "Tur Halaman Transactions",
+        buildSteps: (role) => stepsFor(role, ["transactions"], true),
+    },
+    branches: {
+        id: "branches",
+        title: "Tur Halaman Branches",
+        buildSteps: (role) => stepsFor(role, ["branches"], true),
+    },
 };
 
 /** Petakan pathname aktif ke tur per-halaman; default tur pengenalan. */
@@ -217,6 +323,9 @@ export const tourForPathname = (pathname: string): TourId => {
     if (pathname.startsWith("/orders")) return "orders";
     if (pathname.startsWith("/kasir")) return "kasir";
     if (pathname.startsWith("/overview")) return "overview";
+    if (pathname.startsWith("/menu")) return "menu";
+    if (pathname.startsWith("/transactions")) return "transactions";
+    if (pathname.startsWith("/branches")) return "branches";
     return "pengenalan";
 };
 

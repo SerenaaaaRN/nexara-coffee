@@ -1,24 +1,28 @@
-/* Tema popover tur Nexara — mengikuti token shadcn agar adaptif ke semua theme. */
+/* Tema popover tur Nexara — mengikuti token shadcn */
 
 .driver-popover.nexara-tour {
     background: var(--popover);
     color: var(--popover-foreground);
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
     font-family: var(--theme-font-sans);
+    min-width: 300px;
+    max-width: 440px;
+    padding: 16px 20px 16px;
 }
 
 .driver-popover.nexara-tour .driver-popover-title {
     color: var(--foreground);
-    font-size: 15px;
+    font-size: 19px;
     font-weight: 700;
+    margin-bottom: 6px;
 }
 
 .driver-popover.nexara-tour .driver-popover-description {
     color: var(--popover-foreground);
-    font-size: 13px;
-    line-height: 1.55;
+    font-size: 15px;
+    line-height: 1.6;
 }
 
 .driver-popover.nexara-tour .driver-popover-arrow {
@@ -43,7 +47,17 @@
 
 .driver-popover.nexara-tour .driver-popover-progress-text {
     color: var(--muted-foreground);
-    font-size: 12px;
+    font-size: 13px;
+}
+
+.driver-popover.nexara-tour .driver-popover-footer {
+    margin-top: 14px;
+}
+
+.driver-popover.nexara-tour .driver-popover-prev-btn,
+.driver-popover.nexara-tour .driver-popover-next-btn {
+    font-size: 14px;
+    padding: 8px 16px;
 }
 
 .driver-popover.nexara-tour .driver-popover-prev-btn {

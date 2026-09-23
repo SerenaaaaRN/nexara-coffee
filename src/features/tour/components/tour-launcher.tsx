@@ -17,7 +17,7 @@ import "./tour-styles.css";
 
 /**
  * Tombol bantuan icon-only di header dashboard. Context-aware: menjalankan
- * tur pendek halaman aktif (overview/orders/kasir), fallback ke tur
+ * tur pendek halaman aktif, fallback ke tur
  * pengenalan di halaman lain. Tur pengenalan auto-start sekali; tur
  * per-halaman hanya manual agar tak mengganggu.
  */
@@ -40,14 +40,12 @@ export const TourLauncher = () => {
             ? candidate
             : "pengenalan";
 
-    // Resume handoff antar-halaman: sengaja bergantung pada pathname agar
     useEffect(() => {
         if (!role || !pathname) return;
         const saved = getSavedResume();
         if (saved) startTour(saved.tourId, saved.index);
     }, [role, pathname, startTour]);
 
-    // Auto-start tur pengenalan sekali per sesi bila belum pernah tur.
     useEffect(() => {
         if (!role || autoStartedRef.current) return;
         if (isTourDone("pengenalan") || getSavedResume() !== null) return;

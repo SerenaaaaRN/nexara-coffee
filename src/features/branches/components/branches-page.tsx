@@ -83,6 +83,7 @@ export const BranchesPage = () => {
 
             <div className="flex min-h-0 flex-1 flex-col-reverse gap-0 overflow-hidden rounded-lg border md:flex-row md:gap-px">
                 <div
+                    data-tour="branches-detail"
                     className={cn(
                         "flex min-h-0 flex-1 flex-col",
                         !selectedBranch ? "hidden md:flex" : null,

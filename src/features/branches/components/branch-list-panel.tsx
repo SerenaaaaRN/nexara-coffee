@@ -28,13 +28,18 @@ export const BranchListPanel = ({
 }: BranchListPanelProps) => {
     return (
         <div
+            data-tour="branches-list"
             className={cn(
                 "flex w-full min-w-0 flex-col overflow-hidden border-b md:w-80 md:border-b-0 md:border-l",
                 hidden ? "hidden md:flex" : null,
             )}>
             <div className="flex items-center justify-between border-b px-3 py-2.5">
                 <h3 className="text-sm font-medium">Branches</h3>
-                <Button variant="outline" size="sm" onClick={onAdd}>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onAdd}
+                    data-tour="branches-add">
                     <Plus className="size-3.5" /> Add
                 </Button>
             </div>

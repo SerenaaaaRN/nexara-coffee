@@ -1,7 +1,7 @@
 import type { Alignment, Side } from "driver.js";
 import type { Role } from "@/lib/rbac";
 
-/** 7 grup langkah tur Fase 1: intro → shell → header → overview → orders → kasir → outro. */
+/** Grup langkah tur: 7 grup Fase 1 + 1 grup per halaman Fase 2. */
 export type TourGroup =
     | "intro"
     | "shell"
@@ -9,7 +9,10 @@ export type TourGroup =
     | "overview"
     | "orders"
     | "kasir"
-    | "outro";
+    | "outro"
+    | "menu"
+    | "transactions"
+    | "branches";
 
 /** Rute tujuan untuk langkah handoff antar-halaman (tur resumable). */
 export type TourHandoffTarget = "/orders" | "/kasir";
@@ -32,7 +35,14 @@ export interface TourStepDef {
 }
 
 /** Id tur: satu tur pengenalan multi-halaman + satu tur pendek per halaman. */
-export type TourId = "pengenalan" | "overview" | "orders" | "kasir";
+export type TourId =
+    | "pengenalan"
+    | "overview"
+    | "orders"
+    | "kasir"
+    | "menu"
+    | "transactions"
+    | "branches";
 
 export interface TourDef {
     id: TourId;
