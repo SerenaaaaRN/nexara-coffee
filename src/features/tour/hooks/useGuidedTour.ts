@@ -6,7 +6,7 @@ import {
     markTourDone,
     saveResume,
 } from "@/features/tour/storage";
-import type { TourId } from "@/features/tour/types";
+import type { TourHandoffTarget, TourId } from "@/features/tour/types";
 import type { Role } from "@/lib/rbac";
 
 /**
@@ -15,7 +15,7 @@ import type { Role } from "@/lib/rbac";
  */
 export const useGuidedTour = (
     role: Role | undefined,
-    onNavigate: (to: "/orders" | "/kasir") => void,
+    onNavigate: (to: TourHandoffTarget) => void,
 ) => {
     const driverRef = useRef<Driver | null>(null);
     const activeTourRef = useRef<TourId>("pengenalan");

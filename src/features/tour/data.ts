@@ -333,4 +333,106 @@ export const ALL_STEPS: TourStepDef[] = [
             role === "branch_manager" ||
             role === "cashier",
     },
+    {
+        id: "portal-intro",
+        group: "portal",
+        title: "Selamat datang di Nexara",
+        description:
+            "Ini portal member kamu: riwayat pesanan, poin loyalty, dan pengaturan akun. Ikuti tur singkat ini.",
+    },
+    {
+        id: "portal-tabs",
+        group: "portal",
+        element: '[data-tour="my-tabs"]',
+        title: "Navigasi portal",
+        description:
+            "Tiga tab — Pesananku, Member, Akun — untuk berpindah bagian portal.",
+        side: "bottom",
+        waitForElement: 5000,
+    },
+    {
+        id: "my-orders-stats",
+        group: "my-orders",
+        element: '[data-tour="my-orders-stats"]',
+        title: "Ringkasan pesanan",
+        description: "Total pesanan dan yang sudah selesai sekilas.",
+        side: "bottom",
+        waitForElement: 5000,
+    },
+    {
+        id: "my-orders-table",
+        group: "my-orders",
+        element: '[data-tour="my-orders-table"]',
+        title: "Riwayat pesanan",
+        description:
+            "Semua pesanan kamu tercatat di sini, termasuk yang dicatat kasir di cabang. Pesanan selesai bisa diberi ulasan.",
+        side: "top",
+        waitForElement: 5000,
+    },
+    {
+        id: "handoff-my-member",
+        group: "my-orders",
+        element: '[data-tour="my-tabs"]',
+        title: "Lanjut ke Member",
+        description:
+            "Klik Lanjut untuk pindah ke tab Member dan melihat poin loyalty.",
+        side: "bottom",
+        waitForElement: 5000,
+        navigateTo: "/my/member",
+    },
+    {
+        id: "my-loyalty-stats",
+        group: "my-member",
+        element: '[data-tour="my-loyalty-stats"]',
+        title: "Poin & segmen",
+        description: "Poin loyalty, total order, dan segmen kamu saat ini.",
+        side: "bottom",
+        waitForElement: 5000,
+    },
+    {
+        id: "my-loyalty-card",
+        group: "my-member",
+        element: '[data-tour="my-loyalty-card"]',
+        title: "Kartu member",
+        description:
+            "Tier dan keuntungan yang kamu nikmati. Poin bertambah tiap pembelian selesai.",
+        side: "top",
+        waitForElement: 5000,
+    },
+    {
+        id: "handoff-my-account",
+        group: "my-member",
+        element: '[data-tour="my-tabs"]',
+        title: "Lanjut ke Akun",
+        description:
+            "Klik Lanjut untuk pindah ke tab Akun dan mengatur profil.",
+        side: "bottom",
+        waitForElement: 5000,
+        navigateTo: "/my/account",
+    },
+    {
+        id: "my-account-profile",
+        group: "my-account",
+        element: '[data-tour="my-account-profile"]',
+        title: "Profil",
+        description: "Ubah nama yang tampil di pesanan dan profil member kamu.",
+        side: "top",
+        waitForElement: 5000,
+    },
+    {
+        id: "my-account-password",
+        group: "my-account",
+        element: '[data-tour="my-account-password"]',
+        title: "Password",
+        description: "Perbarui password untuk keamanan akun kamu.",
+        side: "top",
+        waitForElement: 5000,
+    },
+    {
+        id: "portal-outro",
+        group: "portal",
+        title: "Selesai",
+        description:
+            "Itu dia portal member Nexara. Buka tur ini lagi kapan saja lewat tombol bantuan di atas.",
+    },
 ];

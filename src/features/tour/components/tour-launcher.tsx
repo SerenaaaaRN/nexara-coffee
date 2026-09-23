@@ -30,14 +30,14 @@ const isPageTourDue = (
 
 /**
  * Tombol bantuan icon-only di header dashboard. Context-aware: menjalankan
- * tur pendek halaman aktif, fallback ke tur
- * pengenalan di halaman lain. Tur pengenalan auto-start sekali; tiap tur
+ * tur pendek halaman aktif, fallback ke tur pengenalan (portal: sambutan). Tur pengenalan auto-start sekali; tiap tur
  * per-halaman juga auto-start sekali (kunjungan pertama) setelah pengenalan
  * selesai — dismiss (Esc/backdrop/×) tercatat selesai via markTourDone.
  */
 export const TourLauncher = () => {
     const { data: session } = useSession();
     const role = (session?.user as { role?: Role } | undefined)?.role;
+    const isVisitor = role === "visitor";
     const navigate = useNavigate();
     const pathname = useLocation({
         select: (location) => location.pathname,
@@ -50,10 +50,11 @@ export const TourLauncher = () => {
     });
 
     const candidate = tourForPathname(pathname);
+    const fallbackTour: TourId = isVisitor ? "sambutan" : "pengenalan";
     const activeTourId =
         role && TOURS[candidate].buildSteps(role).length > 0
             ? candidate
-            : "pengenalan";
+            : fallbackTour;
 
     useEffect(() => {
         if (!role || !pathname) return;
@@ -62,17 +63,18 @@ export const TourLauncher = () => {
     }, [role, pathname, startTour]);
 
     useEffect(() => {
-        if (!role || autoStartedRef.current) return;
+        if (!role || isVisitor || autoStartedRef.current) return;
         if (isTourDone("pengenalan") || getSavedResume() !== null) return;
         autoStartedRef.current = true;
         const timer = setTimeout(() => startTour("pengenalan", 0), 800);
         return () => clearTimeout(timer);
-    }, [role, startTour]);
+    }, [role, isVisitor, startTour]);
 
     // Auto sekali per tur halaman, dijalankan tiap pindah halaman.
     useEffect(() => {
         if (
             !role ||
+            isVisitor ||
             !pathname ||
             !isPageTourDue(role, candidate, autoPageRef.current)
         )
@@ -80,7 +82,16 @@ export const TourLauncher = () => {
         autoPageRef.current.add(candidate);
         const timer = setTimeout(() => startTour(candidate, 0), 800);
         return () => clearTimeout(timer);
-    }, [role, pathname, candidate, startTour]);
+    }, [role, isVisitor, pathname, candidate, startTour]);
+
+    useEffect(() => {
+        if (!isVisitor || !pathname) return;
+        if (isTourDone("sambutan") || getSavedResume() !== null) return;
+        if (autoPageRef.current.has("sambutan")) return;
+        autoPageRef.current.add("sambutan");
+        const timer = setTimeout(() => startTour("sambutan", 0), 800);
+        return () => clearTimeout(timer);
+    }, [isVisitor, pathname, startTour]);
 
     return (
         <Button

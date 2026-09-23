@@ -28,7 +28,7 @@ It is primarily an internal tool used by head office admins, branch managers, ca
 - Branches have limited autonomy: they can manage stock, staff schedules, and request restock — but cannot change menu/pricing without HQ approval
 - Franchise branch revenue is shared according to a commission scheme, disbursed via the Payouts feature
 
-**Built:** overview dashboard (3 tabs, 8 charts, 2 tables), auth flow (login/register/forgot-reset password/Google OAuth), customers (card grid + sheet detail + edit/delete — TANPA manual add, akun lahir via self-register; order count via rpc `get_customer_order_counts`), kasir & setoran harian (input + approve/reject + POS reconciliation), orders (queue + status management + Ably realtime), POS (single-file client + hooks `usePosCart`/`usePosCatalog`/`useChargeOrder`, checkout + member lookup via HP saja — field Customer Name dihapus), chat (realtime messaging, DM, branch channels, Ably integration — staff only), maps (MapLibre GL, branch markers, popup, search), menu CRUD (grid, categories, Cloudinary image upload, RHF forms), branches CRUD (table + form + franchise owner assignment), employee CRUD (TanStack Table + shadcn + FilterToolbar), reviews (list + moderate + customer self-review per completed order), transactions (list + filter), payouts (list + approve), notifications (list + mark read), audit log (timeline with search, action/table filter, expandable metadata), customer portal `/my` (order history infinite scroll 20/page incl. offline cashier-recorded orders, loyalty member card, account self-service, per-order review dialog).
+**Built:** overview dashboard (3 tabs, 8 charts, 2 tables), auth flow (login/register/forgot-reset password/Google OAuth), customers (card grid + sheet detail + edit/delete — TANPA manual add, akun lahir via self-register; order count via rpc `get_customer_order_counts`), kasir & setoran harian (input + approve/reject + POS reconciliation), orders (queue + status management + Ably realtime), POS (single-file client + hooks `usePosCart`/`usePosCatalog`/`useChargeOrder`, checkout + member lookup via HP saja — field Customer Name dihapus), chat (realtime messaging, DM, branch channels, Ably integration — staff only), maps (MapLibre GL, branch markers, popup, search), menu CRUD (grid, categories, Cloudinary image upload, RHF forms), branches CRUD (table + form + franchise owner assignment), employee CRUD (TanStack Table + shadcn + FilterToolbar), reviews (list + moderate + customer self-review per completed order), transactions (list + filter), payouts (list + approve), notifications (list + mark read), audit log (timeline with search, action/table filter, expandable metadata), customer portal `/my` (order history infinite scroll 20/page incl. offline cashier-recorded orders, loyalty member card, account self-service, per-order review dialog), guided tour (driver.js — 9 tur: `pengenalan` multi-halaman + 7 tur halaman dashboard + `sambutan` satu alur utuh untuk portal `/my`; full spec di `TOUR.md`).
 
 **Not yet implemented:** AI Assistant page.
 
@@ -130,6 +130,8 @@ src/
 │   ├── data.ts                      # Static data/constants (optional)
 ├── features/query-keys.ts           # Centralized TanStack Query key definitions
 ├── features/stale-time.ts           # staleTime constants: FREQUENT(30s), NORMAL(60s), SLOW(5min), STATIC(∞)
+├── features/tour/                   # Guided tour driver.js (types, data, registry, storage, launcher — spec di TOUR.md)
+├── features/customer-portal/        # Portal /my (visitor): orders, loyalty member, account
 ├── lib/
 │   ├── auth.ts                      # Better Auth instance
 │   ├── auth-client.ts               # Client-side auth client
@@ -340,6 +342,7 @@ Additional rules:
 - Visitor lockout: `_dashboard.tsx` and `my.tsx` `beforeLoad` redirect by role (`_dashboard` rejects visitor → `/my`, `/my` rejects staff → `/overview`, `/pos` allows super_admin/branch_manager/cashier only)
 - Customer portal own-scope pattern: portal server fns use `getSession()` + filter by `session.user.id` (never grant visitor global `orders`/`customers`/`reviews` perms). Visitor matrix keeps only `users: ["read","update"]` (portal account self-service via `updateProfileFn`)
 - RBAC is staff-only by design — no visitor branches in feature code (chat visitor checks removed)
+- Exception: `features/tour/components/tour-launcher.tsx` has an `isVisitor` branch — it only selects which tour to run (dashboard `pengenalan` vs portal `sambutan`), never gates data. Route guards (`_dashboard.tsx`, `my.tsx`) enforce isolation.
 
 ## Data Fetching Pattern
 
