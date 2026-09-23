@@ -1,24 +1,25 @@
 import { type Driver, type DriveStep, driver } from "driver.js";
 import { useCallback, useEffect, useRef } from "react";
 import {
-    buildTourSteps,
-    clearSavedStepIndex,
+    clearSavedResume,
     markTourDone,
-    saveStepIndex,
+    saveResume,
+    TOURS,
 } from "@/features/tour/data";
-import type { TourHandoffTarget } from "@/features/tour/types";
+import type { TourId } from "@/features/tour/types";
 import type { Role } from "@/lib/rbac";
 
 /**
  * Hook instance driver.js untuk tur dashboard. Membuat instance saat
- * `startTour` dipanggil dan  menghancurkannya saat unmount agar overlay
- * tak tertinggal pindah rute.
+ * `startTour` dipanggil (bukan di module top-level, aman untuk SSR) dan
+ * menghancurkannya saat unmount agar overlay tak tertinggal pindah rute.
  */
 export const useGuidedTour = (
     role: Role | undefined,
-    onNavigate: (to: TourHandoffTarget) => void,
+    onNavigate: (to: "/orders" | "/kasir") => void,
 ) => {
     const driverRef = useRef<Driver | null>(null);
+    const activeTourRef = useRef<TourId>("pengenalan");
     const navigatingRef = useRef(false);
     const unmountingRef = useRef(false);
     const onNavigateRef = useRef(onNavigate);
@@ -31,15 +32,17 @@ export const useGuidedTour = (
     }, []);
 
     /**
-     * Mulai tur dari indeks tertentu. Langkah handoff menyimpan indeks
-     * berikutnya lalu pindah rute; halaman tujuan melanjutkan via resume.
+     * Mulai tur dari registry berdasarkan id. Langkah handoff menyimpan
+     * resume (tourId + indeks berikut) lalu pindah rute; halaman tujuan
+     * melanjutkan via resume.
      */
     const startTour = useCallback(
-        (stepIndex = 0) => {
+        (tourId: TourId, stepIndex = 0) => {
             if (typeof document === "undefined" || !role) return;
             destroyTour();
-            const defs = buildTourSteps(role);
+            const defs = TOURS[tourId].buildSteps(role);
             if (defs.length === 0 || stepIndex >= defs.length) return;
+            activeTourRef.current = tourId;
 
             const steps: DriveStep[] = defs.map((def, idx) => ({
                 element: def.element,
@@ -63,7 +66,7 @@ export const useGuidedTour = (
                                       return;
                                   }
                                   navigatingRef.current = true;
-                                  saveStepIndex((opts.index ?? idx) + 1);
+                                  saveResume(tourId, (opts.index ?? idx) + 1);
                                   tour.destroy();
                                   onNavigateRef.current(def.navigateTo);
                               },
@@ -95,8 +98,8 @@ export const useGuidedTour = (
                         unmountingRef.current = false;
                         return;
                     }
-                    clearSavedStepIndex();
-                    markTourDone();
+                    clearSavedResume();
+                    markTourDone(activeTourRef.current);
                 },
                 steps,
             });

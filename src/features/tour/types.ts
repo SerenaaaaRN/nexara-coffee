@@ -30,3 +30,14 @@ export interface TourStepDef {
     /** Filter per role. Undefined = semua role staff. */
     visibleFor?: (role: Role) => boolean;
 }
+
+/** Id tur: satu tur pengenalan multi-halaman + satu tur pendek per halaman. */
+export type TourId = "pengenalan" | "overview" | "orders" | "kasir";
+
+export interface TourDef {
+    id: TourId;
+    /** Judul untuk tooltip tombol Help yang context-aware. */
+    title: string;
+    /** Susun langkah sesuai izin role (langkah terlarang dibuang). */
+    buildSteps: (role: Role) => TourStepDef[];
+}

@@ -1,9 +1,11 @@
 # TOUR.md — Guided Tour Dashboard Nexara (driver.js)
 
 > Dokumen perencanaan + implementasi tur terpandu dashboard internal.
-> Status: **Fase 1 selesai** (berhenti di Kasir, 7 grup langkah).
+> Status: **Fase 1 selesai + refactor Opsi A (tur per halaman)**.
 > Library: `driver.js@^1.8.0` (sudah ada di `package.json`, tanpa install tambahan).
 > Referensi API: `.agents/skills/driverjs-tours/` (SKILL.md + `references/`).
+> Aturan validasi: pemilik repo validasi sendiri — agen tidak menjalankan
+> build/lint/tsc (instruksi eksplisit).
 
 ## 1. Keputusan Desain (mengikat)
 
@@ -21,18 +23,44 @@ Fitur vertikal `src/features/tour/` (ikut execution order AGENTS.md):
 
 ```
 src/features/tour/
-├── types.ts                  # TourStepDef, TourGroup, TourHandoffTarget
-├── data.ts                   # 14 langkah + buildTourSteps(role) + storage helpers
+├── types.ts                  # TourStepDef, TourGroup, TourId, TourDef
+├── data.ts                   # ALL_STEPS + TOURS registry + storage helpers
 ├── hooks/useGuidedTour.ts    # Instance driver, handoff navigate, destroy/cleanup
 └── components/
-    ├── tour-launcher.tsx     # Tombol Help + auto-start + resume antar-halaman
+    ├── tour-launcher.tsx     # Tombol Help context-aware + auto-start + resume
     └── tour-styles.css       # Tema popover .nexara-tour dari token shadcn
 ```
+
+### 2a. Model Opsi A — tur per halaman (pengganti append satu tur panjang)
+
+Satu tur 40+ langkah tidak dipakai. Sebagai gantinya ada registry tur:
+
+| TourId | Isi | Pemicu |
+|---|---|---|
+| `pengenalan` | 14 langkah multi-halaman (intro → … → kasir → outro), satu-satunya yang punya langkah handoff | Auto-start sekali + tombol Help di halaman tanpa tur sendiri |
+| `overview` | Shell (3) + header (1) + overview (2) = 6 langkah — satu-satunya tur halaman yang menyertakan shell karena overview adalah halaman pertama user | Tombol Help saat di `/overview` |
+| `orders` | Konten orders saja (2 langkah) | Tombol Help saat di `/orders` |
+| `kasir` | Konten kasir saja (1–2 langkah, role-filtered) | Tombol Help saat di `/kasir` |
+
+Hanya tur `overview` yang menyertakan grup `shell` + `header`. Tur halaman lain
+konten saja (tanpa intro/outro/handoff).
 
 Aturan yang dipatuhi: arrow function only, TSX < 250 baris, anchor via atribut
 `data-tour="..."` saja (tanpa ubah layout/styling — UI consistency rule),
 instance `driver()` hanya dibuat di effect/event handler (aman SSR),
 `destroy()` saat unmount agar overlay tak tertinggal pindah rute.
+
+### 2b. Flag & resume per tour
+
+- Flag selesai per tur: `nexara-tour-{id}-done` (fungsi `doneKeyFor`).
+  Flag model lama `nexara-tour-v1-done` tetap dihormati untuk `pengenalan`.
+- Resume handoff: `localStorage["nexara-tour-step"]` berisi `tourId:index`
+  (fungsi `saveResume`/`getSavedResume`); format lama (angka polos) dianggap
+  milik `pengenalan`. Hanya tur `pengenalan` yang menulis resume.
+- `tourForPathname(pathname)` memetakan halaman aktif ke tur; bila tur
+  halaman membangun 0 langkah untuk role tersebut, fallback ke `pengenalan`.
+- Menambah tur halaman baru = 1 entry di `TOURS` + 1 cabang di
+  `tourForPathname` + anchor `data-tour` — mekanisme handoff/resume tak berubah.
 
 ## 3. Daftar Langkah (14, Bahasa Indonesia)
 
@@ -97,17 +125,21 @@ semua cabang render-nya.**
 
 ## 7. Verifikasi
 
-- `bunx biome check src/features/tour` + `biome lint` file edit: bersih.
-  (Error `format` CRLF adalah bawaan repo — file tak tersentuh pun gagal sama.)
-- `bunx tsc --noEmit`: hanya 2 error pre-existing (`kanban.tsx`, `my-orders-page.tsx`).
-- Manual per role: Help → tur penuh, langkah terlarang ter-skip, reload di tengah
-  tur → resume di halaman benar, Esc → flag selesai + replay via tombol.
-- Reset auto-start: hapus `nexara-tour-v1-done` di localStorage.
+> Validasi dilakukan pemilik repo sendiri (agen dilarang validasi).
+
+- Manual per role: Help → tur sesuai halaman (overview/orders/kasir) atau
+  pengenalan di halaman lain; langkah terlarang ter-skip; reload di tengah
+  tur pengenalan → resume di halaman benar; Esc → flag selesai per-tour +
+  replay via tombol.
+- Reset: hapus `nexara-tour-{id}-done` di localStorage
+  (`pengenalan`, `overview`, `orders`, `kasir`).
 
 ## 8. Backlog Fase 2 (belum dikerjakan)
 
-Halaman tanpa langkah tur: Menu, Branches, Maps, Customers, Reviews,
-Transactions, Employee, Payouts, Chat, Audit, Notifications, Settings,
-POS (`/pos`), portal `/my`. Cara menambah: entry baru di `ALL_STEPS`
-(`data.ts`) + 1 atribut `data-tour` di komponen target — mekanisme
-handoff/resume tidak perlu diubah.
+Halaman tanpa tur sendiri (tombol Help di sana menjalankan tur pengenalan):
+Menu, Branches, Maps, Customers, Reviews, Transactions, Employee, Payouts,
+Chat, Audit, Notifications, Settings, POS (`/pos`), portal `/my`.
+Cara menambah: langkah baru di `ALL_STEPS` dengan `group` baru + 1 entry di
+`TOURS` + 1 cabang di `tourForPathname` + anchor `data-tour` — mekanisme
+handoff/resume tidak perlu diubah. Keputusan: tidak di-append ke satu tur
+panjang (melebihi batas retensi); tiap halaman punya tur pendek 2–4 langkah.

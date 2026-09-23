@@ -3,7 +3,12 @@ import { CircleHelp } from "lucide-react";
 import { useEffect, useRef } from "react";
 import "driver.js/dist/driver.css";
 import { Button } from "@/components/ui/button";
-import { getSavedStepIndex, isTourDone } from "@/features/tour/data";
+import {
+    getSavedResume,
+    isTourDone,
+    TOURS,
+    tourForPathname,
+} from "@/features/tour/data";
 import { useGuidedTour } from "@/features/tour/hooks/useGuidedTour";
 import type { TourHandoffTarget } from "@/features/tour/types";
 import { useSession } from "@/lib/auth-client";
@@ -11,9 +16,10 @@ import type { Role } from "@/lib/rbac";
 import "./tour-styles.css";
 
 /**
- * Tombol bantuan icon-only di header dashboard + auto-start tur sekali
- * untuk semua role staff. Dipasang sekali di layout agar hidup lintas rute
- * dan bisa melanjutkan tur handoff antar-halaman.
+ * Tombol bantuan icon-only di header dashboard. Context-aware: menjalankan
+ * tur pendek halaman aktif (overview/orders/kasir), fallback ke tur
+ * pengenalan di halaman lain. Tur pengenalan auto-start sekali; tur
+ * per-halaman hanya manual agar tak mengganggu.
  */
 export const TourLauncher = () => {
     const { data: session } = useSession();
@@ -28,20 +34,25 @@ export const TourLauncher = () => {
         void navigate({ to });
     });
 
+    const candidate = tourForPathname(pathname);
+    const activeTourId =
+        role && TOURS[candidate].buildSteps(role).length > 0
+            ? candidate
+            : "pengenalan";
+
     // Resume handoff antar-halaman: sengaja bergantung pada pathname agar
-    // berjalan ulang setiap navigasi.
     useEffect(() => {
         if (!role || !pathname) return;
-        const saved = getSavedStepIndex();
-        if (saved !== null) startTour(saved);
+        const saved = getSavedResume();
+        if (saved) startTour(saved.tourId, saved.index);
     }, [role, pathname, startTour]);
 
-    // Auto-start sekali per sesi bila belum pernah tur.
+    // Auto-start tur pengenalan sekali per sesi bila belum pernah tur.
     useEffect(() => {
         if (!role || autoStartedRef.current) return;
-        if (isTourDone() || getSavedStepIndex() !== null) return;
+        if (isTourDone("pengenalan") || getSavedResume() !== null) return;
         autoStartedRef.current = true;
-        const timer = setTimeout(() => startTour(0), 800);
+        const timer = setTimeout(() => startTour("pengenalan", 0), 800);
         return () => clearTimeout(timer);
     }, [role, startTour]);
 
@@ -51,11 +62,11 @@ export const TourLauncher = () => {
             size="icon"
             className="h-8 w-8"
             data-tour="tour-help"
-            onClick={() => startTour(0)}
-            aria-label="Panduan"
-            title="Panduan">
+            onClick={() => startTour(activeTourId, 0)}
+            aria-label={TOURS[activeTourId].title}
+            title={TOURS[activeTourId].title}>
             <CircleHelp className="h-4 w-4" />
-            <span className="sr-only">Panduan</span>
+            <span className="sr-only">{TOURS[activeTourId].title}</span>
         </Button>
     );
 };
