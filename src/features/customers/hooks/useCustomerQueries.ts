@@ -7,7 +7,11 @@ import { STALE } from "@/features/stale-time";
 /**
  * Mengambil daftar semua customer beserta jumlah order mereka.
  *
- * Data digabung dengan tabel orders untuk menghitung total order per customer.
+ * Count dikerjakan di database via `get_customer_order_counts`
+ * (database/migrations/0003_customer_order_counts.sql) — 1x rpc call.
+ * Fetch `orders.customer_id` + count di JS TIDAK dipakai lagi karena kena
+ * cap 1000 rows PostgREST (count kepotong saat orders > 1000) dan URL
+ * `.in()` yang meledak saat customers > ~100.
  * Diurutkan berdasarkan tanggal dibuat (terbaru dulu).
  *
  * @returns {CustomerRow[]} Daftar customer dengan informasi order
@@ -24,30 +28,21 @@ export const getCustomersFn = createServerFn({ method: "GET" }).handler(
         const { data: customerData, error: customerError } = await supabaseAdmin
             .from("customers")
             .select(
-                "id, full_name, email, phone, segment, loyalty_points, loyalty_tier, created_at",
+                "id, full_name, email, phone, segment, loyalty_points, loyalty_tier, created_at, user_id",
             )
             .order("created_at", { ascending: false });
 
         if (customerError)
             return { success: false as const, error: customerError.message };
 
-        const customerIds = (customerData ?? []).map((c) => c.id);
-
         const orderCounts = new Map<string, number>();
-        if (customerIds.length > 0) {
-            const { data: orderData, error: orderError } = await supabaseAdmin
-                .from("orders")
-                .select("customer_id")
-                .in("customer_id", customerIds);
-            if (orderError)
-                return { success: false as const, error: orderError.message };
-            for (const o of orderData ?? []) {
-                if (!o.customer_id) continue;
-                orderCounts.set(
-                    o.customer_id,
-                    (orderCounts.get(o.customer_id) ?? 0) + 1,
-                );
-            }
+        const { data: countRows, error: countError } =
+            await supabaseAdmin.rpc("get_customer_order_counts");
+        if (countError)
+            return { success: false as const, error: countError.message };
+        for (const r of countRows ?? []) {
+            if (!r.customer_id) continue;
+            orderCounts.set(r.customer_id, Number(r.order_count));
         }
 
         const rows: CustomerRow[] = (customerData ?? []).map((c) => ({
@@ -60,10 +55,11 @@ export const getCustomersFn = createServerFn({ method: "GET" }).handler(
             loyaltyTier: c.loyalty_tier,
             createdAt: c.created_at,
             orderCount: orderCounts.get(c.id) ?? 0,
+            userId: c.user_id,
         }));
 
         return { success: true as const, data: rows };
-    },
+    },  
 );
 
 /** @see {@link getCustomersFn} */

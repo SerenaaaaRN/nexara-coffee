@@ -2,88 +2,12 @@ import type { Database } from "@database/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import type {
-    CreateCustomerInput,
-    Customer,
-    UpdateCustomerInput,
-} from "@/features/customers/types";
+import type { Customer, UpdateCustomerInput } from "@/features/customers/types";
 import {
-    createCustomerSchema,
     updateCustomerSchema,
     updateLoyaltySchema,
 } from "@/features/customers/types";
 import { customerKeys } from "@/features/query-keys";
-
-/**
- * Membuat customer baru.
- *
- * Menyimpan data customer ke tabel `customers`. Email dan phone di-set null
- * jika dikirim sebagai string kosong. Invalidasi query key "customers"
- * setelah berhasil.
- *
- * @returns Customer yang baru dibuat
- */
-export const createCustomerFn = createServerFn({ method: "POST" })
-    .validator(createCustomerSchema)
-    .handler(async ({ data }) => {
-        const { requireAccessAction } = await import("@/lib/with-auth.server");
-        const auth = await requireAccessAction("create", "customers");
-        if (!auth.success)
-            return { success: false as const, error: auth.error };
-
-        const { rateLimit } = await import("@/lib/rate-limit");
-        if (
-            !rateLimit(`customers:create:${auth.session.user.id}`, 20, 60_000)
-        ) {
-            return { success: false as const, error: "Too many requests" };
-        }
-
-        const { supabaseAdmin } = await import("@database/server");
-        const { logAudit } = await import("@/lib/audit-log");
-
-        type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
-
-        const toCustomer = (c: CustomerRow): Customer => ({
-            id: c.id,
-            fullName: c.full_name,
-            email: c.email,
-            phone: c.phone,
-            segment: c.segment,
-            loyaltyPoints: c.loyalty_points,
-            loyaltyTier: c.loyalty_tier,
-            createdAt: c.created_at,
-        });
-
-        const { data: customer, error } = await supabaseAdmin
-            .from("customers")
-            .insert({
-                id: crypto.randomUUID(),
-                full_name: data.fullName,
-                email: data.email || null,
-                phone: data.phone || null,
-                segment: data.segment,
-                loyalty_points: data.loyaltyPoints,
-                loyalty_tier: data.loyaltyTier,
-            })
-            .select()
-            .single();
-
-        if (error || !customer)
-            return {
-                success: false as const,
-                error: error?.message ?? "Gagal membuat customer",
-            };
-
-        void logAudit({
-            actorId: auth.session.user.id,
-            action: "create",
-            targetTable: "customers",
-            targetId: customer.id,
-            metadata: { fullName: customer.full_name },
-        });
-
-        return { success: true as const, data: toCustomer(customer) };
-    });
 
 /**
  * Mencari customer berdasarkan HP (kalau diisi) lalu nama, atau membuat baru.
@@ -131,6 +55,7 @@ export const findOrCreateCustomerFn = createServerFn({ method: "POST" })
             loyaltyPoints: c.loyalty_points,
             loyaltyTier: c.loyalty_tier,
             createdAt: c.created_at,
+            userId: c.user_id,
         });
 
         const { normalizePhone } = await import("@/features/customers/types");
@@ -270,6 +195,7 @@ export const updateCustomerFn = createServerFn({ method: "POST" })
                 loyaltyPoints: customer.loyalty_points,
                 loyaltyTier: customer.loyalty_tier,
                 createdAt: customer.created_at,
+                userId: customer.user_id,
             } satisfies Customer,
         };
     });
@@ -366,19 +292,10 @@ export const updateLoyaltyPointsFn = createServerFn({ method: "POST" })
                 loyaltyPoints: customer.loyalty_points,
                 loyaltyTier: customer.loyalty_tier,
                 createdAt: customer.created_at,
+                userId: customer.user_id,
             } satisfies Customer,
         };
     });
-
-/** @see {@link createCustomerFn} */
-export const useCreateCustomer = () => {
-    const qc = useQueryClient();
-    return useMutation({
-        mutationFn: (data: CreateCustomerInput) => createCustomerFn({ data }),
-        onSuccess: () =>
-            qc.invalidateQueries({ queryKey: customerKeys.lists() }),
-    });
-};
 
 /** @see {@link findOrCreateCustomerFn} */
 export const useFindOrCreateCustomer = () => {

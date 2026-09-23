@@ -1,4 +1,3 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
     Loader2,
     Minus,
@@ -7,8 +6,6 @@ import {
     ShoppingCart,
     Trash2,
 } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,190 +21,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { useFindOrCreateCustomer } from "@/features/customers/hooks/useCustomerMutations";
-import { useCreateOrder } from "@/features/orders/hooks/useOrderMutations";
-import type {
-    POSCartItem,
-    POSClientProps,
-    POSMenuItem,
-} from "@/features/pos/types";
-import { useRecordTransaction } from "@/features/transactions/hooks/useTransactionMutations";
+import { useChargeOrder } from "@/features/pos/hooks/useChargeOrder";
+import { usePosCart } from "@/features/pos/hooks/usePosCart";
+import { usePosCatalog } from "@/features/pos/hooks/usePosCatalog";
+import type { POSClientProps } from "@/features/pos/types";
 import { PAYMENT_METHODS } from "@/features/transactions/types";
 import { formatCurrency } from "@/utils/format";
 
-export function POSClient({ branchId, categories, items }: POSClientProps) {
-    const searchParams = useSearch({ from: "/pos" });
-    const navigate = useNavigate({ from: "/pos" });
-
-    const search = searchParams.search || "";
-    const activeCategory = searchParams.category || "all";
-
-    const setSearch = (val: string) => {
-        navigate({
-            search: (prev) => ({ ...prev, search: val || undefined }),
-            replace: true,
-        });
-    };
-
-    const setActiveCategory = (val: string) => {
-        navigate({
-            search: (prev) => ({
-                ...prev,
-                category: val === "all" ? undefined : val,
-            }),
-            replace: true,
-        });
-    };
-
-    const [cart, setCart] = useState<POSCartItem[]>([]);
-    const [isPending, startTransition] = useTransition();
-    const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
-    const [paymentMethod, setPaymentMethod] =
-        useState<(typeof PAYMENT_METHODS)[number]>("cash");
-    const [customerName, setCustomerName] = useState("");
-    const [customerPhone, setCustomerPhone] = useState("");
-
-    const findOrCreateCustomer = useFindOrCreateCustomer();
-    const createOrder = useCreateOrder();
-    const recordTransaction = useRecordTransaction();
-
-    const filteredItems = useMemo(() => {
-        return items.filter((item) => {
-            if (
-                activeCategory !== "all" &&
-                item.categoryId !== activeCategory
-            ) {
-                return false;
-            }
-            if (
-                search &&
-                !item.name.toLowerCase().includes(search.toLowerCase())
-            ) {
-                return false;
-            }
-            return true;
-        });
-    }, [items, search, activeCategory]);
-
-    const addToCart = (item: POSMenuItem) => {
-        setCart((prev) => {
-            const existing = prev.find((i) => i.menuItem.id === item.id);
-            if (existing) {
-                return prev.map((i) =>
-                    i.menuItem.id === item.id
-                        ? { ...i, quantity: i.quantity + 1 }
-                        : i,
-                );
-            }
-            return [
-                ...prev,
-                { id: crypto.randomUUID(), menuItem: item, quantity: 1 },
-            ];
-        });
-    };
-
-    const updateQuantity = (id: string, delta: number) => {
-        setCart((prev) =>
-            prev
-                .map((item) => {
-                    if (item.id === id) {
-                        const newQuantity = item.quantity + delta;
-                        return newQuantity > 0
-                            ? { ...item, quantity: newQuantity }
-                            : item;
-                    }
-                    return item;
-                })
-                .filter((item) => item.quantity > 0),
-        );
-    };
-
-    const removeFromCart = (id: string) => {
-        setCart((prev) => prev.filter((item) => item.id !== id));
-    };
-
-    const subtotal = cart.reduce(
-        (sum, item) => sum + Number(item.menuItem.price) * item.quantity,
-        0,
-    );
-
-    const handleCharge = () => {
-        if (!branchId || cart.length === 0) return;
-
-        startTransition(async () => {
-            let customerId: string | undefined;
-
-            try {
-                if (customerName.trim() !== "" || customerPhone.trim() !== "") {
-                    const custRes = await findOrCreateCustomer.mutateAsync({
-                        fullName:
-                            customerName.trim() !== ""
-                                ? customerName.trim()
-                                : customerPhone.trim(),
-                        phone: customerPhone.trim(),
-                    });
-                    if (custRes.success) {
-                        customerId = custRes.data.id;
-                    } else {
-                        console.error(
-                            "Customer creation failed:",
-                            custRes.error,
-                        );
-                    }
-                }
-            } catch (e) {
-                console.error("Error creating customer:", e);
-            }
-
-            const orderItems = cart.map((item) => ({
-                menuItemId: item.menuItem.id,
-                name: item.menuItem.name,
-                price: Number(item.menuItem.price),
-                qty: item.quantity,
-            }));
-
-            const res = await createOrder.mutateAsync({
-                branchId,
-                customerId,
-                items: orderItems,
-            });
-
-            if (res.success) {
-                const txnRes = await recordTransaction.mutateAsync({
-                    orderId: res.data.id,
-                    branchId,
-                    paymentMethod,
-                    amount: subtotal,
-                });
-
-                if (txnRes.success) {
-                    toast.success("Order & Payment Successful", {
-                        description: `Order Number: ${res.data.orderNumber} paid via ${paymentMethod.toUpperCase()}`,
-                    });
-                    setCart([]);
-                    setChargeDialogOpen(false);
-                    setPaymentMethod("cash");
-                    setCustomerName("");
-                    setCustomerPhone("");
-                } else {
-                    toast.warning(
-                        "Order created but payment recording failed",
-                        {
-                            description: Array.isArray(txnRes.error)
-                                ? txnRes.error.map((e) => e.message).join(", ")
-                                : txnRes.error,
-                        },
-                    );
-                }
-            } else {
-                toast.error("Failed to create order", {
-                    description: Array.isArray(res.error)
-                        ? res.error.map((e) => e.message).join(", ")
-                        : res.error,
-                });
-            }
-        });
-    };
+export const POSClient = ({ branchId, categories, items }: POSClientProps) => {
+    const {
+        cart,
+        subtotal,
+        addToCart,
+        updateQuantity,
+        removeFromCart,
+        clearCart,
+    } = usePosCart();
+    const {
+        search,
+        activeCategory,
+        setSearch,
+        setActiveCategory,
+        filteredItems,
+    } = usePosCatalog(items);
+    const {
+        isPending,
+        chargeDialogOpen,
+        setChargeDialogOpen,
+        paymentMethod,
+        setPaymentMethod,
+        customerPhone,
+        setCustomerPhone,
+        handleCharge,
+    } = useChargeOrder({ branchId, cart, subtotal, onCharged: clearCart });
 
     if (!branchId) {
         return (
@@ -297,11 +143,11 @@ export function POSClient({ branchId, categories, items }: POSClientProps) {
                                 </CardContent>
                             </Card>
                         ))}
-                        {filteredItems.length === 0 && (
+                        {filteredItems.length === 0 ? (
                             <div className="col-span-full py-12 text-center text-muted-foreground">
                                 No items found for this filter.
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </ScrollArea>
             </aside>
@@ -423,18 +269,6 @@ export function POSClient({ branchId, categories, items }: POSClientProps) {
                         </div>
                         <div className="space-y-2">
                             <Label className="text-sm font-medium">
-                                Customer Name (Optional)
-                            </Label>
-                            <Input
-                                placeholder="Enter customer name..."
-                                value={customerName}
-                                onChange={(e) =>
-                                    setCustomerName(e.target.value)
-                                }
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium">
                                 No. HP Member (Optional)
                             </Label>
                             <Input
@@ -488,9 +322,9 @@ export function POSClient({ branchId, categories, items }: POSClientProps) {
                             Cancel
                         </Button>
                         <Button onClick={handleCharge} disabled={isPending}>
-                            {isPending && (
+                            {isPending ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
+                            ) : null}
                             Confirm Charge
                         </Button>
                     </DialogFooter>
@@ -498,4 +332,4 @@ export function POSClient({ branchId, categories, items }: POSClientProps) {
             </Dialog>
         </div>
     );
-}
+};
