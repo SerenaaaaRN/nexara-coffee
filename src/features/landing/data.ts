@@ -5,36 +5,59 @@ import type {
 } from "@/features/landing/types";
 
 export const LANDING_COPY = {
-    badge: "Jaringan kopi Palembang",
-    headline: "Kopi favorit Palembang, dari hulu sampai cangkir",
+    eyebrow: "Rumah kopi Palembang",
+    headlineA: "Seduh pelan,",
+    headlineB: "rasa dalam.",
     subheadline:
-        "Jelajahi menu andalan dan cabang Nexara Coffee terdekat dari rumahmu.",
-    primaryCta: "Lihat Menu",
-    secondaryCta: "Cari Cabang",
+        "Biji pilihan, sangrai presisi, dan ruang yang tenang di tiap cabang Nexara.",
+    primaryCta: "Jelajahi Menu",
+    secondaryCta: "Temukan Cabang",
     loginCta: "Masuk",
-    registerCta: "Daftar",
+    registerCta: "Jadi Member",
+    marquee: [
+        "Seduh fresh setiap hari",
+        "Biji pilihan Nusantara",
+        "Palembang",
+        "Ruang tenang",
+        "Nexara Coffee",
+    ],
 } as const;
 
-export const LANDING_FEATURES = [
+export interface LandingRitual {
+    index: string;
+    title: string;
+    description: string;
+    image: string;
+}
+
+export const LANDING_RITUALS: LandingRitual[] = [
     {
-        icon: "Wallet",
-        title: "Setoran Harian Transparan",
+        index: "01",
+        title: "Biji pilihan Nusantara",
         description:
-            "Setiap rupiah tercatat rapi di tiap cabang, bisa dipantau kapan saja.",
+            "Arabika dataran tinggi dan robusta Pezzotta, dikurasi tiap musim panen lalu diistirahatkan hingga titik manisnya.",
+        image: "https://picsum.photos/seed/nexara-beans/1200/900",
     },
     {
-        icon: "Receipt",
-        title: "Pesanan Terpantau",
+        index: "02",
+        title: "Sangrai dan seduh presisi",
         description:
-            "Status pesanan dapur sampai kasir selalu sinkron dan terpantau.",
+            "Profil sangrai dikalibrasi harian. Suhu, grind, dan rasio ditimbang, bukan dikira-kira.",
+        image: "https://picsum.photos/seed/nexara-brew/1200/900",
     },
     {
-        icon: "Building2",
-        title: "Cabang Dekat Kamu",
+        index: "03",
+        title: "Ruang untuk kembali",
         description:
-            "Belasan titik di Palembang, tinggal pilih yang paling dekat.",
+            "Pencahayaan hangat, meja lapang, dan bar yang terbuka. Datang untuk kopi, tinggal untuk suasananya.",
+        image: "https://picsum.photos/seed/nexara-space/1200/900",
     },
-] as const;
+];
+
+export const LANDING_EDITORIAL = {
+    heading: "Kecil di jumlah, besar di rasa",
+    body: "Kami tidak mengejar ratusan gerai. Tiap cabang dirawat seperti ruang tamu sendiri.",
+} as const;
 
 export const FALLBACK_BRANCHES: PublicBranch[] = [];
 
@@ -42,18 +65,23 @@ export const FALLBACK_MENU: PublicMenuItem[] = [];
 
 export const LANDING_TESTIMONIALS: LandingTestimonial[] = [
     {
-        quote: "Kopinya konsisten, tempatnya nyaman buat kerja.",
-        name: "Rani",
-        role: "Pelanggan",
+        quote: "Es kopi susunya tidak pernah gagal. Tenang dan konsisten.",
+        name: "Rani Pratama",
+        role: "Pelanggan Setia, Cabang Basuki Rahmat",
     },
     {
-        quote: "Pelayanan cepat, menu favorit selalu tersedia.",
-        name: "Bagas",
-        role: "Pelanggan",
+        quote: "Tempat paling enak buat kerja lama tanpa merasa diusir.",
+        name: "Bagas Aditya",
+        role: "Freelancer, Cabang Demang",
     },
     {
-        quote: "Cabang dekat rumah, jadi langganan tiap pagi.",
-        name: "Sinta",
-        role: "Pelanggan",
+        quote: "Baristanya hafal pesananku. Rasanya seperti rumah kedua.",
+        name: "Sinta Maharani",
+        role: "Member Gold, Cabang Veteran",
     },
 ];
+
+export const LANDING_HERO_IMAGES = {
+    main: "/caffe1.jpg",
+    alt: "Bar Nexara Coffee saat seduh manual",
+} as const;

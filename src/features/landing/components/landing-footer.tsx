@@ -1,35 +1,44 @@
 import { Link } from "@tanstack/react-router";
-import { Coffee } from "lucide-react";
+import { ArrowUpRight, Coffee } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { Reveal } from "@/features/landing/components/landing-reveal";
+import { cn } from "@/utils/cn";
 
 export const LandingFooter = () => {
     return (
         <>
             <section className="border-t">
-                <div className="mx-auto flex max-w-7xl flex-col items-start gap-4 px-4 py-12 md:px-6 md:py-16">
-                    <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-                        Mampir, seruput, balik lagi.
-                    </h2>
-                    <p className="max-w-[65ch] text-muted-foreground">
-                        Temukan cabang Nexara Coffee terdekat di kotamu.
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                        <a href="#cabang" className={buttonVariants()}>
-                            Kunjungi Cabang
+                <div className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24">
+                    <Reveal className="flex flex-col items-start gap-6">
+                        <h2 className="max-w-2xl text-4xl font-bold tracking-tighter text-balance md:text-6xl">
+                            Mampir, seruput, balik lagi.
+                        </h2>
+                        <p className="max-w-[52ch] leading-relaxed text-muted-foreground">
+                            Temukan cabang Nexara Coffee terdekat dan rasakan
+                            ritualnya langsung.
+                        </p>
+                        <a
+                            href="#cabang"
+                            className={cn(
+                                buttonVariants({ size: "lg" }),
+                                "rounded-2xl active:scale-[0.98]",
+                            )}>
+                            Temukan Cabang
+                            <ArrowUpRight className="size-4" />
                         </a>
-                    </div>
+                    </Reveal>
                 </div>
             </section>
             <footer className="border-t">
                 <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:px-6">
                     <div className="flex items-center gap-2 font-medium">
-                        <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                        <span className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                             <Coffee className="size-4" />
                         </span>
                         Nexara Coffee
                     </div>
                     <p className="text-sm text-muted-foreground">
-                        Jaringan kopi Palembang. Buka setiap hari mengikuti jam
+                        Rumah kopi Palembang. Buka setiap hari mengikuti jam
                         tiap cabang.
                     </p>
                     <nav className="flex flex-wrap gap-1 md:ml-auto">
@@ -50,12 +59,12 @@ export const LandingFooter = () => {
                             Cabang
                         </a>
                         <Link
-                            to="/login"
+                            to="/register"
                             className={buttonVariants({
                                 variant: "ghost",
                                 size: "sm",
                             })}>
-                            Masuk
+                            Jadi Member
                         </Link>
                     </nav>
                 </div>
