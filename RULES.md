@@ -137,10 +137,10 @@ import { SectionHeader } from "@/components/shared/section-header";
 
 ## Batas Baris TSX
 
-- **Soft limit:** 200 baris per file `.tsx`
-- **Non-TSX files:** gaada limit
-- **Jangan split prematur** — beberapa komponen kecil boleh digabung di 1 file
-- **Split kalo:** 1 komponen >200 baris ATAU logika bisa dipisah bersih jadi dumb UI + parent orchestrator
+- **250 is the floor, not the ceiling:** while a file is under 250 lines, DO NOT split components into new files
+- **Non-TSX files:** no limit
+- **Compose first** — small components in the same flow must live in 1 file (composite pattern, e.g. primitives together with the section that uses them)
+- **Split when:** 1 file >350 lines OR logic separates cleanly into dumb UI + parent orchestrator
 
 ---
 

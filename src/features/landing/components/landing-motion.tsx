@@ -1,7 +1,9 @@
+"use client";
+
 import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
 
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+export const EASE: [number, number, number, number] = [0.4, 0, 0.2, 1];
 
 interface RevealProps {
     children: ReactNode;
@@ -77,5 +79,39 @@ export const RevealItem = ({
             }}>
             {children}
         </motion.div>
+    );
+};
+
+interface SectionHeadingProps {
+    title: string;
+    body: string;
+    aside?: ReactNode;
+    className?: string;
+}
+
+export const SectionHeading = ({
+    title,
+    body,
+    aside,
+    className,
+}: SectionHeadingProps) => {
+    return (
+        <Reveal
+            className={
+                className ??
+                "mb-8 flex flex-wrap items-end justify-between gap-4"
+            }>
+            <div>
+                <h2 className="text-3xl font-bold tracking-tighter text-balance md:text-4xl">
+                    {title}
+                </h2>
+                <p className="mt-2 max-w-[60ch] text-muted-foreground">
+                    {body}
+                </p>
+            </div>
+            {aside ? (
+                <div className="flex items-center gap-2">{aside}</div>
+            ) : null}
+        </Reveal>
     );
 };

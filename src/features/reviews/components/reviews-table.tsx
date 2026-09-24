@@ -36,7 +36,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { useReplyReview } from "@/features/reviews/hooks/useReviewMutations";
+import { useModerateReview, useReplyReview } from "@/features/reviews/hooks/useReviewMutations";
 import { useReviews } from "@/features/reviews/hooks/useReviewQueries";
 import { useReviewsTable } from "@/features/reviews/hooks/useReviewsTable";
 import type { ReviewRow } from "@/features/reviews/types";
@@ -46,6 +46,7 @@ export function ReviewsTable() {
     const { data: reviewsData } = useReviews();
     const allReviews = reviewsData.data ?? [];
     const replyMutation = useReplyReview();
+    const moderateMutation = useModerateReview();
 
     const [replyTarget, setReplyTarget] = useState<ReviewRow | null>(null);
     const [replyText, setReplyText] = useState("");
@@ -55,6 +56,27 @@ export function ReviewsTable() {
             onReply: (row) => {
                 setReplyTarget(row);
                 setReplyText(row.reply ?? "");
+            },
+            onModerate: (row, status) => {
+                moderateMutation.mutate(
+                    { id: row.id, status },
+                    {
+                        onSuccess: (res) => {
+                            if (res.success) {
+                                toast.success(
+                                    status === "approved"
+                                        ? "Review approved"
+                                        : "Review rejected",
+                                );
+                            } else {
+                                toast.error("Failed to moderate review");
+                            }
+                        },
+                        onError: () => {
+                            toast.error("Failed to moderate review");
+                        },
+                    },
+                );
             },
         });
 

@@ -175,7 +175,7 @@ src/
 - **No Shell/Client intermediary layers** — absorb into the page component or split into focused sub-components.
 - SQL is source of truth: `database/schema/*.sql` dulu, `database/types.ts` mengikuti (manual, tanpa generate)
 - Each feature is built **vertically**: types → server functions → hooks → components → route
-- **TSX files: max 250 lines** — do not split prematurely. Multiple components can be combined in one file.
+- **TSX files: 250 is the split floor** — below 250 lines do not split into new files; compose same-flow components in 1 file (composite). Split only above ~350 lines or when logic separates cleanly
 - **Non-TSX files** (types, utils) have no line limit.
 - **Global layout components** stay in `src/components/layout/`, not in features.
 - **Feature hooks**: All server functions + query hooks + mutation hooks live in `src/features/{domain}/hooks/`. Hooks are **split** into `use{Domain}Queries.ts` (queries) and `use{Domain}Mutations.ts` (mutations). Additional UI hooks (table state, realtime) use separate files like `use{Domain}Table.tsx`.

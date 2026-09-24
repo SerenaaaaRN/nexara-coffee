@@ -6,7 +6,7 @@ import {
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
-import { Reply, Star } from "lucide-react";
+import { Check, Reply, Star, X } from "lucide-react";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,11 +36,14 @@ function StarRating({ rating }: { rating: number }) {
 
 /**
  * Mempersiapkan column definitions, filter configs, useTableState, dan instance useReactTable
- * untuk tabel reviews. Callback onReply diteruskan ke kolom aksi.
+ * untuk tabel reviews. Callback onReply dan onModerate diteruskan ke kolom aksi.
  */
 export function useReviewsTable(
     reviews: ReviewRow[],
-    callbacks: { onReply: (review: ReviewRow) => void },
+    callbacks: {
+        onReply: (review: ReviewRow) => void;
+        onModerate: (review: ReviewRow, status: "approved" | "rejected") => void;
+    },
 ) {
     const tableState = useTableState();
 
@@ -125,6 +128,34 @@ export function useReviewsTable(
                 header: "Actions",
                 cell: ({ row }) => (
                     <div className="flex gap-1">
+                        {row.original.status === "pending" ? (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Approve"
+                                    onClick={() =>
+                                        callbacks.onModerate(
+                                            row.original,
+                                            "approved",
+                                        )
+                                    }>
+                                    <Check data-icon="inline-start" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Reject"
+                                    onClick={() =>
+                                        callbacks.onModerate(
+                                            row.original,
+                                            "rejected",
+                                        )
+                                    }>
+                                    <X data-icon="inline-start" />
+                                </Button>
+                            </>
+                        ) : null}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -135,7 +166,7 @@ export function useReviewsTable(
                 ),
             }),
         ],
-        [callbacks.onReply],
+        [callbacks.onReply, callbacks.onModerate],
     );
 
     /**

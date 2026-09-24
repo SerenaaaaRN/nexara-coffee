@@ -40,8 +40,10 @@ export interface PublicMenuCategoryJoined {
     } | null;
 }
 
-export interface LandingTestimonial {
-    quote: string;
-    name: string;
-    role: string;
+export interface PublicReview {
+    id: string;
+    rating: number;
+    comment: string;
+    customerName: string | null;
+    branchName: string | null;
 }

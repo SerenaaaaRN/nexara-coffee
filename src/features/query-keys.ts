@@ -141,6 +141,7 @@ export const landingKeys = {
     all: ["landing"] as const,
     branches: () => [...landingKeys.all, "branches"] as const,
     menu: () => [...landingKeys.all, "menu"] as const,
+    reviews: () => [...landingKeys.all, "reviews"] as const,
 };
 
 export const myPortalKeys = {

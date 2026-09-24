@@ -42,6 +42,15 @@ export function formatTime(date: string | Date): string {
     });
 }
 
+/** Rentang jam operasional cabang: "08:00–22:00". Null bila tak lengkap. */
+export function formatHours(
+    opening: string | null,
+    closing: string | null,
+): string | null {
+    if (!opening || !closing) return null;
+    return `${opening.slice(0, 5)}–${closing.slice(0, 5)}`;
+}
+
 /** Kapitalisasi huruf pertama. */
 export function capitalize(str: string): string {
     return str.charAt(0).toUpperCase() + str.slice(1);

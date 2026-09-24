@@ -1,9 +1,3 @@
-import type {
-    LandingTestimonial,
-    PublicBranch,
-    PublicMenuItem,
-} from "@/features/landing/types";
-
 export const LANDING_COPY = {
     eyebrow: "Rumah kopi Palembang",
     headlineA: "Seduh pelan,",
@@ -59,29 +53,13 @@ export const LANDING_EDITORIAL = {
     body: "Kami tidak mengejar ratusan gerai. Tiap cabang dirawat seperti ruang tamu sendiri.",
 } as const;
 
-export const FALLBACK_BRANCHES: PublicBranch[] = [];
-
-export const FALLBACK_MENU: PublicMenuItem[] = [];
-
-export const LANDING_TESTIMONIALS: LandingTestimonial[] = [
+export const LANDING_HERO_SLIDES = [
     {
-        quote: "Es kopi susunya tidak pernah gagal. Tenang dan konsisten.",
-        name: "Rani Pratama",
-        role: "Pelanggan Setia, Cabang Basuki Rahmat",
+        src: "/caffe1.jpg",
+        alt: "Suasana hangat gerai Nexara Coffee",
     },
     {
-        quote: "Tempat paling enak buat kerja lama tanpa merasa diusir.",
-        name: "Bagas Aditya",
-        role: "Freelancer, Cabang Demang",
+        src: "/caffe2.jpg",
+        alt: "Bar Nexara Coffee saat seduh manual",
     },
-    {
-        quote: "Baristanya hafal pesananku. Rasanya seperti rumah kedua.",
-        name: "Sinta Maharani",
-        role: "Member Gold, Cabang Veteran",
-    },
-];
-
-export const LANDING_HERO_IMAGES = {
-    main: "/caffe1.jpg",
-    alt: "Bar Nexara Coffee saat seduh manual",
-} as const;
+] as const;
