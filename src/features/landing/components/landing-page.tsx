@@ -8,7 +8,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { LandingCatalog } from "@/features/landing/components/landing-catalog";
 import { LandingHero } from "@/features/landing/components/landing-hero";
 import { EASE, Reveal } from "@/features/landing/components/landing-motion";
-import { LandingStory } from "@/features/landing/components/landing-story";
 import { LANDING_COPY } from "@/features/landing/data";
 import {
     usePublicBranches,
@@ -17,6 +16,7 @@ import {
 } from "@/features/landing/hooks/useLandingQueries";
 import { cn } from "@/utils/cn";
 import { formatHours } from "@/utils/format";
+import { LandingTestimonials } from "./landing-testi";
 
 const NAV_LINKS = [
     { href: "#ritual", label: "Ritual" },
@@ -241,7 +241,7 @@ export const LandingPage = () => {
                     }}
                 />
                 <LandingCatalog menuItems={menuItems} branches={branches} />
-                <LandingStory reviews={reviews} />
+                <LandingTestimonials reviews={reviews} />
             </main>
             <LandingFooter />
         </div>
