@@ -338,11 +338,14 @@ UPDATE "user" SET role = 'super_admin' WHERE email = 'you@example.com';
 
 ## 🚀 Deployment
 
-Deploy the frontend to Vercel (or another Node hosting provider):
+Deploy to Netlify (or another Node hosting provider such as Vercel):
 
-1. Import the repository into Vercel.
-2. Fill in all environment variables from `.env.example` in the project settings.
-3. Build command: `bun run build` (or `npm run build`). Server functions run on the server — this is not a static export.
+1. Connect the repository to Netlify. The `@netlify/vite-plugin-tanstack-start` adapter (already wired in `vite.config.ts`, production builds only) turns server functions into Netlify Functions — build command `bun run build`, publish directory `dist/client` (see `netlify.toml`).
+2. Fill in all environment variables from `.env.example` in the site settings. For production, adjust three auth-related values:
+   - `BETTER_AUTH_URL` = the production URL (e.g. `https://xxx.netlify.app`), not localhost
+   - add the production URL to `BETTER_AUTH_TRUSTED_ORIGINS`
+   - register `<production-URL>/api/auth/callback/google` as an authorized redirect URI in Google Cloud Console (otherwise Google login fails in production)
+3. Deploy, then smoke-test on the production URL: landing → register → login → one page per role → logout. Server functions run on the server — this is not a static export.
 
 ---
 
