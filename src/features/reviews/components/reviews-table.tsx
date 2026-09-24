@@ -36,7 +36,10 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { useModerateReview, useReplyReview } from "@/features/reviews/hooks/useReviewMutations";
+import {
+    useModerateReview,
+    useReplyReview,
+} from "@/features/reviews/hooks/useReviewMutations";
 import { useReviews } from "@/features/reviews/hooks/useReviewQueries";
 import { useReviewsTable } from "@/features/reviews/hooks/useReviewsTable";
 import type { ReviewRow } from "@/features/reviews/types";

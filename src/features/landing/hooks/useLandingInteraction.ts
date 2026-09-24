@@ -73,22 +73,6 @@ export const useCountUp = (value: number, duration = 1.2) => {
 };
 
 /**
- * Logika carousel dua arah (index + arah gerak untuk AnimatePresence).
- */
-export const useCarousel = (total: number) => {
-    const [index, setIndex] = useState(0);
-    const [direction, setDirection] = useState(1);
-
-    const go = (dir: number) => {
-        if (total === 0) return;
-        setDirection(dir);
-        setIndex((i) => (i + dir + total) % total);
-    };
-
-    return { index: total === 0 ? 0 : index % total, direction, go };
-};
-
-/**
  * Filter kategori menu: daftar kategori, item tampil (max 7), dan state aktif.
  */
 export const useMenuFilter = (items: PublicMenuItem[]) => {

@@ -1,15 +1,11 @@
-import { ArrowLeft, ArrowRight, Quote, Star } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { buttonVariants } from "@/components/ui/button";
+import { Quote, Star } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import {
     EASE,
-    Reveal,
     SectionHeading,
 } from "@/features/landing/components/landing-motion";
 import { LANDING_RITUALS } from "@/features/landing/data";
-import { useCarousel } from "@/features/landing/hooks/useLandingInteraction";
 import type { PublicReview } from "@/features/landing/types";
-import { cn } from "@/utils/cn";
 
 const LandingRitual = () => {
     const reduce = useReducedMotion();
@@ -63,105 +59,75 @@ const LandingRitual = () => {
     );
 };
 
-const LandingTestimonials = ({ items }: { items: PublicReview[] }) => {
-    const reduce = useReducedMotion();
-    const { index, direction, go } = useCarousel(items.length);
-
-    if (items.length === 0) return null;
-
-    const item = items[index];
+const ReviewCard = ({ item }: { item: PublicReview }) => {
     const displayName = item.customerName ?? "Pelanggan Nexara";
+    return (
+        <article className="flex h-60 w-72 shrink-0 flex-col rounded-3xl border bg-card p-5 shadow-sm md:w-80">
+            <div
+                role="img"
+                aria-label={`Rating ${item.rating} dari 5`}
+                className="flex items-center gap-0.5">
+                {Array.from({ length: 5 }, (_, i) => (
+                    <Star
+                        key={i}
+                        className={
+                            i < item.rating
+                                ? "size-3.5 fill-current text-foreground"
+                                : "size-3.5 text-muted-foreground/40"
+                        }
+                    />
+                ))}
+            </div>
+            <p className="mt-3 line-clamp-4 flex-1 font-serif text-base leading-relaxed italic">
+                &ldquo;{item.comment}&rdquo;
+            </p>
+            <div className="mt-4 flex items-center gap-2.5 border-t pt-3">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    {displayName.slice(0, 1).toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                    <p className="truncate text-sm font-bold">{displayName}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                        {item.branchName
+                            ? `Cabang ${item.branchName}`
+                            : "Pelanggan terverifikasi"}
+                    </p>
+                </div>
+                <Quote
+                    aria-hidden
+                    className="ml-auto size-4 shrink-0 opacity-20"
+                />
+            </div>
+        </article>
+    );
+};
+
+const LandingTestimonials = ({ items }: { items: PublicReview[] }) => {
+    if (items.length === 0) return null;
 
     return (
         <div id="cerita" className="scroll-mt-24 border-t">
             <div className="mx-auto max-w-7xl px-4 py-14 md:px-6 md:py-20">
-                <div className="grid gap-10 lg:grid-cols-[1fr_2fr] lg:items-start">
-                    <Reveal>
-                        <h2 className="text-3xl font-bold tracking-tighter md:text-4xl">
-                            Kata mereka yang kembali
-                        </h2>
-                        <p className="mt-2 text-muted-foreground">
-                            Ulasan asli pelanggan, hanya yang lolos kurasi yang
-                            tampil di sini.
-                        </p>
-                        <div className="mt-6 flex items-center gap-2">
-                            <button
-                                type="button"
-                                aria-label="Ulasan sebelumnya"
-                                onClick={() => go(-1)}
-                                className={cn(
-                                    buttonVariants({
-                                        variant: "outline",
-                                        size: "icon",
-                                    }),
-                                    "rounded-full active:scale-[0.95]",
-                                )}>
-                                <ArrowLeft className="size-4" />
-                            </button>
-                            <button
-                                type="button"
-                                aria-label="Ulasan berikutnya"
-                                onClick={() => go(1)}
-                                className={cn(
-                                    buttonVariants({
-                                        variant: "outline",
-                                        size: "icon",
-                                    }),
-                                    "rounded-full active:scale-[0.95]",
-                                )}>
-                                <ArrowRight className="size-4" />
-                            </button>
-                            <span className="ml-2 font-mono text-xs text-muted-foreground">
-                                {index + 1} / {items.length}
-                            </span>
+                <SectionHeading
+                    title="Kata mereka yang kembali"
+                    body="Ulasan asli pelanggan, hanya yang lolos kurasi yang tampil di sini."
+                />
+            </div>
+            <div className="overflow-hidden pb-14 md:pb-20 mask-[linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]">
+                <div className="landing-review-track flex w-max items-stretch gap-4">
+                    {[0, 1].map((half) => (
+                        <div
+                            key={half}
+                            aria-hidden={half === 1 ? true : undefined}
+                            className="flex w-max shrink-0 items-stretch gap-4 pr-4">
+                            {items.map((item) => (
+                                <ReviewCard
+                                    key={`${half}-${item.id}`}
+                                    item={item}
+                                />
+                            ))}
                         </div>
-                    </Reveal>
-                    <div className="relative min-h-64 overflow-hidden rounded-3xl border bg-card p-8 shadow-sm md:min-h-72 md:p-12">
-                        <Quote
-                            aria-hidden
-                            className="absolute top-6 right-8 size-10 opacity-10"
-                        />
-                        <AnimatePresence mode="wait" custom={direction}>
-                            <motion.figure
-                                key={item.id}
-                                custom={direction}
-                                initial={
-                                    reduce
-                                        ? false
-                                        : { opacity: 0, x: 48 * direction }
-                                }
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={
-                                    reduce
-                                        ? { opacity: 0 }
-                                        : { opacity: 0, x: -48 * direction }
-                                }
-                                transition={{ duration: 0.4, ease: EASE }}>
-                                <blockquote className="max-w-[52ch] font-serif text-2xl leading-snug italic text-balance md:text-3xl">
-                                    &ldquo;{item.comment}&rdquo;
-                                </blockquote>
-                                <figcaption className="mt-6 flex flex-wrap items-center gap-3">
-                                    <span className="flex size-10 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground">
-                                        {displayName.slice(0, 1).toUpperCase()}
-                                    </span>
-                                    <div>
-                                        <p className="text-sm font-bold">
-                                            {displayName}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {item.branchName
-                                                ? `Cabang ${item.branchName}`
-                                                : "Pelanggan terverifikasi"}
-                                        </p>
-                                    </div>
-                                    <span className="ml-auto flex items-center gap-1 rounded-full border px-3 py-1 font-mono text-xs font-semibold">
-                                        <Star className="size-3.5 fill-current" />
-                                        {item.rating.toFixed(1)}
-                                    </span>
-                                </figcaption>
-                            </motion.figure>
-                        </AnimatePresence>
-                    </div>
+                    ))}
                 </div>
             </div>
         </div>

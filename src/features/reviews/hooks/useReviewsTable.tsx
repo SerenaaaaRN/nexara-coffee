@@ -42,7 +42,10 @@ export function useReviewsTable(
     reviews: ReviewRow[],
     callbacks: {
         onReply: (review: ReviewRow) => void;
-        onModerate: (review: ReviewRow, status: "approved" | "rejected") => void;
+        onModerate: (
+            review: ReviewRow,
+            status: "approved" | "rejected",
+        ) => void;
     },
 ) {
     const tableState = useTableState();

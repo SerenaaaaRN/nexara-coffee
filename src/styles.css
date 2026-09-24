@@ -407,6 +407,12 @@
   .landing-marquee-track:hover {
     animation-play-state: paused;
   }
+  .landing-review-track {
+    animation: landing-marquee 45s linear infinite;
+  }
+  .landing-review-track:hover {
+    animation-play-state: paused;
+  }
   .landing-float-slow {
     animation: landing-float 7s ease-in-out infinite;
   }
@@ -461,6 +467,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .landing-marquee-track,
+  .landing-review-track,
   .landing-float-slow,
   .landing-float-slower,
   .landing-steam {
