@@ -1,59 +1,34 @@
-import type {
-    LandingTestimonial,
-    PublicBranch,
-    PublicMenuItem,
-} from "@/features/landing/types";
-
 export const LANDING_COPY = {
-    badge: "Jaringan kopi Palembang",
-    headline: "Kopi favorit Palembang, dari hulu sampai cangkir",
+    eyebrow: "Rumah kopi Palembang",
+    headlineA: "Seduh pelan,",
+    headlineB: "rasa dalam.",
     subheadline:
-        "Jelajahi menu andalan dan cabang Nexara Coffee terdekat dari rumahmu.",
-    primaryCta: "Lihat Menu",
-    secondaryCta: "Cari Cabang",
+        "Biji pilihan, sangrai presisi, dan ruang yang tenang di tiap cabang Nexara.",
+    primaryCta: "Jelajahi Menu",
+    secondaryCta: "Temukan Cabang",
     loginCta: "Masuk",
-    registerCta: "Daftar",
+    registerCta: "Jadi Member",
+    marquee: [
+        "Seduh fresh setiap hari",
+        "Biji pilihan Nusantara",
+        "Palembang",
+        "Ruang tenang",
+        "Nexara Coffee",
+    ],
 } as const;
 
-export const LANDING_FEATURES = [
+export const LANDING_EDITORIAL = {
+    heading: "Kecil di jumlah, besar di rasa",
+    body: "Kami tidak mengejar ratusan gerai. Tiap cabang dirawat seperti ruang tamu sendiri.",
+} as const;
+
+export const LANDING_HERO_SLIDES = [
     {
-        icon: "Wallet",
-        title: "Setoran Harian Transparan",
-        description:
-            "Setiap rupiah tercatat rapi di tiap cabang, bisa dipantau kapan saja.",
+        src: "/caffe1.jpg",
+        alt: "Suasana hangat gerai Nexara Coffee",
     },
     {
-        icon: "Receipt",
-        title: "Pesanan Terpantau",
-        description:
-            "Status pesanan dapur sampai kasir selalu sinkron dan terpantau.",
-    },
-    {
-        icon: "Building2",
-        title: "Cabang Dekat Kamu",
-        description:
-            "Belasan titik di Palembang, tinggal pilih yang paling dekat.",
+        src: "/caffe2.jpg",
+        alt: "Bar Nexara Coffee saat seduh manual",
     },
 ] as const;
-
-export const FALLBACK_BRANCHES: PublicBranch[] = [];
-
-export const FALLBACK_MENU: PublicMenuItem[] = [];
-
-export const LANDING_TESTIMONIALS: LandingTestimonial[] = [
-    {
-        quote: "Kopinya konsisten, tempatnya nyaman buat kerja.",
-        name: "Rani",
-        role: "Pelanggan",
-    },
-    {
-        quote: "Pelayanan cepat, menu favorit selalu tersedia.",
-        name: "Bagas",
-        role: "Pelanggan",
-    },
-    {
-        quote: "Cabang dekat rumah, jadi langganan tiap pagi.",
-        name: "Sinta",
-        role: "Pelanggan",
-    },
-];

@@ -383,30 +383,31 @@ export function MyPortalSkeleton() {
 export function LandingSkeleton() {
     return (
         <div className="min-h-svh bg-background">
-            <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 md:px-6">
-                <Skeleton className="h-8 w-40" />
-                <div className="ml-auto flex gap-2">
-                    <Skeleton className="h-8 w-20 rounded-md" />
-                    <Skeleton className="h-8 w-20 rounded-md" />
-                </div>
+            <div className="px-4 pt-3 md:pt-5">
+                <Skeleton className="mx-auto h-14 max-w-3xl rounded-2xl md:h-16" />
             </div>
-            <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 md:px-6 md:py-20 lg:grid-cols-2">
-                <div className="space-y-4">
-                    <Skeleton className="h-6 w-48 rounded-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-3/4" />
-                    <Skeleton className="h-5 w-full" />
-                    <div className="flex gap-2">
-                        <Skeleton className="h-10 w-32 rounded-md" />
-                        <Skeleton className="h-10 w-32 rounded-md" />
+            <div className="relative mt-4 min-h-[80dvh] overflow-hidden rounded-3xl border bg-muted/40">
+                <div className="absolute inset-x-4 bottom-8 space-y-4 md:inset-x-10 md:bottom-14">
+                    <Skeleton className="h-6 w-52 rounded-full" />
+                    <Skeleton className="h-14 w-full max-w-2xl rounded-2xl" />
+                    <Skeleton className="h-14 w-3/4 max-w-xl rounded-2xl" />
+                    <Skeleton className="h-5 w-full max-w-lg" />
+                    <div className="flex gap-3">
+                        <Skeleton className="h-12 w-40 rounded-2xl" />
+                        <Skeleton className="h-12 w-40 rounded-2xl" />
                     </div>
                 </div>
-                <Skeleton className="aspect-[4/3] w-full rounded-xl" />
             </div>
-            <div className="mx-auto grid max-w-7xl gap-4 px-4 pb-12 md:grid-cols-3 md:px-6">
-                {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-24 rounded-xl" />
-                ))}
+            <div className="mx-auto max-w-7xl space-y-4 px-4 py-12 md:px-6">
+                <Skeleton className="h-9 w-72" />
+                <div className="grid gap-8 sm:grid-cols-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton
+                            key={i}
+                            className="h-28 rounded-none border-t-2"
+                        />
+                    ))}
+                </div>
             </div>
         </div>
     );

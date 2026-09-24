@@ -5,6 +5,7 @@ import { LandingPage } from "@/features/landing/components/landing-page";
 import {
     publicBranchesOptions,
     publicMenuOptions,
+    publicReviewsOptions,
 } from "@/features/landing/hooks/useLandingQueries";
 
 export const Route = createFileRoute("/")({
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/")({
         await Promise.all([
             queryClient.ensureQueryData(publicBranchesOptions()),
             queryClient.ensureQueryData(publicMenuOptions()),
+            queryClient.ensureQueryData(publicReviewsOptions()),
         ]);
     },
     head: () => ({
