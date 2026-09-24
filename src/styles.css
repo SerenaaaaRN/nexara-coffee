@@ -386,11 +386,94 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
   .maplibregl-popup-content {
     @apply bg-transparent! shadow-none! p-0! rounded-none!;
   }
   .maplibregl-popup-tip {
     @apply hidden!;
+  }
+}
+
+@layer utilities {
+  .landing-marquee-track {
+    animation: landing-marquee 28s linear infinite;
+  }
+  .landing-marquee-track:hover {
+    animation-play-state: paused;
+  }
+  .landing-review-track {
+    animation: landing-marquee 45s linear infinite;
+  }
+  .landing-review-track:hover {
+    animation-play-state: paused;
+  }
+  .landing-float-slow {
+    animation: landing-float 7s ease-in-out infinite;
+  }
+  .landing-float-slower {
+    animation: landing-float 9s ease-in-out 1.2s infinite;
+  }
+  .landing-steam {
+    animation: landing-steam 3.2s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  .landing-grain::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+@keyframes landing-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes landing-steam {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0) scaleX(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-4px) scaleX(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-marquee-track,
+  .landing-review-track,
+  .landing-float-slow,
+  .landing-float-slower,
+  .landing-steam {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
   }
 }

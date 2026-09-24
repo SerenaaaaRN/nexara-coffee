@@ -1,3 +1,4 @@
+import netlify from "@netlify/vite-plugin-tanstack-start";
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
@@ -10,7 +11,8 @@ const config = defineConfig({
     plugins: [
         devtools(),
         tailwindcss(),
-        tanstackStart(),
+        tanstackStart({ spa: { enabled: true } }),
+        ...(process.env.NODE_ENV === "production" ? [netlify()] : []),
         viteReact(),
         babel({ presets: [reactCompilerPreset()] }),
     ],
