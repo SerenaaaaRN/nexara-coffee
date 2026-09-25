@@ -11,7 +11,11 @@ const config = defineConfig({
     plugins: [
         devtools(),
         tailwindcss(),
-        tanstackStart(),
+        tanstackStart({
+            spa: {
+                enabled: true,
+            },
+        }),
         ...(process.env.NODE_ENV === "production" ? [netlify()] : []),
         viteReact(),
         babel({ presets: [reactCompilerPreset()] }),
