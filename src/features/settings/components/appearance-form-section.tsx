@@ -30,9 +30,7 @@ export const AppearanceFormSection = () => {
                     to cycle through all themes.
                 </FieldDescription>
                 <FieldContent>
-                    <div
-                        data-tour="settings-theme"
-                        className="grid grid-cols-3 gap-4 pt-2">
+                    <div className="grid grid-cols-3 gap-4 pt-2">
                         {themes.map((t) => {
                             const meta = THEME_META[t];
                             if (!meta) return null;

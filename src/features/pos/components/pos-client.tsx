@@ -76,9 +76,7 @@ export const POSClient = ({ branchId, categories, items }: POSClientProps) => {
         <div className="flex h-[calc(100vh-56px)] w-full flex-col lg:flex-row overflow-hidden">
             {/* LEFT: Menu Catalog */}
             <aside className="flex h-full flex-1 flex-col overflow-hidden bg-muted/20">
-                <div
-                    data-tour="pos-catalog"
-                    className="flex flex-col gap-4 border-b p-4 sm:flex-row sm:items-center">
+                <div className="flex flex-col gap-4 border-b p-4 sm:flex-row sm:items-center">
                     <div className="relative flex-1 max-w-sm">
                         <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
                         <Input
@@ -155,9 +153,7 @@ export const POSClient = ({ branchId, categories, items }: POSClientProps) => {
             </aside>
 
             {/* RIGHT: Cart */}
-            <div
-                data-tour="pos-cart"
-                className="flex h-[50vh] w-full flex-col border-l bg-background lg:h-full lg:w-95 xl:w-105 shrink-0">
+            <div className="flex h-[50vh] w-full flex-col border-l bg-background lg:h-full lg:w-95 xl:w-105 shrink-0">
                 <div className="flex items-center gap-2 border-b p-4">
                     <ShoppingCart className="size-5" />
                     <h2 className="font-semibold tracking-tight">
@@ -247,7 +243,6 @@ export const POSClient = ({ branchId, categories, items }: POSClientProps) => {
                         </span>
                     </div>
                     <Button
-                        data-tour="pos-charge"
                         className="w-full text-lg h-12"
                         disabled={cart.length === 0}
                         onClick={() => setChargeDialogOpen(true)}>

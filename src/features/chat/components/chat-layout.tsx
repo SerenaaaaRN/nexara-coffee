@@ -59,7 +59,6 @@ export const ChatLayout = ({
             </div>
             {activeChannelId ? (
                 <div
-                    data-tour="chat-conversation"
                     className={cn(
                         "absolute inset-0 inset-s-full z-50 hidden w-full min-h-0 flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
                         mobileSelected && "inset-s-0 flex",
@@ -110,7 +109,6 @@ export const ChatLayout = ({
                 </div>
             ) : (
                 <div
-                    data-tour="chat-conversation"
                     className={cn(
                         "absolute inset-0 inset-s-full z-50 hidden w-full min-h-0 flex-1 flex-col justify-center rounded-md border bg-card shadow-xs sm:static sm:z-auto sm:flex",
                         mobileSelected && "inset-s-0 flex",

@@ -225,9 +225,7 @@ export function MyOrdersPage() {
                 title="Pesananku"
                 subtitle="Riwayat pesanan kamu di Nexara Coffee."
             />
-            <div
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3"
-                data-tour="my-orders-stats">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <StatCard label="Total Pesanan" value={total} icon={Coffee} />
                 <StatCard
                     label="Selesai"
@@ -235,7 +233,7 @@ export function MyOrdersPage() {
                     icon={Coffee}
                 />
             </div>
-            <div className="rounded-lg border" data-tour="my-orders-table">
+            <div className="rounded-lg border">
                 <Table>
                     <TableHeader>
                         <TableRow>

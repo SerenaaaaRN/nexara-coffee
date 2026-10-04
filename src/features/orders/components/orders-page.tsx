@@ -150,9 +150,7 @@ function OrdersContent() {
                 </Empty>
             ) : (
                 <>
-                    <div
-                        className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4"
-                        data-tour="orders-stats">
+                    <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
                         <StatCard
                             label="Total Orders"
                             value={filteredRows.length}
@@ -175,7 +173,7 @@ function OrdersContent() {
                         />
                     </div>
 
-                    <div data-tour="orders-toolbar">
+                    <div>
                         <FilterToolbar
                             tableState={tableState}
                             searchPlaceholder={searchPlaceholder}

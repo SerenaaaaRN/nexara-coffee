@@ -184,9 +184,7 @@ export const ChatPanel = ({
                 </div>
             ) : null}
             {canSend ? (
-                <form
-                    data-tour="chat-form"
-                    className="flex w-full flex-none gap-2 pt-2">
+                <form className="flex w-full flex-none gap-2 pt-2">
                     <div className="flex flex-1 items-center gap-2 rounded-xl border border-input bg-card px-3 py-1.5 focus-within:ring-1 focus-within:ring-ring lg:gap-4">
                         <Button
                             size="icon"

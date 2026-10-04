@@ -67,7 +67,7 @@ export const ProfileFormSection = ({ user }: ProfileFormSectionProps) => {
     return (
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="flex items-start gap-6">
-                <div data-tour="settings-avatar" className="relative">
+                <div className="relative">
                     <Avatar
                         className={`h-20 w-20 rounded-xl ${selectedFile ? "" : "cursor-pointer"}`}
                         onClick={

@@ -317,12 +317,6 @@ UPDATE "user" SET role = 'super_admin' WHERE email = 'you@example.com';
 - **Features**: update profile, change password
 - **How to Use**: same self-service pattern as the customer account page
 
-#### 🧭 Guided Tour
-
-- **Description**: interactive onboarding built with driver.js
-- **Features**: 9 tours — a multi-page introduction, per-page dashboard tours, and one full walkthrough for the `/my` portal
-- **How to Use**: click the tour icon in the header on any page
-
 ---
 
 ## 🔒 Security Notes

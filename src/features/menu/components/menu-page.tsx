@@ -307,9 +307,7 @@ export function MenuPage() {
             />
 
             <div className="flex flex-1 flex-col gap-4">
-                <div
-                    className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4"
-                    data-tour="menu-stats">
+                <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
                     <StatCard label="Total Items" value={items.length} />
                     <StatCard
                         label="Available"
@@ -323,9 +321,7 @@ export function MenuPage() {
                 </div>
 
                 <Tabs value={activeTab} onValueChange={handleTabChange}>
-                    <div
-                        className="flex flex-wrap items-center justify-between gap-3"
-                        data-tour="menu-tabs">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                         <TabsList className="flex-wrap">
                             <TabsTrigger value="all">
                                 All ({items.length})
@@ -354,8 +350,7 @@ export function MenuPage() {
                                 onClick={() => {
                                     setEditingItem(null);
                                     setItemDialogOpen(true);
-                                }}
-                                data-tour="menu-add">
+                                }}>
                                 <Plus className="mr-2 h-4 w-4" /> Add Item
                             </Button>
                         </div>

@@ -37,10 +37,7 @@ export const AccountFormSection = () => {
     };
 
     return (
-        <form
-            data-tour="settings-password"
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Controller
                 name="currentPassword"
                 control={form.control}

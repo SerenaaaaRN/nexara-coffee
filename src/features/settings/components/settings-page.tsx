@@ -127,7 +127,7 @@ export const SettingsPage = () => {
             <Separator className="my-4 lg:my-6" />
 
             <div className="flex flex-1 flex-col space-y-8 md:flex-row md:space-y-0 md:space-x-12">
-                <aside data-tour="settings-nav" className="md:w-48 lg:w-56">
+                <aside className="md:w-48 lg:w-56">
                     <div className="p-1 md:hidden">
                         <Select
                             value={activeSectionKey}
@@ -169,13 +169,6 @@ export const SettingsPage = () => {
                                         key={key}
                                         type="button"
                                         onClick={() => handleSectionSelect(key)}
-                                        data-tour={
-                                            key === "account"
-                                                ? "settings-goto-account"
-                                                : key === "appearance"
-                                                  ? "settings-goto-appearance"
-                                                  : undefined
-                                        }
                                         className={cn(
                                             "inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 justify-start w-full cursor-pointer",
                                             isActive
@@ -194,7 +187,7 @@ export const SettingsPage = () => {
                 </aside>
 
                 <div className="flex-1">
-                    <div data-tour="settings-content" className="flex-none">
+                    <div className="flex-none">
                         <h3 className="text-lg font-medium">
                             {activeConfig.title}
                         </h3>

@@ -32,9 +32,7 @@ export function MyLoyaltyPage() {
                 title="Member"
                 subtitle="Poin dan tier loyalty kamu."
             />
-            <div
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3"
-                data-tour="my-loyalty-stats">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <StatCard
                     label="Poin"
                     value={loyalty.loyaltyPoints.toLocaleString("id-ID")}
@@ -51,7 +49,7 @@ export function MyLoyaltyPage() {
                     icon={Award}
                 />
             </div>
-            <Card data-tour="my-loyalty-card">
+            <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle>{loyalty.fullName}</CardTitle>

@@ -24,7 +24,7 @@ export function MyAccountPage() {
                 subtitle="Ubah nama dan password akun kamu."
             />
             <Separator />
-            <div className="w-full lg:max-w-xl" data-tour="my-account-profile">
+            <div className="w-full lg:max-w-xl">
                 <h3 className="text-lg font-medium">Profile</h3>
                 <p className="text-sm text-muted-foreground">
                     Nama ini ditampilkan di pesanan dan profil member kamu.
@@ -34,7 +34,7 @@ export function MyAccountPage() {
                 </div>
             </div>
             <Separator />
-            <div className="w-full lg:max-w-xl" data-tour="my-account-password">
+            <div className="w-full lg:max-w-xl">
                 <h3 className="text-lg font-medium">Password</h3>
                 <p className="text-sm text-muted-foreground">
                     Perbarui password untuk keamanan akun kamu.

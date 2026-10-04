@@ -10,7 +10,6 @@ import {
     useMenuItems,
 } from "@/features/menu/hooks/useMenuQueries";
 import { POSClient } from "@/features/pos/components/pos-client";
-import { TourLauncher } from "@/features/tour/components/tour-launcher";
 
 const routeApi = getRouteApi("/pos");
 
@@ -56,7 +55,6 @@ export function POSPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <TourLauncher />
                     <Button
                         variant="ghost"
                         size="icon"

@@ -27,9 +27,7 @@ function StatSkeleton() {
 export function StatCards({ stats }: { stats: OverviewStats | null }) {
     if (!stats) {
         return (
-            <div
-                className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
-                data-tour="overview-stats">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {[1, 2, 3, 4].map((n) => (
                     <StatSkeleton key={`skel-${n}`} />
                 ))}
@@ -61,9 +59,7 @@ export function StatCards({ stats }: { stats: OverviewStats | null }) {
     ];
 
     return (
-        <div
-            className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
-            data-tour="overview-stats">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {cards.map((card) => {
                 const Icon = card.icon;
                 return (
