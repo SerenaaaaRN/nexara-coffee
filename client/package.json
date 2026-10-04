@@ -1,5 +1,5 @@
 {
-  "name": "nexara-coffee",
+  "name": "nex-client",
   "private": true,
   "type": "module",
   "imports": {
