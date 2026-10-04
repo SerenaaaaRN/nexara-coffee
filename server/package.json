@@ -9,7 +9,12 @@
 	"scripts": {
 		"dev": "bun run --watch src/index.ts",
 		"typecheck": "tsc --noEmit",
-		"test": "bun test"
+		"test": "bun test",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:push": "drizzle-kit push",
+		"db:studio": "drizzle-kit studio",
+		"db:pull": "drizzle-kit pull"
 	},
 	"dependencies": {
 		"@elysiajs/openapi": "1.4.16",
@@ -26,9 +31,11 @@
 	"devDependencies": {
 		"@elysiajs/eden": "1.4.9",
 		"@types/node": "catalog:",
+		"@types/pg": "^8.23.1",
 		"bun-types": "latest",
 		"dotenv": "^17.4.2",
 		"drizzle-kit": "^0.31.10",
+		"pg": "^8.23.1",
 		"typescript": "catalog:"
 	}
 }
