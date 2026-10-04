@@ -1,10 +1,13 @@
 import Elysia from "elysia";
 import { betterAuth } from "./plugins/auth";
 import { errorPlugin } from "./plugins/error";
+import { api } from "./routes/api";
 import { health } from "./routes/health";
+import { openapiDocs } from "./routes/openapi";
 import { session } from "./routes/sessions";
 
 export const app = new Elysia()
+	.use(openapiDocs)
 	.use(betterAuth)
 	.get("/", () => ({
 		name: "Nexara API",
@@ -13,6 +16,7 @@ export const app = new Elysia()
 	}))
 	.use(health)
 	.use(session)
+	.use(api)
 	.use(errorPlugin);
 
 export type App = typeof app;
