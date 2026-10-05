@@ -15,10 +15,6 @@ export const getOrdersQuery = t.Object({
 	dateTo: t.Optional(t.String()),
 });
 
-export const orderIdParams = t.Object({
-	id: t.String({ minLength: 1 }),
-});
-
 export const createOrderSchema = t.Object({
 	branchId: t.String({ minLength: 1 }),
 	customerId: t.Optional(t.String()),
@@ -28,20 +24,10 @@ export const createOrderSchema = t.Object({
 			name: t.String({ minLength: 1 }),
 			price: t.Number({ minimum: 0, exclusiveMinimum: 0 }),
 			variant: t.Optional(t.String()),
-			qty: t.Numeric({ minimum: 1 }),
+			qty: t.Number({ minimum: 1 }),
 		}),
 		{ minItems: 1 },
 	),
-});
-
-export const updateStatusSchema = t.Object({
-	orderId: t.String({ minLength: 1 }),
-	status: t.UnionEnum([...ORDER_STATUSES] as [string, ...string[]]),
-});
-
-export const cancelOrderSchema = t.Object({
-	orderId: t.String({ minLength: 1 }),
-	reason: t.Optional(t.String({ maxLength: 500 })),
 });
 
 export const updateStatusBody = t.Object({

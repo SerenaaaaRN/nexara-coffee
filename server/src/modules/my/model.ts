@@ -7,6 +7,6 @@ export const myOrdersQuery = t.Object({
 
 export const createMyReviewBody = t.Object({
 	orderId: t.String({ minLength: 1 }),
-	rating: t.Numeric({ minimum: 1, maximum: 5 }),
+	rating: t.Number({ minimum: 1, maximum: 5 }),
 	comment: t.Optional(t.String({ maxLength: 500 })),
 });

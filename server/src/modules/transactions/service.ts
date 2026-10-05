@@ -1,15 +1,13 @@
 import { eq, inArray, sql } from "drizzle-orm";
-import { status } from "elysia";
+import type { CurrentUser } from "../../access/index.js";
+import { getAccessibleBranchIds } from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { branches } from "../../db/schema/branches.js";
 import { transactions } from "../../db/schema/finance.js";
 import { orders } from "../../db/schema/orders.js";
-import { can, type Role } from "../../lib/rbac.js";
-import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
+import { fail, ok } from "../../lib/http.js";
 
-export const getTransactions = async (user: { id: string; role: string }) => {
-	if (!can(user.role as Role, "read", "finance"))
-		return status(403, { success: false as const, error: "Forbidden" });
+export const getTransactions = async (user: CurrentUser) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	const condition = ids
 		? ids.length > 0
@@ -33,28 +31,19 @@ export const getTransactions = async (user: { id: string; role: string }) => {
 		.leftJoin(branches, eq(transactions.branchId, branches.id))
 		.where(condition)
 		.orderBy(transactions.createdAt);
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
-export const getTransactionDetail = async (
-	user: { id: string; role: string },
-	id: string,
-) => {
-	if (!can(user.role as Role, "read", "finance"))
-		return status(403, { success: false as const, error: "Forbidden" });
+export const getTransactionDetail = async (user: CurrentUser, id: string) => {
 	const [row] = await db
 		.select()
 		.from(transactions)
 		.where(eq(transactions.id, id))
 		.limit(1);
-	if (!row)
-		return status(404, {
-			success: false as const,
-			error: "Transaction not found",
-		});
+	if (!row) return fail(404, "Transaction not found");
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	if (ids !== null && !ids.includes(row.branchId))
-		return status(403, { success: false as const, error: "Forbidden" });
+		return fail(403, "Forbidden");
 	const [detail] = await db
 		.select({
 			id: transactions.id,
@@ -72,11 +61,11 @@ export const getTransactionDetail = async (
 		.leftJoin(branches, eq(transactions.branchId, branches.id))
 		.where(eq(transactions.id, id))
 		.limit(1);
-	return { success: true as const, data: detail ?? row };
+	return ok(detail ?? row);
 };
 
 export const recordTransaction = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	data: {
 		orderId: string;
 		branchId: string;
@@ -84,11 +73,9 @@ export const recordTransaction = async (
 		amount: number;
 	},
 ) => {
-	if (!can(user.role as Role, "create", "finance"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	if (ids !== null && !ids.includes(data.branchId))
-		return status(403, { success: false as const, error: "Forbidden" });
+		return fail(403, "Forbidden");
 	const [row] = await db
 		.insert(transactions)
 		.values({
@@ -99,32 +86,26 @@ export const recordTransaction = async (
 			status: "completed",
 		} as never)
 		.returning();
-	return { success: true as const, data: row };
+	return ok(row);
 };
 
 export const refundTransaction = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	transactionId: string,
 ) => {
-	if (!can(user.role as Role, "update", "finance"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	const [existing] = await db
 		.select()
 		.from(transactions)
 		.where(eq(transactions.id, transactionId))
 		.limit(1);
-	if (!existing)
-		return status(404, {
-			success: false as const,
-			error: "Transaction not found",
-		});
+	if (!existing) return fail(404, "Transaction not found");
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	if (ids !== null && !ids.includes(existing.branchId))
-		return status(403, { success: false as const, error: "Forbidden" });
+		return fail(403, "Forbidden");
 	const [row] = await db
 		.update(transactions)
 		.set({ status: "refunded" } as never)
 		.where(eq(transactions.id, transactionId))
 		.returning();
-	return { success: true as const, data: row };
+	return ok(row);
 };

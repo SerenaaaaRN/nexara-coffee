@@ -1,10 +1,10 @@
 import { Elysia } from "elysia";
-import { betterAuth } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
+import { authPlugin } from "../../plugins/auth.js";
 import {
 	cancelOrderBody,
 	createOrderSchema,
 	getOrdersQuery,
-	orderIdParams,
 	updateStatusBody,
 } from "./model.js";
 import {
@@ -16,54 +16,48 @@ import {
 } from "./service.js";
 
 export const orders = new Elysia({ prefix: "/orders" })
-	.use(betterAuth)
-	.get(
-		"/",
-		async ({ query, user }) =>
-			getOrders(user as { id: string; role: string }, query as never),
-		{ query: getOrdersQuery, auth: true, detail: { tags: ["orders"] } },
-	)
-	.get(
-		"/:id",
-		async ({ params, user }) =>
-			getOrderDetail(user as { id: string; role: string }, params.id),
-		{ params: orderIdParams, auth: true, detail: { tags: ["orders"] } },
-	)
-	.post(
-		"/",
-		async ({ body, user }) =>
-			createOrder(user as { id: string; role: string }, body as never),
-		{
-			body: createOrderSchema as never,
-			auth: true,
-			detail: { tags: ["orders"] },
-		},
-	)
+	.use(authPlugin)
+	.model({
+		"orders.query": getOrdersQuery,
+		"orders.params": idParams,
+		"orders.create": createOrderSchema,
+		"orders.status": updateStatusBody,
+		"orders.cancel": cancelOrderBody,
+	})
+	.get("/", async ({ query, user }) => getOrders(user, query), {
+		query: "orders.query",
+		requireRole: ["orders", "read"],
+		detail: { tags: ["orders"] },
+	})
+	.get("/:id", async ({ params, user }) => getOrderDetail(user, params.id), {
+		params: "orders.params",
+		requireRole: ["orders", "read"],
+		detail: { tags: ["orders"] },
+	})
+	.post("/", async ({ body, user }) => createOrder(user, body), {
+		body: "orders.create",
+		requireRole: ["orders", "create"],
+		detail: { tags: ["orders"] },
+	})
 	.post(
 		"/:id/status",
 		async ({ params, body, user }) =>
-			updateOrderStatus(user as { id: string; role: string }, {
-				orderId: params.id,
-				status: (body as { status: string }).status,
-			}),
+			updateOrderStatus(user, { orderId: params.id, status: body.status }),
 		{
-			params: orderIdParams,
-			body: updateStatusBody as never,
-			auth: true,
+			params: "orders.params",
+			body: "orders.status",
+			requireRole: ["orders", "update"],
 			detail: { tags: ["orders"] },
 		},
 	)
 	.post(
 		"/:id/cancel",
 		async ({ params, body, user }) =>
-			cancelOrder(user as { id: string; role: string }, {
-				orderId: params.id,
-				reason: (body as { reason?: string })?.reason,
-			}),
+			cancelOrder(user, { orderId: params.id, reason: body.reason }),
 		{
-			params: orderIdParams,
-			body: cancelOrderBody as never,
-			auth: true,
+			params: "orders.params",
+			body: "orders.cancel",
+			requireRole: ["orders", "update"],
 			detail: { tags: ["orders"] },
 		},
 	);

@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, lt, ne, or, sql } from "drizzle-orm";
-import { status } from "elysia";
+import type { CurrentUser } from "../../access/index.js";
+import { getAccessibleBranchIds } from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
@@ -8,16 +9,12 @@ import {
 	chatChannels,
 	chatMessages,
 } from "../../db/schema/collaboration.js";
-import { getAblyRest } from "../../lib/ably.server.js";
-import { rateLimit } from "../../lib/rate-limit.js";
-import { can, type Role } from "../../lib/rbac.js";
-import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
+import { fail, ok } from "../../lib/http.js";
+import { checkRate, publishAbly } from "../../utils/effects.js";
 
-export const getUserChannels = async (user: { id: string; role: string }) => {
-	if (!can(user.role as Role, "read", "chat"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`chat:channels:${user.id}`, 10, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+export const getUserChannels = async (user: CurrentUser) => {
+	const limited = checkRate(`chat:channels:${user.id}`, 10, 60_000);
+	if (limited) return limited;
 	const branchIds = await getAccessibleBranchIds(user.id, user.role);
 	const baseQuery = db
 		.select({
@@ -74,19 +71,17 @@ export const getUserChannels = async (user: { id: string; role: string }) => {
 		)
 		.orderBy(orderBy);
 
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
 export const getChannelMessages = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	channelId: string,
 	before?: string,
 	limit = 50,
 ) => {
-	if (!can(user.role as Role, "read", "chat"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`chat:messages:${user.id}`, 30, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+	const limited = checkRate(`chat:messages:${user.id}`, 30, 60_000);
+	if (limited) return limited;
 	const conditions = [eq(chatMessages.channelId, channelId)];
 	if (before) conditions.push(lt(chatMessages.createdAt, new Date(before)));
 	const rows = await db
@@ -108,14 +103,12 @@ export const getChannelMessages = async (
 	const messages = (hasMore ? rows.slice(0, limit) : rows)
 		.reverse()
 		.map((m) => ({ ...m, isOwn: false }));
-	return { success: true as const, data: { messages, hasMore } };
+	return ok({ messages, hasMore });
 };
 
-export const getAvailableUsers = async (user: { id: string; role: string }) => {
-	if (!can(user.role as Role, "read", "chat"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`chat:users:${user.id}`, 20, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+export const getAvailableUsers = async (user: CurrentUser) => {
+	const limited = checkRate(`chat:users:${user.id}`, 20, 60_000);
+	if (limited) return limited;
 	const rows = await db
 		.select({
 			id: userTable.id,
@@ -126,18 +119,16 @@ export const getAvailableUsers = async (user: { id: string; role: string }) => {
 		.from(userTable)
 		.where(ne(userTable.id, user.id))
 		.orderBy(userTable.name);
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
 export const sendMessage = async (
-	user: { id: string; name?: string; image?: string | null; role: string },
+	user: CurrentUser,
 	channelId: string,
 	content: string,
 ) => {
-	if (!can(user.role as Role, "create", "chat"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`chat:send:${user.id}`, 20, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+	const limited = checkRate(`chat:send:${user.id}`, 20, 60_000);
+	if (limited) return limited;
 	const [message] = await db
 		.insert(chatMessages)
 		.values({ channelId, senderId: user.id, content })
@@ -148,33 +139,21 @@ export const sendMessage = async (
 		senderId: message.senderId,
 		content: message.content,
 		createdAt: message.createdAt.toISOString(),
-		senderName: (user as { name?: string }).name ?? "",
-		senderImage: (user as { image?: string | null }).image ?? null,
+		senderName: user.name ?? "",
+		senderImage: user.image ?? null,
 	};
-	try {
-		const ably = getAblyRest();
-		await ably.channels
-			.get(`chat:channel:${channelId}`)
-			.publish("message", messageData);
-	} catch {
-		console.warn("Ably publish failed (non-critical)");
-	}
-	return { success: true as const, data: messageData };
+	void publishAbly(`chat:channel:${channelId}`, "message", messageData);
+	return ok(messageData);
 };
 
 export const createDirectChannel = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	targetUserId: string,
 ) => {
-	if (!can(user.role as Role, "create", "chat"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`chat:create-dm:${user.id}`, 10, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+	const limited = checkRate(`chat:create-dm:${user.id}`, 10, 60_000);
+	if (limited) return limited;
 	if (targetUserId === user.id)
-		return status(400, {
-			success: false as const,
-			error: "Cannot create DM with yourself",
-		});
+		return fail(400, "Cannot create DM with yourself");
 	const [existing] = await db
 		.select({ id: chatChannels.id })
 		.from(chatChannels)
@@ -186,7 +165,7 @@ export const createDirectChannel = async (
 			),
 		)
 		.limit(1);
-	if (existing) return { success: true as const, data: existing.id };
+	if (existing) return ok(existing.id);
 	const [targetUser] = await db
 		.select({ name: userTable.name })
 		.from(userTable)
@@ -200,5 +179,5 @@ export const createDirectChannel = async (
 		{ channelId: channel.id, userId: user.id },
 		{ channelId: channel.id, userId: targetUserId },
 	]);
-	return { success: true as const, data: channel.id };
+	return ok(channel.id);
 };

@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import db from "../db/index.js";
-import { resend } from "./resend.js";
+import { resend } from "../infra/email.js";
 
 const betterAuthUrl = process.env.BETTER_AUTH_URL;
 const googleClientId = process.env.GOOGLE_CLIENT_ID;

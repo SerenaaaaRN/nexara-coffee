@@ -7,13 +7,7 @@ export const payoutsQuery = t.Object({
 
 export const requestPayoutBody = t.Object({
 	branchId: t.String({ minLength: 1 }),
-	amount: t.Numeric({ minimum: 0 }),
+	amount: t.Number({ minimum: 0 }),
 	periodStart: t.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
 	periodEnd: t.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
 });
-
-export const approvePayoutBody = t.Object({
-	payoutId: t.String({ minLength: 1 }),
-});
-
-export const payoutIdParams = t.Object({ id: t.String({ minLength: 1 }) });

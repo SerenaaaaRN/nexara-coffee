@@ -1,8 +1,8 @@
 import { Elysia } from "elysia";
-import { betterAuth } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
+import { authPlugin } from "../../plugins/auth.js";
 import {
 	assignFranchiseSchema,
-	branchIdParams,
 	createBranchSchema,
 	updateBranchSchema,
 } from "./model.js";
@@ -15,57 +15,39 @@ import {
 } from "./service.js";
 
 export const branches = new Elysia({ prefix: "/branches" })
-	.use(betterAuth)
-	.get(
-		"/",
-		async ({ user }) => getBranches(user as { id: string; role: string }),
-		{
-			auth: true,
-			detail: { tags: ["branches"] },
-		},
-	)
-	.post(
-		"/",
-		async ({ body, user }) =>
-			createBranch(user as { id: string; role: string }, body as never),
-		{
-			body: createBranchSchema,
-			auth: true,
-			detail: { tags: ["branches"] },
-		},
-	)
+	.use(authPlugin)
+	.model({
+		"branches.params": idParams,
+		"branches.create": createBranchSchema,
+		"branches.update": updateBranchSchema,
+		"branches.franchise": assignFranchiseSchema,
+	})
+	.get("/", async ({ user }) => getBranches(user), {
+		requireRole: ["branches", "read"],
+		detail: { tags: ["branches"] },
+	})
+	.post("/", async ({ body, user }) => createBranch(user, body), {
+		body: "branches.create",
+		requireRole: ["branches", "create"],
+		detail: { tags: ["branches"] },
+	})
 	.put(
 		"/:id",
-		async ({ params, body, user }) =>
-			updateBranch(
-				user as { id: string; role: string },
-				params.id,
-				body as never,
-			),
+		async ({ params, body, user }) => updateBranch(user, params.id, body),
 		{
-			params: branchIdParams,
-			body: updateBranchSchema,
-			auth: true,
+			params: "branches.params",
+			body: "branches.update",
+			requireRole: ["branches", "update"],
 			detail: { tags: ["branches"] },
 		},
 	)
-	.delete(
-		"/:id",
-		async ({ params, user }) =>
-			deleteBranch(user as { id: string; role: string }, params.id),
-		{
-			params: branchIdParams,
-			auth: true,
-			detail: { tags: ["branches"] },
-		},
-	)
-	.post(
-		"/franchise",
-		async ({ body, user }) =>
-			assignFranchise(user as { id: string; role: string }, body as never),
-		{
-			body: assignFranchiseSchema,
-			auth: true,
-			detail: { tags: ["branches"] },
-		},
-	);
+	.delete("/:id", async ({ params, user }) => deleteBranch(user, params.id), {
+		params: "branches.params",
+		requireRole: ["branches", "delete"],
+		detail: { tags: ["branches"] },
+	})
+	.post("/franchise", async ({ body, user }) => assignFranchise(user, body), {
+		body: "branches.franchise",
+		requireRole: ["branches", "update"],
+		detail: { tags: ["branches"] },
+	});

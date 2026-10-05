@@ -1,33 +1,22 @@
-import { and, count, desc, eq, inArray, or } from "drizzle-orm";
-import { status } from "elysia";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
+import type { CurrentUser } from "../../access/index.js";
+import { resolveMyScope } from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { branches } from "../../db/schema/branches.js";
 import { customers, reviews } from "../../db/schema/customers.js";
 import { orders } from "../../db/schema/orders.js";
+import { fail, ok } from "../../lib/http.js";
 
 /** Own-scope portal /my — tanpa can() global, filter by session.user.id (visitor allowed). */
 
-const getOwnedCustomerIds = async (uid: string) => {
-	const rows = await db
-		.select({ id: customers.id })
-		.from(customers)
-		.where(eq(customers.userId, uid));
-	return rows.map((r) => r.id);
-};
-
 export const getMyOrders = async (
-	user: { id: string; name?: string; email?: string | null },
+	user: CurrentUser,
 	params: { page?: number; pageSize?: number },
 ) => {
 	const uid = user.id;
 	const page = params.page ?? 0;
 	const pageSize = params.pageSize ?? 20;
-	const ownedIds = await getOwnedCustomerIds(uid);
-
-	const scope =
-		ownedIds.length > 0
-			? or(eq(orders.createdBy, uid), inArray(orders.customerId, ownedIds))
-			: eq(orders.createdBy, uid);
+	const { scope } = await resolveMyScope(uid);
 
 	const completedScope = and(scope, eq(orders.status, "completed"));
 
@@ -66,22 +55,15 @@ export const getMyOrders = async (
 		for (const rr of reviewRows) if (rr.orderId) reviewed.add(rr.orderId);
 	}
 
-	return {
-		success: true as const,
-		data: {
-			rows: rows.map((r) => ({ ...r, hasReview: reviewed.has(r.id) })),
-			nextPage: rows.length === pageSize ? page + 1 : null,
-			total: totalRows[0]?.cnt ?? 0,
-			completedTotal: completedRows[0]?.cnt ?? 0,
-		},
-	};
+	return ok({
+		rows: rows.map((r) => ({ ...r, hasReview: reviewed.has(r.id) })),
+		nextPage: rows.length === pageSize ? page + 1 : null,
+		total: totalRows[0]?.cnt ?? 0,
+		completedTotal: completedRows[0]?.cnt ?? 0,
+	});
 };
 
-export const getMyLoyalty = async (user: {
-	id: string;
-	name?: string;
-	email?: string | null;
-}) => {
+export const getMyLoyalty = async (user: CurrentUser) => {
 	const uid = user.id;
 	const [existing] = await db
 		.select()
@@ -102,52 +84,37 @@ export const getMyLoyalty = async (user: {
 				userId: uid,
 			} as never)
 			.returning();
-		if (!created)
-			return status(500, {
-				success: false as const,
-				error: "Gagal membuat profil member",
-			});
+		if (!created) return fail(500, "Gagal membuat profil member");
 		customer = created;
 	}
 
-	const ownedIds = await getOwnedCustomerIds(uid);
-	const scope =
-		ownedIds.length > 0
-			? or(eq(orders.createdBy, uid), inArray(orders.customerId, ownedIds))
-			: eq(orders.createdBy, uid);
+	const { scope } = await resolveMyScope(uid);
 	const [countRow] = await db
 		.select({ cnt: count() })
 		.from(orders)
 		.where(scope);
 
-	return {
-		success: true as const,
-		data: {
-			id: customer.id,
-			fullName: customer.fullName,
-			segment: customer.segment,
-			loyaltyPoints: customer.loyaltyPoints,
-			loyaltyTier: customer.loyaltyTier,
-			orderCount: countRow?.cnt ?? 0,
-		},
-	};
+	return ok({
+		id: customer.id,
+		fullName: customer.fullName,
+		segment: customer.segment,
+		loyaltyPoints: customer.loyaltyPoints,
+		loyaltyTier: customer.loyaltyTier,
+		orderCount: countRow?.cnt ?? 0,
+	});
 };
 
 export const createMyReview = async (
-	user: { id: string },
+	user: CurrentUser,
 	input: { orderId: string; rating: number; comment?: string },
 ) => {
 	const uid = user.id;
 	const rating = Math.floor(Number(input.rating));
 	if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-		return status(400, { success: false as const, error: "Rating harus 1-5" });
+		return fail(400, "Rating harus 1-5");
 	}
 
-	const ownedIds = await getOwnedCustomerIds(uid);
-	const scope =
-		ownedIds.length > 0
-			? or(eq(orders.createdBy, uid), inArray(orders.customerId, ownedIds))
-			: eq(orders.createdBy, uid);
+	const { ownedIds, scope } = await resolveMyScope(uid);
 
 	const [order] = await db
 		.select({
@@ -160,16 +127,9 @@ export const createMyReview = async (
 		.where(and(eq(orders.id, input.orderId), scope))
 		.limit(1);
 
-	if (!order)
-		return status(404, {
-			success: false as const,
-			error: "Order tidak ditemukan",
-		});
+	if (!order) return fail(404, "Order tidak ditemukan");
 	if (order.status !== "completed") {
-		return status(400, {
-			success: false as const,
-			error: "Hanya order yang sudah selesai yang bisa diulas",
-		});
+		return fail(400, "Hanya order yang sudah selesai yang bisa diulas");
 	}
 
 	const [dup] = await db
@@ -177,11 +137,7 @@ export const createMyReview = async (
 		.from(reviews)
 		.where(eq(reviews.orderId, order.id))
 		.limit(1);
-	if (dup)
-		return status(400, {
-			success: false as const,
-			error: "Order ini sudah pernah diulas",
-		});
+	if (dup) return fail(400, "Order ini sudah pernah diulas");
 
 	const [inserted] = await db
 		.insert(reviews)
@@ -195,10 +151,6 @@ export const createMyReview = async (
 		} as never)
 		.returning({ id: reviews.id });
 
-	if (!inserted)
-		return status(500, {
-			success: false as const,
-			error: "Gagal menyimpan ulasan",
-		});
-	return { success: true as const, data: { id: inserted.id } };
+	if (!inserted) return fail(500, "Gagal menyimpan ulasan");
+	return ok({ id: inserted.id });
 };

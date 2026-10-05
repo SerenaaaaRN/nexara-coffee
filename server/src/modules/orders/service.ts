@@ -1,19 +1,38 @@
 import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { status } from "elysia";
+import type { CurrentUser } from "../../access/index.js";
+import {
+	assertBranchAccess,
+	emptyScope,
+	getAccessibleBranchIds,
+} from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { customers } from "../../db/schema/customers.js";
 import { menuItems } from "../../db/schema/menu.js";
 import { orderItems, orders } from "../../db/schema/orders.js";
-import { getAblyRest } from "../../lib/ably.server.js";
-import { can, type Role } from "../../lib/rbac.js";
-import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
+import { fail, ok } from "../../lib/http.js";
+import { publishAbly } from "../../utils/effects.js";
 import { earnedPointsForTotal, tierForPoints } from "../../utils/loyalty.js";
 
+const guardTerminalTransition = (
+	current: string,
+	action: "update" | "cancel",
+) => {
+	if (current === "cancelled") return fail(400, "Order is already cancelled");
+	if (current === "completed")
+		return fail(
+			400,
+			action === "cancel"
+				? "Cannot cancel a completed order"
+				: "Cannot change a completed order",
+		);
+	return null;
+};
+
 export const getOrders = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	params: {
 		branchId?: string;
 		status?: string;
@@ -21,14 +40,10 @@ export const getOrders = async (
 		dateTo?: string;
 	},
 ) => {
-	if (!can(user.role as Role, "read", "orders")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
-
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 
-	if (ids !== null && ids.length === 0) {
-		return { success: true as const, data: [] };
+	if (emptyScope(ids)) {
+		return ok([]);
 	}
 
 	const createdByUser = alias(userTable, "created_by_user");
@@ -36,7 +51,7 @@ export const getOrders = async (
 
 	if (params.branchId) {
 		if (ids !== null && !ids.includes(params.branchId)) {
-			return { success: true as const, data: [] };
+			return ok([]);
 		}
 		conditions.push(eq(orders.branchId, params.branchId));
 	} else if (ids !== null && ids.length > 0) {
@@ -74,17 +89,10 @@ export const getOrders = async (
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		.orderBy(desc(orders.createdAt));
 
-	return { success: true as const, data };
+	return ok(data);
 };
 
-export const getOrderDetail = async (
-	user: { id: string; role: string },
-	orderId: string,
-) => {
-	if (!can(user.role as Role, "read", "orders")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
-
+export const getOrderDetail = async (user: CurrentUser, orderId: string) => {
 	const createdByUser = alias(userTable, "created_by_user");
 
 	const [order] = await db
@@ -109,16 +117,12 @@ export const getOrderDetail = async (
 		.limit(1);
 
 	if (!order) {
-		return status(404, { success: false as const, error: "Order not found" });
+		return fail(404, "Order not found");
 	}
 
 	const ids = await getAccessibleBranchIds(user.id, user.role);
-	if (ids !== null && !ids.includes(order.branchId)) {
-		return status(403, {
-			success: false as const,
-			error: "Forbidden branch access",
-		});
-	}
+	const denied = assertBranchAccess(ids, order.branchId);
+	if (denied) return denied;
 
 	const items = await db
 		.select({
@@ -136,11 +140,11 @@ export const getOrderDetail = async (
 		.leftJoin(menuItems, eq(orderItems.menuItemId, menuItems.id))
 		.where(eq(orderItems.orderId, orderId));
 
-	return { success: true as const, data: { ...order, items } };
+	return ok({ ...order, items });
 };
 
 export const createOrder = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	parsed: {
 		branchId: string;
 		customerId?: string;
@@ -153,18 +157,13 @@ export const createOrder = async (
 		}[];
 	},
 ) => {
-	if (!can(user.role as Role, "create", "orders")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
-
 	const ids = await getAccessibleBranchIds(user.id, user.role);
-	if (ids !== null && !ids.includes(parsed.branchId)) {
-		return status(403, {
-			success: false as const,
-			error: "Forbidden branch access",
-		});
-	}
+	const denied = assertBranchAccess(ids, parsed.branchId);
+	if (denied) return denied;
 
+	// orderId manual tetap dibutuhkan: dipakai menurunkan orderNumber +
+	// FK orderItems sebelum insert (skema $defaultFn hanya untuk kolom id
+	// yang tidak diisi — lihat orderItems di bawah yang mengandalkannya).
 	const orderId = crypto.randomUUID();
 	const total = parsed.items.reduce(
 		(sum, i) => sum + Number(i.price) * i.qty,
@@ -185,7 +184,6 @@ export const createOrder = async (
 
 	await db.insert(orderItems).values(
 		parsed.items.map((item) => ({
-			id: crypto.randomUUID(),
 			orderId,
 			menuItemId: item.menuItemId,
 			nameSnapshot: item.variant ? `${item.name} (${item.variant})` : item.name,
@@ -196,24 +194,15 @@ export const createOrder = async (
 		})),
 	);
 
-	try {
-		const ably = getAblyRest();
-		ably.channels.get("orders").publish("order-created", { orderId });
-	} catch (e) {
-		console.error("Ably publish failed:", e);
-	}
+	void publishAbly("orders", "order-created", { orderId });
 
-	return { success: true as const, data: { id: orderId, orderNumber } };
+	return ok({ id: orderId, orderNumber });
 };
 
 export const updateOrderStatus = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	parsed: { orderId: string; status: string },
 ) => {
-	if (!can(user.role as Role, "update", "orders")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
-
 	const [[existing], ids] = await Promise.all([
 		db
 			.select({
@@ -229,29 +218,14 @@ export const updateOrderStatus = async (
 	]);
 
 	if (!existing) {
-		return status(404, { success: false as const, error: "Order not found" });
+		return fail(404, "Order not found");
 	}
 
-	if (ids !== null && !ids.includes(existing.branchId)) {
-		return status(403, {
-			success: false as const,
-			error: "Forbidden branch access",
-		});
-	}
+	const denied = assertBranchAccess(ids, existing.branchId);
+	if (denied) return denied;
 
-	if (existing.status === "cancelled") {
-		return status(400, {
-			success: false as const,
-			error: "Order is already cancelled",
-		});
-	}
-
-	if (existing.status === "completed") {
-		return status(400, {
-			success: false as const,
-			error: "Cannot change a completed order",
-		});
-	}
+	const terminal = guardTerminalTransition(existing.status, "update");
+	if (terminal) return terminal;
 
 	const [order] = await db
 		.update(orders)
@@ -283,24 +257,15 @@ export const updateOrderStatus = async (
 		}
 	}
 
-	try {
-		const ably = getAblyRest();
-		ably.channels.get("orders").publish("order-updated", { orderId: order.id });
-	} catch (e) {
-		console.error("Ably publish failed:", e);
-	}
+	void publishAbly("orders", "order-updated", { orderId: order.id });
 
-	return { success: true as const, data: order };
+	return ok(order);
 };
 
 export const cancelOrder = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	parsed: { orderId: string; reason?: string },
 ) => {
-	if (!can(user.role as Role, "update", "orders")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
-
 	const [[existing], ids] = await Promise.all([
 		db
 			.select({ branchId: orders.branchId, status: orders.status })
@@ -311,29 +276,14 @@ export const cancelOrder = async (
 	]);
 
 	if (!existing) {
-		return status(404, { success: false as const, error: "Order not found" });
+		return fail(404, "Order not found");
 	}
 
-	if (ids !== null && !ids.includes(existing.branchId)) {
-		return status(403, {
-			success: false as const,
-			error: "Forbidden branch access",
-		});
-	}
+	const denied = assertBranchAccess(ids, existing.branchId);
+	if (denied) return denied;
 
-	if (existing.status === "completed") {
-		return status(400, {
-			success: false as const,
-			error: "Cannot cancel a completed order",
-		});
-	}
-
-	if (existing.status === "cancelled") {
-		return status(400, {
-			success: false as const,
-			error: "Order is already cancelled",
-		});
-	}
+	const terminal = guardTerminalTransition(existing.status, "cancel");
+	if (terminal) return terminal;
 
 	const [order] = await db
 		.update(orders)
@@ -341,14 +291,7 @@ export const cancelOrder = async (
 		.where(eq(orders.id, parsed.orderId))
 		.returning();
 
-	try {
-		const ably = getAblyRest();
-		ably.channels
-			.get("orders")
-			.publish("order-cancelled", { orderId: order.id });
-	} catch (e) {
-		console.error("Ably publish failed:", e);
-	}
+	void publishAbly("orders", "order-cancelled", { orderId: order.id });
 
-	return { success: true as const, data: order };
+	return ok(order);
 };

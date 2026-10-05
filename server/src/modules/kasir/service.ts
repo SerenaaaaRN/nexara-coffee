@@ -1,27 +1,27 @@
-import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { status } from "elysia";
+import type { CurrentUser } from "../../access/index.js";
+import {
+	assertBranchAccess,
+	branchFilter,
+	getAccessibleBranchIds,
+} from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { transactions } from "../../db/schema/finance.js";
 import { dailySetorans } from "../../db/schema/orders.js";
-import { logAudit } from "../../lib/audit-log.js";
-import { can, type Role } from "../../lib/rbac.js";
-import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
+import { fail, ok } from "../../lib/http.js";
+import { logAudit } from "../../utils/effects.js";
 
 export const getExpectedCash = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	branchId: string,
 	date: string,
 ) => {
-	if (!can(user.role as Role, "read", "finance")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const ids = await getAccessibleBranchIds(user.id, user.role);
-	if (ids !== null && !ids.includes(branchId)) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
+	const denied = assertBranchAccess(ids, branchId);
+	if (denied) return denied;
 
 	const startDate = new Date(`${date}T00:00:00.000Z`);
 	const endDate = new Date(startDate);
@@ -49,37 +49,25 @@ export const getExpectedCash = async (
 		}
 	}
 
-	return {
-		success: true as const,
-		data: {
-			cashTotal: result.cash,
-			qrisTotal: result.qris,
-			debitTotal: result.debit,
-			creditTotal: result.credit,
-			total: result.cash + result.qris + result.debit + result.credit,
-		},
-	};
+	return ok({
+		cashTotal: result.cash,
+		qrisTotal: result.qris,
+		debitTotal: result.debit,
+		creditTotal: result.credit,
+		total: result.cash + result.qris + result.debit + result.credit,
+	});
 };
 
 export const getSetorans = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	branch?: string | null,
 	limit?: number,
+	offset = 0,
 ) => {
-	if (!can(user.role as Role, "read", "setoran")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const ids = await getAccessibleBranchIds(user.id, user.role);
-	const branchId = branch ?? null;
 	const take = limit ?? 300;
 
-	const conditions = branchId
-		? eq(dailySetorans.branchId, branchId)
-		: ids
-			? ids.length > 0
-				? inArray(dailySetorans.branchId, ids)
-				: sql`1=0`
-			: undefined;
+	const conditions = branchFilter(dailySetorans, branch ?? null, ids);
 
 	const cashierUser = alias(userTable, "cashier");
 	const verifierUser = alias(userTable, "verifier");
@@ -105,26 +93,20 @@ export const getSetorans = async (
 		.leftJoin(verifierUser, eq(dailySetorans.verifiedBy, verifierUser.id))
 		.where(conditions)
 		.orderBy(desc(dailySetorans.createdAt))
-		.limit(take);
+		.limit(take)
+		.offset(offset);
 
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
 export const createSetoran = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	branchId: string,
 	formData: { amount: number; date: string; notes?: string },
 ) => {
-	if (!can(user.role as Role, "create", "setoran")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const ids = await getAccessibleBranchIds(user.id, user.role);
-	if (ids !== null && !ids.includes(branchId)) {
-		return status(403, {
-			success: false as const,
-			error: "Forbidden branch access",
-		});
-	}
+	const denied = assertBranchAccess(ids, branchId);
+	if (denied) return denied;
 
 	const existing = await db
 		.select()
@@ -141,10 +123,10 @@ export const createSetoran = async (
 	if (existing.length > 0) {
 		const prev = existing[0];
 		if (prev.status !== "pending") {
-			return status(400, {
-				success: false as const,
-				error: `Cannot update setoran with status "${prev.status}". Only pending setoran can be edited.`,
-			});
+			return fail(
+				400,
+				`Cannot update setoran with status "${prev.status}". Only pending setoran can be edited.`,
+			);
 		}
 		[setoran] = await db
 			.update(dailySetorans)
@@ -185,16 +167,13 @@ export const createSetoran = async (
 				)
 				.limit(1);
 			if (!retryExisting) {
-				return status(409, {
-					success: false as const,
-					error: "Duplicate setoran detected, please retry.",
-				});
+				return fail(409, "Duplicate setoran detected, please retry.");
 			}
 			if (retryExisting.status !== "pending") {
-				return status(400, {
-					success: false as const,
-					error: `Cannot update setoran with status "${retryExisting.status}". Only pending setoran can be edited.`,
-				});
+				return fail(
+					400,
+					`Cannot update setoran with status "${retryExisting.status}". Only pending setoran can be edited.`,
+				);
 			}
 			[setoran] = await db
 				.update(dailySetorans)
@@ -217,30 +196,18 @@ export const createSetoran = async (
 		metadata: { amount: formData.amount },
 	});
 
-	return { success: true as const, data: setoran };
+	return ok(setoran);
 };
 
-export const deleteSetoran = async (
-	user: { id: string; role: string },
-	id: string,
-) => {
-	if (!can(user.role as Role, "delete", "setoran")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
-
+export const deleteSetoran = async (user: CurrentUser, id: string) => {
 	const [setoran] = await db
 		.select()
 		.from(dailySetorans)
 		.where(eq(dailySetorans.id, id));
-	if (!setoran)
-		return status(404, { success: false as const, error: "Not found" });
-	if (setoran.cashierId !== user.id)
-		return status(403, { success: false as const, error: "Forbidden" });
+	if (!setoran) return fail(404, "Setoran not found");
+	if (setoran.cashierId !== user.id) return fail(403, "Forbidden");
 	if (setoran.status !== "pending")
-		return status(400, {
-			success: false as const,
-			error: "Can only delete pending setoran",
-		});
+		return fail(400, "Can only delete pending setoran");
 
 	await db.delete(dailySetorans).where(eq(dailySetorans.id, id));
 
@@ -252,109 +219,64 @@ export const deleteSetoran = async (
 		branchId: setoran.branchId,
 	});
 
-	return { success: true as const, data: null };
+	return ok(null);
+};
+
+const setSetoranStatus = async (
+	user: CurrentUser,
+	id: string,
+	decision: "approved" | "rejected",
+	notes?: string,
+) => {
+	const ids = await getAccessibleBranchIds(user.id, user.role);
+
+	const [existing] = await db
+		.select({ branchId: dailySetorans.branchId, status: dailySetorans.status })
+		.from(dailySetorans)
+		.where(eq(dailySetorans.id, id));
+
+	if (!existing) return fail(404, "Setoran not found");
+	const denied = assertBranchAccess(ids, existing.branchId);
+	if (denied) return denied;
+	if (existing.status !== "pending") {
+		return fail(
+			400,
+			`Cannot ${decision === "approved" ? "approve" : "reject"} setoran with status "${existing.status}". Only pending can be ${decision === "approved" ? "approved" : "rejected"}.`,
+		);
+	}
+
+	const [setoran] = await db
+		.update(dailySetorans)
+		.set({
+			status: decision,
+			verifiedBy: user.id,
+			...(notes ? { notes } : {}),
+		})
+		.where(and(eq(dailySetorans.id, id), eq(dailySetorans.status, "pending")))
+		.returning();
+
+	if (!setoran) return fail(404, "Setoran not found");
+
+	void logAudit({
+		actorId: user.id,
+		action: decision === "approved" ? "approve" : "reject",
+		targetTable: "daily_setorans",
+		targetId: id,
+		branchId: setoran.branchId,
+		metadata: { result: decision, notes },
+	});
+
+	return ok(setoran);
 };
 
 export const approveSetoran = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	id: string,
 	notes?: string,
-) => {
-	if (!can(user.role as Role, "approve", "setoran")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
-	const ids = await getAccessibleBranchIds(user.id, user.role);
-
-	const [existing] = await db
-		.select({ branchId: dailySetorans.branchId, status: dailySetorans.status })
-		.from(dailySetorans)
-		.where(eq(dailySetorans.id, id));
-
-	if (!existing)
-		return status(404, { success: false as const, error: "Not found" });
-	if (ids !== null && !ids.includes(existing.branchId)) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
-	if (existing.status !== "pending") {
-		return status(400, {
-			success: false as const,
-			error: `Cannot approve setoran with status "${existing.status}". Only pending can be approved.`,
-		});
-	}
-
-	const [setoran] = await db
-		.update(dailySetorans)
-		.set({
-			status: "approved",
-			verifiedBy: user.id,
-			...(notes ? { notes } : {}),
-		})
-		.where(and(eq(dailySetorans.id, id), eq(dailySetorans.status, "pending")))
-		.returning();
-
-	if (!setoran)
-		return status(404, { success: false as const, error: "Not found" });
-
-	void logAudit({
-		actorId: user.id,
-		action: "approve",
-		targetTable: "daily_setorans",
-		targetId: id,
-		branchId: setoran.branchId,
-		metadata: { result: "approved", notes },
-	});
-
-	return { success: true as const, data: setoran };
-};
+) => setSetoranStatus(user, id, "approved", notes);
 
 export const rejectSetoran = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	id: string,
 	notes?: string,
-) => {
-	if (!can(user.role as Role, "approve", "setoran")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
-	const ids = await getAccessibleBranchIds(user.id, user.role);
-
-	const [existing] = await db
-		.select({ branchId: dailySetorans.branchId, status: dailySetorans.status })
-		.from(dailySetorans)
-		.where(eq(dailySetorans.id, id));
-
-	if (!existing)
-		return status(404, { success: false as const, error: "Not found" });
-	if (ids !== null && !ids.includes(existing.branchId)) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
-	if (existing.status !== "pending") {
-		return status(400, {
-			success: false as const,
-			error: `Cannot reject setoran with status "${existing.status}". Only pending can be rejected.`,
-		});
-	}
-
-	const [setoran] = await db
-		.update(dailySetorans)
-		.set({
-			status: "rejected",
-			verifiedBy: user.id,
-			...(notes ? { notes } : {}),
-		})
-		.where(and(eq(dailySetorans.id, id), eq(dailySetorans.status, "pending")))
-		.returning();
-
-	if (!setoran)
-		return status(404, { success: false as const, error: "Not found" });
-
-	void logAudit({
-		actorId: user.id,
-		action: "reject",
-		targetTable: "daily_setorans",
-		targetId: id,
-		branchId: setoran.branchId,
-		metadata: { result: "rejected", notes },
-	});
-
-	return { success: true as const, data: setoran };
-};
+) => setSetoranStatus(user, id, "rejected", notes);

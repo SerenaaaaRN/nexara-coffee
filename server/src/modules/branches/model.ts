@@ -1,7 +1,5 @@
 import { t } from "elysia";
 
-export const branchIdParams = t.Object({ id: t.String({ minLength: 1 }) });
-
 export const createBranchSchema = t.Object({
 	name: t.String({ minLength: 2, maxLength: 100 }),
 	address: t.String({ minLength: 5, maxLength: 500 }),
@@ -20,5 +18,5 @@ export const updateBranchSchema = t.Partial(createBranchSchema);
 export const assignFranchiseSchema = t.Object({
 	userId: t.String({ minLength: 1 }),
 	branchId: t.String({ minLength: 1 }),
-	commissionRate: t.Optional(t.Numeric({ minimum: 0, maximum: 100 })),
+	commissionRate: t.Optional(t.Number({ minimum: 0, maximum: 100 })),
 });

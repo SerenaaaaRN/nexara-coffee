@@ -1,17 +1,14 @@
 import { asc, desc, eq } from "drizzle-orm";
-import { status } from "elysia";
 import { db } from "../../db/index.js";
 import { branches } from "../../db/schema/branches.js";
 import { customers, reviews } from "../../db/schema/customers.js";
 import { menuCategories, menuItems } from "../../db/schema/menu.js";
-import { rateLimit } from "../../lib/rate-limit.js";
-
-/** Endpoint publik landing — tanpa auth, rateLimit 60/menit (port useLandingQueries.ts). */
+import { ok } from "../../lib/http.js";
+import { checkRate } from "../../utils/effects.js";
 
 export const getPublicBranches = async () => {
-	if (!rateLimit("landing:public-branches", 60, 60_000)) {
-		return status(429, { success: false as const, error: "Too many requests" });
-	}
+	const limited = checkRate("landing:public-branches", 60, 60_000);
+	if (limited) return limited;
 	const rows = await db
 		.select({
 			id: branches.id,
@@ -27,13 +24,12 @@ export const getPublicBranches = async () => {
 		.from(branches)
 		.where(eq(branches.status, "active"))
 		.orderBy(asc(branches.name));
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
 export const getPublicMenu = async () => {
-	if (!rateLimit("landing:public-menu", 60, 60_000)) {
-		return status(429, { success: false as const, error: "Too many requests" });
-	}
+	const limited = checkRate("landing:public-menu", 60, 60_000);
+	if (limited) return limited;
 	const rows = await db
 		.select({
 			id: menuItems.id,
@@ -72,13 +68,12 @@ export const getPublicMenu = async () => {
 				a.category.displayOrder - b.category.displayOrder ||
 				a.name.localeCompare(b.name),
 		);
-	return { success: true as const, data };
+	return ok(data);
 };
 
 export const getPublicReviews = async () => {
-	if (!rateLimit("landing:public-reviews", 60, 60_000)) {
-		return status(429, { success: false as const, error: "Too many requests" });
-	}
+	const limited = checkRate("landing:public-reviews", 60, 60_000);
+	if (limited) return limited;
 	const rows = await db
 		.select({
 			id: reviews.id,
@@ -102,5 +97,5 @@ export const getPublicReviews = async () => {
 			customerName: r.customerName,
 			branchName: r.branchName,
 		}));
-	return { success: true as const, data };
+	return ok(data);
 };

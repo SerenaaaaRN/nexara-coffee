@@ -8,10 +8,7 @@ export const expectedCashQuery = t.Object({
 export const setoransQuery = t.Object({
 	branch: t.Optional(t.String()),
 	limit: t.Optional(t.Numeric({ minimum: 1, maximum: 1000 })),
-});
-
-export const kasirIdParams = t.Object({
-	id: t.String({ minLength: 1 }),
+	offset: t.Optional(t.Numeric({ minimum: 0 })),
 });
 
 export const createSetoranSchema = t.Object({

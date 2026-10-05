@@ -1,10 +1,10 @@
 import { Elysia } from "elysia";
-import { betterAuth } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
+import { authPlugin } from "../../plugins/auth.js";
 import {
 	expectedCashQuery,
 	kasirApproveBody,
 	kasirCreateBody,
-	kasirIdParams,
 	setoransQuery,
 } from "./model.js";
 import {
@@ -17,75 +17,71 @@ import {
 } from "./service.js";
 
 export const kasir = new Elysia({ prefix: "/kasir" })
-	.use(betterAuth)
+	.use(authPlugin)
+	.model({
+		"kasir.expectedCash": expectedCashQuery,
+		"kasir.setorans": setoransQuery,
+		"kasir.params": idParams,
+		"kasir.create": kasirCreateBody,
+		"kasir.decision": kasirApproveBody,
+	})
 	.get(
 		"/expected-cash",
 		async ({ query, user }) =>
-			getExpectedCash(
-				user as { id: string; role: string },
-				query.branchId,
-				query.date,
-			),
-		{ query: expectedCashQuery, auth: true, detail: { tags: ["kasir"] } },
+			getExpectedCash(user, query.branchId, query.date),
+		{
+			query: "kasir.expectedCash",
+			requireRole: ["finance", "read"],
+			detail: { tags: ["kasir"] },
+		},
 	)
 	.get(
 		"/setorans",
 		async ({ query, user }) =>
-			getSetorans(
-				user as { id: string; role: string },
-				query.branch ?? null,
-				query.limit,
-			),
-		{ query: setoransQuery, auth: true, detail: { tags: ["kasir"] } },
+			getSetorans(user, query.branch ?? null, query.limit, query.offset ?? 0),
+		{
+			query: "kasir.setorans",
+			requireRole: ["setoran", "read"],
+			detail: { tags: ["kasir"] },
+		},
 	)
 	.post(
 		"/setorans",
-		async ({ body, user }) =>
-			createSetoran(
-				user as { id: string; role: string },
-				(body as { branchId: string }).branchId,
-				(body as { formData: { amount: number; date: string; notes?: string } })
-					.formData,
-			),
+		async ({ body, user }) => createSetoran(user, body.branchId, body.formData),
 		{
-			body: kasirCreateBody as never,
-			auth: true,
+			body: "kasir.create",
+			requireRole: ["setoran", "create"],
 			detail: { tags: ["kasir"] },
 		},
 	)
 	.post(
 		"/setorans/:id/delete",
-		async ({ params, user }) =>
-			deleteSetoran(user as { id: string; role: string }, params.id),
-		{ params: kasirIdParams, auth: true, detail: { tags: ["kasir"] } },
+		async ({ params, user }) => deleteSetoran(user, params.id),
+		{
+			params: "kasir.params",
+			requireRole: ["setoran", "delete"],
+			detail: { tags: ["kasir"] },
+		},
 	)
 	.post(
 		"/setorans/:id/approve",
 		async ({ params, body, user }) =>
-			approveSetoran(
-				user as { id: string; role: string },
-				params.id,
-				(body as { formData?: { notes?: string } })?.formData?.notes,
-			),
+			approveSetoran(user, params.id, body.formData.notes),
 		{
-			params: kasirIdParams,
-			body: kasirApproveBody as never,
-			auth: true,
+			params: "kasir.params",
+			body: "kasir.decision",
+			requireRole: ["setoran", "approve"],
 			detail: { tags: ["kasir"] },
 		},
 	)
 	.post(
 		"/setorans/:id/reject",
 		async ({ params, body, user }) =>
-			rejectSetoran(
-				user as { id: string; role: string },
-				params.id,
-				(body as { formData?: { notes?: string } })?.formData?.notes,
-			),
+			rejectSetoran(user, params.id, body.formData.notes),
 		{
-			params: kasirIdParams,
-			body: kasirApproveBody as never,
-			auth: true,
+			params: "kasir.params",
+			body: "kasir.decision",
+			requireRole: ["setoran", "approve"],
 			detail: { tags: ["kasir"] },
 		},
 	);

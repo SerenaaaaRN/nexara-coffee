@@ -1,16 +1,13 @@
 import { count, eq } from "drizzle-orm";
-import { status } from "elysia";
+import type { CurrentUser } from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { customers } from "../../db/schema/customers.js";
 import { orders } from "../../db/schema/orders.js";
-import { logAudit } from "../../lib/audit-log.js";
-import { rateLimit } from "../../lib/rate-limit.js";
-import { can, type Role } from "../../lib/rbac.js";
+import { fail, ok } from "../../lib/http.js";
+import { checkRate, logAudit } from "../../utils/effects.js";
 import { normalizePhone, tierForPoints } from "../../utils/loyalty.js";
 
-export const getCustomers = async (user: { id: string; role: string }) => {
-	if (!can(user.role as Role, "read", "customers"))
-		return status(403, { success: false as const, error: "Forbidden" });
+export const getCustomers = async () => {
 	const [rows, counts] = await Promise.all([
 		db.select().from(customers).orderBy(customers.fullName),
 		db
@@ -19,14 +16,11 @@ export const getCustomers = async (user: { id: string; role: string }) => {
 			.groupBy(orders.customerId),
 	]);
 	const countById = new Map(counts.map((c) => [c.customerId, c.orderCount]));
-	return {
-		success: true as const,
-		data: rows.map((r) => ({ ...r, orderCount: countById.get(r.id) ?? 0 })),
-	};
+	return ok(rows.map((r) => ({ ...r, orderCount: countById.get(r.id) ?? 0 })));
 };
 
 export const createCustomer = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	data: {
 		fullName: string;
 		email?: string | null;
@@ -34,10 +28,8 @@ export const createCustomer = async (
 		segment?: string;
 	},
 ) => {
-	if (!can(user.role as Role, "create", "customers"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`customers:create:${user.id}`, 20, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+	const limited = checkRate(`customers:create:${user.id}`, 20, 60_000);
+	if (limited) return limited;
 	const [customer] = await db
 		.insert(customers)
 		.values({
@@ -54,18 +46,16 @@ export const createCustomer = async (
 		targetId: customer.id,
 		metadata: { fullName: customer.fullName },
 	});
-	return { success: true as const, data: customer };
+	return ok(customer);
 };
 
 export const findOrCreateCustomer = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	fullName: string,
 	phone?: string,
 ) => {
-	if (!can(user.role as Role, "create", "customers"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`customers:find-or-create:${user.id}`, 20, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+	const limited = checkRate(`customers:find-or-create:${user.id}`, 20, 60_000);
+	if (limited) return limited;
 
 	const digits = phone ? normalizePhone(phone) : "";
 	if (digits !== "") {
@@ -74,14 +64,14 @@ export const findOrCreateCustomer = async (
 			.from(customers)
 			.where(eq(customers.phone, digits))
 			.limit(1);
-		if (byPhone) return { success: true as const, data: byPhone };
+		if (byPhone) return ok(byPhone);
 	}
 	const [existing] = await db
 		.select()
 		.from(customers)
 		.where(eq(customers.fullName, fullName))
 		.limit(1);
-	if (existing) return { success: true as const, data: existing };
+	if (existing) return ok(existing);
 	try {
 		const [customer] = await db
 			.insert(customers)
@@ -94,31 +84,25 @@ export const findOrCreateCustomer = async (
 			targetId: customer.id,
 			metadata: { fullName },
 		});
-		return { success: true as const, data: customer };
+		return ok(customer);
 	} catch {
 		const [fallback] = await db
 			.select()
 			.from(customers)
 			.where(eq(customers.fullName, fullName))
 			.limit(1);
-		if (!fallback)
-			return status(500, {
-				success: false as const,
-				error: "Failed to create customer",
-			});
-		return { success: true as const, data: fallback };
+		if (!fallback) return fail(500, "Failed to create customer");
+		return ok(fallback);
 	}
 };
 
 export const updateCustomer = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	id: string,
 	data: Record<string, unknown>,
 ) => {
-	if (!can(user.role as Role, "update", "customers"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`customers:update:${user.id}`, 30, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+	const limited = checkRate(`customers:update:${user.id}`, 30, 60_000);
+	if (limited) return limited;
 	const updates: Record<string, unknown> = { ...data };
 	if (updates.email === "") updates.email = null;
 	if (updates.phone === "") updates.phone = null;
@@ -127,11 +111,7 @@ export const updateCustomer = async (
 		.set(updates as never)
 		.where(eq(customers.id, id))
 		.returning();
-	if (!customer)
-		return status(404, {
-			success: false as const,
-			error: "Customer not found",
-		});
+	if (!customer) return fail(404, "Customer not found");
 	void logAudit({
 		actorId: user.id,
 		action: "update",
@@ -139,17 +119,12 @@ export const updateCustomer = async (
 		targetId: id,
 		metadata: data,
 	});
-	return { success: true as const, data: customer };
+	return ok(customer);
 };
 
-export const deleteCustomer = async (
-	user: { id: string; role: string },
-	id: string,
-) => {
-	if (!can(user.role as Role, "delete", "customers"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`customers:delete:${user.id}`, 10, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+export const deleteCustomer = async (user: CurrentUser, id: string) => {
+	const limited = checkRate(`customers:delete:${user.id}`, 10, 60_000);
+	if (limited) return limited;
 	await db.delete(customers).where(eq(customers.id, id));
 	void logAudit({
 		actorId: user.id,
@@ -157,27 +132,21 @@ export const deleteCustomer = async (
 		targetTable: "customers",
 		targetId: id,
 	});
-	return { success: true as const, data: null };
+	return ok(null);
 };
 
 export const updateLoyaltyPoints = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	customerId: string,
 	points: number,
 ) => {
-	if (!can(user.role as Role, "update", "customers"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`customers:loyalty:${user.id}`, 30, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+	const limited = checkRate(`customers:loyalty:${user.id}`, 30, 60_000);
+	if (limited) return limited;
 	const [customer] = await db
 		.update(customers)
 		.set({ loyaltyPoints: points, loyaltyTier: tierForPoints(points) } as never)
 		.where(eq(customers.id, customerId))
 		.returning();
-	if (!customer)
-		return status(404, {
-			success: false as const,
-			error: "Customer not found",
-		});
-	return { success: true as const, data: customer };
+	if (!customer) return fail(404, "Customer not found");
+	return ok(customer);
 };

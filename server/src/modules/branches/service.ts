@@ -1,24 +1,19 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { status } from "elysia";
+import type { CurrentUser } from "../../access/index.js";
+import { emptyScope, getAccessibleBranchIds } from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches, franchiseBranches } from "../../db/schema/branches.js";
 import { chatChannels } from "../../db/schema/collaboration.js";
 import { employeeDetails } from "../../db/schema/employee.js";
-import { logAudit } from "../../lib/audit-log.js";
-import { can, type Role } from "../../lib/rbac.js";
-import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
+import { fail, ok } from "../../lib/http.js";
+import { logAudit } from "../../utils/effects.js";
 
-export const getBranches = async (user: { id: string; role: string }) => {
-	if (!can(user.role as Role, "read", "branches")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
-
-	// Parity coffee getBranchesFn: filter branch-scope + join manager + employeeCount.
+export const getBranches = async (user: CurrentUser) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
-	if (ids !== null && ids.length === 0) {
-		return { success: true as const, data: [] };
+	if (emptyScope(ids)) {
+		return ok([]);
 	}
 
 	const manager = alias(userTable, "manager");
@@ -59,9 +54,8 @@ export const getBranches = async (user: { id: string; role: string }) => {
 		}
 	}
 
-	return {
-		success: true as const,
-		data: rows.map((r) => ({
+	return ok(
+		rows.map((r) => ({
 			id: r.id,
 			name: r.name,
 			address: r.address,
@@ -80,16 +74,13 @@ export const getBranches = async (user: { id: string; role: string }) => {
 				: null,
 			employeeCount: empCounts.get(r.id) ?? 0,
 		})),
-	};
+	);
 };
 
 export const createBranch = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	data: Record<string, unknown>,
 ) => {
-	if (!can(user.role as Role, "create", "branches")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const [branch] = await db
 		.insert(branches)
 		.values(data as never)
@@ -104,24 +95,20 @@ export const createBranch = async (
 		targetId: branch.id,
 		metadata: { name: (branch as { name: string }).name },
 	});
-	return { success: true as const, data: branch };
+	return ok(branch);
 };
 
 export const updateBranch = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	id: string,
 	data: Record<string, unknown>,
 ) => {
-	if (!can(user.role as Role, "update", "branches")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const [branch] = await db
 		.update(branches)
 		.set(data as never)
 		.where(eq(branches.id, id))
 		.returning();
-	if (!branch)
-		return status(404, { success: false as const, error: "Branch not found" });
+	if (!branch) return fail(404, "Branch not found");
 	void logAudit({
 		actorId: user.id,
 		action: "update",
@@ -130,16 +117,10 @@ export const updateBranch = async (
 		branchId: id,
 		metadata: data as Record<string, unknown>,
 	});
-	return { success: true as const, data: branch };
+	return ok(branch);
 };
 
-export const deleteBranch = async (
-	user: { id: string; role: string },
-	id: string,
-) => {
-	if (!can(user.role as Role, "delete", "branches")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
+export const deleteBranch = async (user: CurrentUser, id: string) => {
 	await db.delete(branches).where(eq(branches.id, id));
 	void logAudit({
 		actorId: user.id,
@@ -147,16 +128,13 @@ export const deleteBranch = async (
 		targetTable: "branches",
 		targetId: id,
 	});
-	return { success: true as const, data: null };
+	return ok(null);
 };
 
 export const assignFranchise = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	data: { userId: string; branchId: string; commissionRate?: number },
 ) => {
-	if (!can(user.role as Role, "update", "branches")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const [fb] = await db
 		.insert(franchiseBranches)
 		.values({
@@ -174,5 +152,5 @@ export const assignFranchise = async (
 		branchId: data.branchId,
 		metadata: { userId: data.userId, commissionRate: data.commissionRate },
 	});
-	return { success: true as const, data: fb };
+	return ok(fb);
 };

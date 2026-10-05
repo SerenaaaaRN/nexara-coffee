@@ -1,8 +1,8 @@
 import { Elysia } from "elysia";
-import { betterAuth } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
+import { authPlugin } from "../../plugins/auth.js";
 import {
 	createCustomerBody,
-	customerIdParams,
 	findOrCreateBody,
 	loyaltyBody,
 	updateCustomerBody,
@@ -17,76 +17,56 @@ import {
 } from "./service.js";
 
 export const customers = new Elysia({ prefix: "/customers" })
-	.use(betterAuth)
-	.get(
-		"/",
-		async ({ user }) => getCustomers(user as { id: string; role: string }),
-		{
-			auth: true,
-			detail: { tags: ["customers"] },
-		},
-	)
-	.post(
-		"/",
-		async ({ body, user }) =>
-			createCustomer(user as { id: string; role: string }, body as never),
-		{
-			body: createCustomerBody,
-			auth: true,
-			detail: { tags: ["customers"] },
-		},
-	)
+	.use(authPlugin)
+	.model({
+		"customers.params": idParams,
+		"customers.create": createCustomerBody,
+		"customers.update": updateCustomerBody,
+		"customers.findOrCreate": findOrCreateBody,
+		"customers.loyalty": loyaltyBody,
+	})
+	.get("/", async () => getCustomers(), {
+		requireRole: ["customers", "read"],
+		detail: { tags: ["customers"] },
+	})
+	.post("/", async ({ body, user }) => createCustomer(user, body), {
+		body: "customers.create",
+		requireRole: ["customers", "create"],
+		detail: { tags: ["customers"] },
+	})
 	.post(
 		"/find-or-create",
 		async ({ body, user }) =>
-			findOrCreateCustomer(
-				user as { id: string; role: string },
-				(body as { fullName: string }).fullName,
-				(body as { phone?: string }).phone,
-			),
+			findOrCreateCustomer(user, body.fullName, body.phone),
 		{
-			body: findOrCreateBody,
-			auth: true,
+			body: "customers.findOrCreate",
+			requireRole: ["customers", "create"],
 			detail: { tags: ["customers"] },
 		},
 	)
 	.put(
 		"/:id",
-		async ({ params, body, user }) =>
-			updateCustomer(
-				user as { id: string; role: string },
-				params.id,
-				body as never,
-			),
+		async ({ params, body, user }) => updateCustomer(user, params.id, body),
 		{
-			params: customerIdParams,
-			body: updateCustomerBody,
-			auth: true,
+			params: "customers.params",
+			body: "customers.update",
+			requireRole: ["customers", "update"],
 			detail: { tags: ["customers"] },
 		},
 	)
-	.delete(
-		"/:id",
-		async ({ params, user }) =>
-			deleteCustomer(user as { id: string; role: string }, params.id),
-		{
-			params: customerIdParams,
-			auth: true,
-			detail: { tags: ["customers"] },
-		},
-	)
+	.delete("/:id", async ({ params, user }) => deleteCustomer(user, params.id), {
+		params: "customers.params",
+		requireRole: ["customers", "delete"],
+		detail: { tags: ["customers"] },
+	})
 	.patch(
 		"/:id/loyalty",
 		async ({ params, body, user }) =>
-			updateLoyaltyPoints(
-				user as { id: string; role: string },
-				params.id,
-				(body as { points: number }).points,
-			),
+			updateLoyaltyPoints(user, params.id, body.points),
 		{
-			params: customerIdParams,
-			body: loyaltyBody,
-			auth: true,
+			params: "customers.params",
+			body: "customers.loyalty",
+			requireRole: ["customers", "update"],
 			detail: { tags: ["customers"] },
 		},
 	);

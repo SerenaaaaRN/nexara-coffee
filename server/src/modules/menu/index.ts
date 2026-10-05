@@ -1,10 +1,10 @@
 import { Elysia, t } from "elysia";
-import { betterAuth } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
+import { authPlugin } from "../../plugins/auth.js";
 import {
 	categoryOrderBody,
 	createCategoryBody,
 	createMenuItemBody,
-	menuIdParams,
 	menuItemsQuery,
 	updateCategoryBody,
 	updateMenuItemBody,
@@ -23,121 +23,85 @@ import {
 } from "./service.js";
 
 export const menu = new Elysia({ prefix: "/menu" })
-	.use(betterAuth)
-	.get(
-		"/categories",
-		async ({ user }) => getMenuCategories(user as { id: string; role: string }),
-		{
-			auth: true,
-			detail: { tags: ["menu"] },
-		},
-	)
-	.get(
-		"/items",
-		async ({ query, user }) =>
-			getMenuItems(
-				user as { id: string; role: string },
-				query.categoryId ?? null,
-			),
-		{ query: menuItemsQuery, auth: true, detail: { tags: ["menu"] } },
-	)
-	.post(
-		"/categories",
-		async ({ body, user }) =>
-			createCategory(user as { id: string; role: string }, body as never),
-		{
-			body: createCategoryBody as never,
-			auth: true,
-			detail: { tags: ["menu"] },
-		},
-	)
+	.use(authPlugin)
+	.model({
+		"menu.createCategory": createCategoryBody,
+		"menu.updateCategory": updateCategoryBody,
+		"menu.createItem": createMenuItemBody,
+		"menu.updateItem": updateMenuItemBody,
+		"menu.categoryOrder": categoryOrderBody,
+		"menu.availability": t.Object({ isAvailable: t.Boolean() }),
+		"menu.itemsQuery": menuItemsQuery,
+		"menu.idParams": idParams,
+	})
+	.get("/categories", async () => getMenuCategories(), {
+		requireRole: ["menu", "read"],
+		detail: { tags: ["menu"] },
+	})
+	.get("/items", async ({ query }) => getMenuItems(query.categoryId ?? null), {
+		query: "menu.itemsQuery",
+		requireRole: ["menu", "read"],
+		detail: { tags: ["menu"] },
+	})
+	.post("/categories", async ({ body }) => createCategory(body), {
+		body: "menu.createCategory",
+		requireRole: ["menu", "create"],
+		detail: { tags: ["menu"] },
+	})
 	.put(
 		"/categories/:id",
-		async ({ params, body, user }) =>
-			updateCategory(
-				user as { id: string; role: string },
-				params.id,
-				body as never,
-			),
+		async ({ params, body }) => updateCategory(params.id, body),
 		{
-			params: menuIdParams,
-			body: updateCategoryBody as never,
-			auth: true,
+			params: "menu.idParams",
+			body: "menu.updateCategory",
+			requireRole: ["menu", "update"],
 			detail: { tags: ["menu"] },
 		},
 	)
-	.delete(
-		"/categories/:id",
-		async ({ params, user }) =>
-			deleteCategory(user as { id: string; role: string }, params.id),
-		{
-			params: menuIdParams,
-			auth: true,
-			detail: { tags: ["menu"] },
-		},
-	)
+	.delete("/categories/:id", async ({ params }) => deleteCategory(params.id), {
+		params: "menu.idParams",
+		requireRole: ["menu", "delete"],
+		detail: { tags: ["menu"] },
+	})
 	.patch(
 		"/categories/:id/order",
-		async ({ params, body, user }) =>
-			updateCategoryOrder(
-				user as { id: string; role: string },
-				params.id,
-				(body as { displayOrder: number }).displayOrder,
-			),
+		async ({ params, body }) =>
+			updateCategoryOrder(params.id, body.displayOrder),
 		{
-			params: menuIdParams,
-			body: categoryOrderBody,
-			auth: true,
+			params: "menu.idParams",
+			body: "menu.categoryOrder",
+			requireRole: ["menu", "update"],
 			detail: { tags: ["menu"] },
 		},
 	)
-	.post(
-		"/items",
-		async ({ body, user }) =>
-			createMenuItem(user as { id: string; role: string }, body as never),
-		{
-			body: createMenuItemBody,
-			auth: true,
-			detail: { tags: ["menu"] },
-		},
-	)
+	.post("/items", async ({ body }) => createMenuItem(body), {
+		body: "menu.createItem",
+		requireRole: ["menu", "create"],
+		detail: { tags: ["menu"] },
+	})
 	.put(
 		"/items/:id",
-		async ({ params, body, user }) =>
-			updateMenuItem(
-				user as { id: string; role: string },
-				params.id,
-				body as never,
-			),
+		async ({ params, body }) => updateMenuItem(params.id, body),
 		{
-			params: menuIdParams,
-			body: updateMenuItemBody,
-			auth: true,
+			params: "menu.idParams",
+			body: "menu.updateItem",
+			requireRole: ["menu", "update"],
 			detail: { tags: ["menu"] },
 		},
 	)
-	.delete(
-		"/items/:id",
-		async ({ params, user }) =>
-			deleteMenuItem(user as { id: string; role: string }, params.id),
-		{
-			params: menuIdParams,
-			auth: true,
-			detail: { tags: ["menu"] },
-		},
-	)
+	.delete("/items/:id", async ({ params }) => deleteMenuItem(params.id), {
+		params: "menu.idParams",
+		requireRole: ["menu", "delete"],
+		detail: { tags: ["menu"] },
+	})
 	.patch(
 		"/items/:id/availability",
-		async ({ params, body, user }) =>
-			toggleMenuAvailability(
-				user as { id: string; role: string },
-				params.id,
-				(body as { isAvailable: boolean }).isAvailable,
-			),
+		async ({ params, body }) =>
+			toggleMenuAvailability(params.id, body.isAvailable),
 		{
-			params: menuIdParams,
-			body: t.Object({ isAvailable: t.Boolean() }),
-			auth: true,
+			params: "menu.idParams",
+			body: "menu.availability",
+			requireRole: ["menu", "update"],
 			detail: { tags: ["menu"] },
 		},
 	);

@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
-import { betterAuth } from "../../plugins/auth.js";
-import { notificationIdParams } from "./model.js";
+import { idParams } from "../../lib/schema.js";
+import { authPlugin } from "../../plugins/auth.js";
 import {
 	getNotifications,
 	markAllRead,
@@ -8,30 +8,22 @@ import {
 } from "./service.js";
 
 export const notifications = new Elysia({ prefix: "/notifications" })
-	.use(betterAuth)
-	.get(
-		"/",
-		async ({ user }) => getNotifications(user as { id: string; role: string }),
-		{
-			auth: true,
-			detail: { tags: ["notifications"] },
-		},
-	)
+	.use(authPlugin)
+	.model({ "notifications.params": idParams })
+	.get("/", async ({ user }) => getNotifications(user), {
+		requireRole: ["notifications", "read"],
+		detail: { tags: ["notifications"] },
+	})
 	.post(
 		"/:id/read",
-		async ({ params, user }) =>
-			markNotificationRead(user as { id: string; role: string }, params.id),
+		async ({ params, user }) => markNotificationRead(user, params.id),
 		{
-			params: notificationIdParams,
-			auth: true,
+			params: "notifications.params",
+			requireRole: ["notifications", "read"],
 			detail: { tags: ["notifications"] },
 		},
 	)
-	.post(
-		"/read-all",
-		async ({ user }) => markAllRead(user as { id: string; role: string }),
-		{
-			auth: true,
-			detail: { tags: ["notifications"] },
-		},
-	);
+	.post("/read-all", async ({ user }) => markAllRead(user), {
+		requireRole: ["notifications", "read"],
+		detail: { tags: ["notifications"] },
+	});
