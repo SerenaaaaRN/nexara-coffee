@@ -16,7 +16,7 @@ export type EnvelopeData<T> = T extends { success: true; data: infer D }
     : never;
 
 /**
- * Turunkan tipe entity dari method treaty 
+ * Turunkan tipe entity dari method treaty
  * Contoh: `GetData<typeof api.branches.get>` untuk list, `[number]` untuk item.
  */
 export type GetData<
@@ -29,31 +29,31 @@ export type GetData<
  * jalur `error` (status >= 300 → `data = null`).
  */
 export const toEnvelope = <T>(
-	data: Envelope<T> | null | undefined,
-	error: { status: number | string; value: unknown } | null,
+    data: Envelope<T> | null | undefined,
+    error: { status: number | string; value: unknown } | null,
 ): Envelope<T> => {
-	if (error) {
-		const v = error.value as
-			| { success?: unknown; error?: unknown; message?: unknown }
-			| undefined;
-		if (
-			v !== null &&
-			typeof v === "object" &&
-			v.success === false &&
-			typeof v.error === "string"
-		) {
-			return { success: false as const, error: v.error };
-		}
-		const message =
-			v !== null && typeof v === "object" && typeof v.message === "string"
-				? v.message
-				: `Request failed (${String(error.status)})`;
-		return { success: false as const, error: message };
-	}
-	return (
-		(data as Envelope<T>) ?? {
-			success: false as const,
-			error: "Empty response",
-		}
-	);
+    if (error) {
+        const v = error.value as
+            | { success?: unknown; error?: unknown; message?: unknown }
+            | undefined;
+        if (
+            v !== null &&
+            typeof v === "object" &&
+            v.success === false &&
+            typeof v.error === "string"
+        ) {
+            return { success: false as const, error: v.error };
+        }
+        const message =
+            v !== null && typeof v === "object" && typeof v.message === "string"
+                ? v.message
+                : `Request failed (${String(error.status)})`;
+        return { success: false as const, error: message };
+    }
+    return (
+        (data as Envelope<T>) ?? {
+            success: false as const,
+            error: "Empty response",
+        }
+    );
 };

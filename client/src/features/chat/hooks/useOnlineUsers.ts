@@ -4,9 +4,6 @@ import { getRealtimeClient } from "@/lib/realtime";
 
 /**
  * Melacak status kehadiran (presence) user di channel tertentu.
- *
- * @param channelId - ID channel chat aktif
- * @returns Set berisi `clientId` dari user yang sedang online
  */
 export function useOnlineUsers(channelId: string | null) {
     const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());

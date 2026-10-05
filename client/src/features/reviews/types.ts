@@ -10,5 +10,5 @@ export type ReviewRow = GetData<typeof api.reviews.get>[number];
 export type Review = Omit<ReviewRow, "branchName" | "customerName">;
 
 export const replyReviewSchema = z.object({
-	reply: z.string().max(1000).optional().or(z.literal("")),
+    reply: z.string().max(1000).optional().or(z.literal("")),
 });

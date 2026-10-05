@@ -1,7 +1,7 @@
 import type { InboundMessage, RealtimeChannel } from "ably";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSendMessage } from "@/features/chat/hooks/useChatMutations";
-import { getChannelMessagesFn } from "@/features/chat/hooks/useChatQueries";
+import { getChannelMessages } from "@/features/chat/hooks/useChatQueries";
 import { getRealtimeClient } from "@/lib/realtime";
 import type { MessageRow } from "../types";
 
@@ -24,8 +24,6 @@ interface UseChatMessagesReturn {
 
 /**
  * Mengelola state pesan chat: realtime subscription (Ably), initial load, load more, send message.
- *
- * @returns State pesan, derived groups, loading status, dan fungsi send/loadMore
  */
 export function useChatMessages({
     channelId,
@@ -147,7 +145,7 @@ export function useChatMessages({
         setHasMore(true);
         setIsLoadingMessages(true);
         earliestRef.current = null;
-        getChannelMessagesFn({ data: { channelId } })
+        getChannelMessages({ channelId })
             .then((result) => {
                 if (!result.success) return;
                 setAllMessages(
@@ -171,8 +169,9 @@ export function useChatMessages({
         if (!hasMore || isLoadingMore || !earliestRef.current) return;
         setIsLoadingMore(true);
         try {
-            const result = await getChannelMessagesFn({
-                data: { channelId, before: earliestRef.current },
+            const result = await getChannelMessages({
+                channelId,
+                before: earliestRef.current,
             });
             if (!result.success) return;
             setHasMore(result.data.hasMore ?? false);

@@ -6,12 +6,6 @@ import { api, type Envelope, toEnvelope } from "@/lib/eden";
 
 /**
  * Mengambil daftar semua customer beserta jumlah order mereka.
- *
- * Order count dikerjakan di database (group-by server) — tanpa cap 1000
- * rows dan tanpa URL `.in()` yang meledak. Diurutkan terbaru dulu
- * (parity era-supabase yang order by created_at desc).
- *
- * @returns {CustomerRow[]} Daftar customer dengan informasi order
  */
 export const getCustomers = async (): Promise<Envelope<CustomerRow[]>> => {
     const { data, error } = await api.customers.get();

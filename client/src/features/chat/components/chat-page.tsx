@@ -24,7 +24,7 @@ export const ChatPage = () => {
     const { data: session } = useSession();
     const queryClient = useQueryClient();
     const { data: channelsQuery } = useSuspenseQuery(userChannelsOptions());
-    const channels = channelsQuery.data ?? [];
+    const channels = channelsQuery?.success ? channelsQuery.data : [];
 
     const [activeChannelId, setActiveChannelId] = useState<string | null>(() =>
         channels.length > 0 ? channels[0].id : null,

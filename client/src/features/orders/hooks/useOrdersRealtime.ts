@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as Ably from "ably";
 import { useEffect, useRef } from "react";
 import { orderKeys } from "@/features/query-keys";
-import { getAblyTokenFn } from "@/hooks/useAblyToken";
+import { getAblyToken } from "@/hooks/useAblyToken";
 
 /**
  * Hook untuk berlangganan channel "orders" melalui Ably Realtime.
@@ -19,7 +19,7 @@ export function useOrdersRealtime() {
         const client = new Ably.Realtime({
             authCallback: async (_data, callback) => {
                 try {
-                    const token = await getAblyTokenFn();
+                    const token = await getAblyToken();
                     callback(null, token);
                 } catch (err) {
                     callback(

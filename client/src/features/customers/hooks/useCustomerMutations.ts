@@ -9,8 +9,6 @@ import { api, type Envelope, toEnvelope } from "@/lib/eden";
  * Match berlapis di server: phone yang dinormalisasi dulu (identitas stabil
  * untuk member), fallback ke nama persis. Baris baru ikut menyimpan phone
  * supaya tidak menumpuk baris tanpa identitas.
- *
- * @returns Data customer yang ditemukan atau dibuat
  */
 export const findOrCreateCustomer = async (input: {
     fullName: string;
@@ -28,8 +26,6 @@ export const findOrCreateCustomer = async (input: {
  * Server hanya menerima fullName/email/phone/segment — loyalty dikirim
  * terpisah ke endpoint loyalty agar UX form (yang mengedit semuanya
  * sekaligus) tetap sama seperti era-supabase.
- *
- * @returns Customer yang sudah diperbarui
  */
 export const updateCustomer = async ({
     id,
@@ -52,9 +48,7 @@ export const updateCustomer = async ({
 /**
  * Menghapus customer. Hard delete.
  */
-export const deleteCustomer = async (
-    id: string,
-): Promise<Envelope<null>> => {
+export const deleteCustomer = async (id: string): Promise<Envelope<null>> => {
     const { data, error } = await api.customers({ id }).delete();
     return toEnvelope(data, error);
 };

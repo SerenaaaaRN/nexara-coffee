@@ -43,7 +43,10 @@ export const useEmployeeTable = (
         const unique = new Map<string, { id: string; name: string }>();
         for (const e of employees) {
             if (!unique.has(e.branchId)) {
-                unique.set(e.branchId, { id: e.branchId, name: e.branch.name });
+                unique.set(e.branchId, {
+                    id: e.branchId,
+                    name: e.branchName ?? e.branchId,
+                });
             }
         }
         return Array.from(unique.values());
@@ -69,28 +72,28 @@ export const useEmployeeTable = (
         [branchOptions],
     );
 
-    /** Kolom: user.name, user.email, branchId, user.role, baseSalary, hireDate, actions. */
+    /** Kolom: userName, userEmail, branchName, userRole, baseSalary, hireDate, actions. */
     const columns = useMemo(
         () => [
-            columnHelper.accessor((row) => row.user.name, {
+            columnHelper.accessor((row) => row.userName ?? "", {
                 id: "user.name",
                 header: "Name",
                 cell: (info) => (
                     <span className="font-medium">
-                        {info.row.original.user.name}
+                        {info.row.original.userName}
                     </span>
                 ),
             }),
-            columnHelper.accessor((row) => row.user.email, {
+            columnHelper.accessor((row) => row.userEmail ?? "", {
                 id: "user.email",
                 header: "Email",
                 cell: (info) => (
                     <span className="text-muted-foreground">
-                        {info.row.original.user.email}
+                        {info.row.original.userEmail}
                     </span>
                 ),
             }),
-            columnHelper.accessor((row) => row.branch.name, {
+            columnHelper.accessor((row) => row.branchName ?? "", {
                 id: "branchId",
                 header: "Branch",
                 filterFn: (row, _columnId, filterValue) => {
@@ -99,15 +102,17 @@ export const useEmployeeTable = (
                 },
                 cell: (info) => (
                     <Badge variant="secondary">
-                        {info.row.original.branch.name}
+                        {info.row.original.branchName}
                     </Badge>
                 ),
             }),
-            columnHelper.accessor((row) => row.user.role, {
+            columnHelper.accessor((row) => row.userRole ?? "", {
                 id: "user.role",
                 header: "Role",
                 cell: (info) => (
-                    <Badge>{formatLabel(info.row.original.user.role)}</Badge>
+                    <Badge>
+                        {formatLabel(info.row.original.userRole ?? "")}
+                    </Badge>
                 ),
             }),
             columnHelper.accessor("baseSalary", {
@@ -148,7 +153,7 @@ export const useEmployeeTable = (
 
     /**
      * Instance useReactTable.
-     * globalFilterFn mencari berdasarkan user.name, user.email, user.role, branch.name.
+     * globalFilterFn mencari berdasarkan userName, userEmail, userRole, branchName.
      */
     const table = useReactTable({
         data: employees,
@@ -168,10 +173,10 @@ export const useEmployeeTable = (
             const q = String(filterValue).toLowerCase();
             const e = row.original;
             return (
-                e.user.name.toLowerCase().includes(q) ||
-                e.user.email.toLowerCase().includes(q) ||
-                e.user.role.toLowerCase().includes(q) ||
-                e.branch.name.toLowerCase().includes(q)
+                (e.userName ?? "").toLowerCase().includes(q) ||
+                (e.userEmail ?? "").toLowerCase().includes(q) ||
+                (e.userRole ?? "").toLowerCase().includes(q) ||
+                (e.branchName ?? "").toLowerCase().includes(q)
             );
         },
         getCoreRowModel: getCoreRowModel(),

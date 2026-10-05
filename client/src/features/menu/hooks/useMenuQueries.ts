@@ -1,8 +1,8 @@
 import {
-	keepPreviousData,
-	queryOptions,
-	useQuery,
-	useSuspenseQuery,
+    keepPreviousData,
+    queryOptions,
+    useQuery,
+    useSuspenseQuery,
 } from "@tanstack/react-query";
 import type { MenuCategory, MenuItemRow } from "@/features/menu/types";
 import { menuKeys } from "@/features/query-keys";
@@ -15,10 +15,10 @@ import { api, type Envelope, toEnvelope } from "@/lib/eden";
  * kategori dan form dialog.
  */
 export const getMenuCategories = async (): Promise<
-	Envelope<MenuCategory[]>
+    Envelope<MenuCategory[]>
 > => {
-	const { data, error } = await api.menu.categories.get();
-	return toEnvelope(data, error);
+    const { data, error } = await api.menu.categories.get();
+    return toEnvelope(data, error);
 };
 
 /**
@@ -30,36 +30,36 @@ export const getMenuCategories = async (): Promise<
  * memiliki properti `category`.
  */
 export const getMenuItems = async (
-	categoryId?: string | null,
+    categoryId?: string | null,
 ): Promise<Envelope<MenuItemRow[]>> => {
-	const { data, error } =
-		categoryId == null
-			? await api.menu.items.get()
-			: await api.menu.items.get({ query: { categoryId } });
-	return toEnvelope(data, error);
+    const { data, error } =
+        categoryId == null
+            ? await api.menu.items.get()
+            : await api.menu.items.get({ query: { categoryId } });
+    return toEnvelope(data, error);
 };
 
 export const menuCategoriesOptions = () =>
-	queryOptions({
-		queryKey: menuKeys.categories(),
-		queryFn: () => getMenuCategories(),
-		staleTime: STALE.FREQUENT,
-	});
+    queryOptions({
+        queryKey: menuKeys.categories(),
+        queryFn: () => getMenuCategories(),
+        staleTime: STALE.FREQUENT,
+    });
 
 export const menuItemsOptions = (categoryId?: string | null) =>
-	queryOptions({
-		queryKey: menuKeys.items(categoryId),
-		queryFn: () => getMenuItems(categoryId),
-		staleTime: STALE.FREQUENT,
-	});
+    queryOptions({
+        queryKey: menuKeys.items(categoryId),
+        queryFn: () => getMenuItems(categoryId),
+        staleTime: STALE.FREQUENT,
+    });
 
 export function useMenuCategories() {
-	return useSuspenseQuery(menuCategoriesOptions());
+    return useSuspenseQuery(menuCategoriesOptions());
 }
 
 export function useMenuItems(categoryId?: string | null) {
-	return useQuery({
-		...menuItemsOptions(categoryId),
-		placeholderData: keepPreviousData,
-	});
+    return useQuery({
+        ...menuItemsOptions(categoryId),
+        placeholderData: keepPreviousData,
+    });
 }

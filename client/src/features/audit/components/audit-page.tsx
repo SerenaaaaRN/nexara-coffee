@@ -17,7 +17,7 @@ import { useAuditLogs } from "@/features/audit/hooks/useAuditLogs";
 
 export const AuditPage = () => {
     const { data } = useAuditLogs();
-    const logs = data?.data ?? [];
+    const logs = data?.success ? data.data : [];
 
     const {
         search,

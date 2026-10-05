@@ -4,12 +4,6 @@ import { groupByDate } from "@/utils/group-by";
 
 /**
  * Filter & search audit log di sisi client.
- *
- * Ngatur state pencarian (search), filter aksi (actionFilter), dan filter tabel (tableFilter).
- * Semua derived otomatis: `uniqueTables`, `filtered`, `grouped` (by date).
- *
- * @param logs - Seluruh data audit log (biasanya dari useAuditLogs)
- * @returns State + setter + hasil filter/group
  */
 export const useAuditFilters = (logs: AuditLogRow[]) => {
     const [search, setSearch] = useState("");

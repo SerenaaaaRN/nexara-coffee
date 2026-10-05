@@ -3,12 +3,6 @@ import type { CustomerRow } from "@/features/customers/types";
 
 /**
  * Filter & search customer di sisi client.
- *
- * Ngatur state pencarian, filter segment, dan filter loyalty tier.
- * Derived: `filtered`, `hasFilters`, `totalOrders`, `totalPoints`.
- *
- * @param customers - Seluruh data customer (biasanya dari useCustomers)
- * @returns State, setter, hasil filter, dan agregat
  */
 export const useCustomerFilters = (customers: CustomerRow[]) => {
     const [search, setSearch] = useState("");

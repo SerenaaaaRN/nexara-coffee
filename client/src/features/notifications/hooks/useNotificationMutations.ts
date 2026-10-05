@@ -7,8 +7,6 @@ import type { markAllReadSchema, markReadSchema } from "../types";
 /**
  * Menandai satu notifikasi sebagai sudah dibaca.
  * Hanya pemilik notifikasi yang boleh menandainya.
- *
- * @param id - id notifikasi
  */
 export const markNotificationRead = async (
     input: z.infer<typeof markReadSchema>,

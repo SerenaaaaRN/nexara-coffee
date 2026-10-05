@@ -6,9 +6,6 @@ import { api, type Envelope, toEnvelope } from "@/lib/eden";
 
 /**
  * Mengambil daftar review beserta nama branch & customer.
- *
- * Filter opsional berdasarkan branch dan status. Diurutkan
- * berdasarkan waktu dibuat (terbaru dulu).
  */
 export const getReviews = async (params?: {
     branchId?: string;
@@ -31,7 +28,6 @@ export const reviewsOptions = (params?: {
         staleTime: STALE.FREQUENT,
     });
 
-/** @see {@link getReviews} */
 export function useReviews(params?: { branchId?: string; status?: string }) {
     return useSuspenseQuery(reviewsOptions(params));
 }

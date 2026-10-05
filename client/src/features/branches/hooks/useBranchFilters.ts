@@ -3,9 +3,6 @@ import type { BranchRow } from "@/features/branches/types";
 
 /**
  * Search cabang di sisi client.
- *
- * @param branches - Seluruh data cabang (biasanya dari useBranches)
- * @returns State search + hasil filter
  */
 export const useBranchFilters = (branches: BranchRow[]) => {
     const [search, setSearch] = useState("");

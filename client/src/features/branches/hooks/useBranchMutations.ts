@@ -12,11 +12,6 @@ import { api, type Envelope, toEnvelope } from "@/lib/eden";
 
 /**
  * Membuat cabang baru.
- *
- * Server sekaligus membuat chat channel "General" untuk cabang tersebut
- * dan mencatat audit log.
- *
- * @returns Branch yang baru dibuat
  */
 export const createBranch = async (
     input: CreateBranchInput,

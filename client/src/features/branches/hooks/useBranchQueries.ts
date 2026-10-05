@@ -6,12 +6,6 @@ import { api, type Envelope, toEnvelope } from "@/lib/eden";
 
 /**
  * Mengambil daftar semua cabang dengan detail manajer.
- *
- * Data di-filter berdasarkan hak akses user (branch scope) di server.
- * Jika user memiliki akses ke semua cabang (super_admin), semua cabang
- * dikembalikan. Termasuk jumlah karyawan per cabang.
- *
- * @returns {BranchRow[]} Daftar cabang dengan informasi manajer
  */
 export const getBranches = async (): Promise<Envelope<BranchRow[]>> => {
     const { data, error } = await api.branches.get();
@@ -25,7 +19,6 @@ export const branchesOptions = () =>
         staleTime: STALE.FREQUENT,
     });
 
-/** @see {@link getBranches} */
 export function useBranches() {
     return useSuspenseQuery(branchesOptions());
 }

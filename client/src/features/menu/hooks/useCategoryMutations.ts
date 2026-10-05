@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
-	CreateCategoryInput,
-	MenuCategory,
-	UpdateCategoryInput,
+    CreateCategoryInput,
+    MenuCategory,
+    UpdateCategoryInput,
 } from "@/features/menu/types";
 import { menuKeys } from "@/features/query-keys";
 import { api, type Envelope, toEnvelope } from "@/lib/eden";
@@ -14,10 +14,10 @@ import { api, type Envelope, toEnvelope } from "@/lib/eden";
  * di halaman menu. Default 0 jika tidak disediakan.
  */
 export const createCategory = async (
-	input: CreateCategoryInput,
+    input: CreateCategoryInput,
 ): Promise<Envelope<MenuCategory>> => {
-	const { data, error } = await api.menu.categories.post({ ...input });
-	return toEnvelope(data, error);
+    const { data, error } = await api.menu.categories.post({ ...input });
+    return toEnvelope(data, error);
 };
 
 /**
@@ -25,11 +25,11 @@ export const createCategory = async (
  * Partial update — hanya field yang dikirim yang akan diubah.
  */
 export const updateCategory = async ({
-	id,
-	...rest
+    id,
+    ...rest
 }: UpdateCategoryInput & { id: string }): Promise<Envelope<MenuCategory>> => {
-	const { data, error } = await api.menu.categories({ id }).put({ ...rest });
-	return toEnvelope(data, error);
+    const { data, error } = await api.menu.categories({ id }).put({ ...rest });
+    return toEnvelope(data, error);
 };
 
 /**
@@ -39,10 +39,10 @@ export const updateCategory = async ({
  * kategori ini (400 + pesan jumlah item).
  */
 export const deleteCategory = async (
-	id: string,
+    id: string,
 ): Promise<Envelope<unknown>> => {
-	const { data, error } = await api.menu.categories({ id }).delete();
-	return toEnvelope(data, error);
+    const { data, error } = await api.menu.categories({ id }).delete();
+    return toEnvelope(data, error);
 };
 
 /**
@@ -51,58 +51,63 @@ export const deleteCategory = async (
  * Urutan ditampilkan secara ASC berdasarkan nilai `displayOrder`.
  */
 export const updateCategoryOrder = async ({
-	id,
-	displayOrder,
+    id,
+    displayOrder,
 }: {
-	id: string;
-	displayOrder: number;
+    id: string;
+    displayOrder: number;
 }): Promise<Envelope<unknown>> => {
-	const { data, error } = await api.menu
-		.categories({ id })
-		.order.patch({ displayOrder });
-	return toEnvelope(data, error);
+    const { data, error } = await api.menu
+        .categories({ id })
+        .order.patch({ displayOrder });
+    return toEnvelope(data, error);
 };
 
 export function useCreateCategory() {
-	const qc = useQueryClient();
-	return useMutation({
-		mutationFn: (data: CreateCategoryInput) => createCategory(data),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: menuKeys.categories() });
-			qc.invalidateQueries({ queryKey: menuKeys.all });
-		},
-	});
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (data: CreateCategoryInput) => createCategory(data),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: menuKeys.categories() });
+            qc.invalidateQueries({ queryKey: menuKeys.all });
+        },
+    });
 }
 
 export function useUpdateCategory() {
-	const qc = useQueryClient();
-	return useMutation({
-		mutationFn: (data: UpdateCategoryInput & { id: string }) =>
-			updateCategory(data),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: menuKeys.categories() });
-		},
-	});
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (data: UpdateCategoryInput & { id: string }) =>
+            updateCategory(data),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: menuKeys.categories() });
+        },
+    });
 }
 
 export function useDeleteCategory() {
-	const qc = useQueryClient();
-	return useMutation({
-		mutationFn: (id: string) => deleteCategory(id),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: menuKeys.categories() });
-			qc.invalidateQueries({ queryKey: menuKeys.all });
-		},
-	});
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => deleteCategory(id),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: menuKeys.categories() });
+            qc.invalidateQueries({ queryKey: menuKeys.all });
+        },
+    });
 }
 
 export function useUpdateCategoryOrder() {
-	const qc = useQueryClient();
-	return useMutation({
-		mutationFn: ({ id, displayOrder }: { id: string; displayOrder: number }) =>
-			updateCategoryOrder({ id, displayOrder }),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: menuKeys.categories() });
-		},
-	});
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({
+            id,
+            displayOrder,
+        }: {
+            id: string;
+            displayOrder: number;
+        }) => updateCategoryOrder({ id, displayOrder }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: menuKeys.categories() });
+        },
+    });
 }

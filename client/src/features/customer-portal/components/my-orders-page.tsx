@@ -125,7 +125,11 @@ function ReviewDialog({
                                                     <Star
                                                         className={cn(
                                                             "size-6",
-                                                            n <= field.value
+                                                            n <=
+                                                                Number(
+                                                                    field.value ??
+                                                                        0,
+                                                                )
                                                                 ? "fill-yellow-400 text-yellow-400"
                                                                 : "text-muted-foreground",
                                                         )}

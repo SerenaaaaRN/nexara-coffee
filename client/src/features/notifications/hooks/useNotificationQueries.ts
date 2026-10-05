@@ -5,9 +5,6 @@ import type { NotificationRow } from "../types";
 
 /**
  * Mengambil daftar notifikasi milik user yang sedang login.
- *
- * Diurutkan berdasarkan waktu dibuat (terbaru dulu).
- * `createdAt` sudah ISO string dari server (boundary JSON-safe).
  */
 export const getNotifications = async (): Promise<
     Envelope<NotificationRow[]>
