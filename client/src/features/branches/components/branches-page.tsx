@@ -31,7 +31,7 @@ export const BranchesPage = () => {
     const [createOpen, setCreateOpen] = useState(false);
     const { data } = useBranches();
 
-    const branches = data.data ?? [];
+    const branches = data.success ? data.data : [];
     const { search, setSearch, filtered } = useBranchFilters(branches);
 
     const createBranch = useCreateBranch();
