@@ -1,0 +1,177 @@
+export const ROLES = {
+	super_admin: 0,
+	branch_manager: 1,
+	franchise_owner: 2,
+	cashier: 3,
+	barista: 4,
+	visitor: 5,
+} as const;
+
+export type Role = keyof typeof ROLES;
+
+export type Resource =
+	| "menu"
+	| "orders"
+	| "users"
+	| "branches"
+	| "customers"
+	| "reviews"
+	| "finance"
+	| "payouts"
+	| "chat"
+	| "system"
+	| "ai"
+	| "employee"
+	| "reports"
+	| "setoran"
+	| "notifications"
+	| "maps";
+
+export type Action =
+	| "create"
+	| "read"
+	| "update"
+	| "delete"
+	| "approve"
+	| "manage"
+	| "process";
+
+type PermissionMap = Partial<Record<Resource, Action[]>>;
+
+export const RESOURCES: Resource[] = [
+	"menu",
+	"orders",
+	"users",
+	"branches",
+	"customers",
+	"reviews",
+	"finance",
+	"payouts",
+	"chat",
+	"system",
+	"ai",
+	"employee",
+	"reports",
+	"setoran",
+	"notifications",
+	"maps",
+];
+
+export const ACTIONS: Action[] = [
+	"create",
+	"read",
+	"update",
+	"delete",
+	"approve",
+	"manage",
+	"process",
+];
+
+export interface NavGuard {
+	path: string;
+	resource: Resource;
+	action: Action;
+}
+
+export const NAV_GUARDS: NavGuard[] = [
+	{ path: "/overview", resource: "reports", action: "read" },
+	{ path: "/orders", resource: "orders", action: "read" },
+	{ path: "/kasir", resource: "setoran", action: "read" },
+	{ path: "/menu", resource: "menu", action: "read" },
+	{ path: "/branches", resource: "branches", action: "read" },
+	{ path: "/customers", resource: "customers", action: "read" },
+	{ path: "/reviews", resource: "reviews", action: "read" },
+	{ path: "/transactions", resource: "finance", action: "read" },
+	{ path: "/payouts", resource: "payouts", action: "read" },
+	{ path: "/employee", resource: "employee", action: "read" },
+	{ path: "/chat", resource: "chat", action: "read" },
+	{ path: "/maps", resource: "maps", action: "read" },
+	{ path: "/audit", resource: "system", action: "read" },
+	{ path: "/notifications", resource: "notifications", action: "read" },
+	{ path: "/settings", resource: "users", action: "read" },
+];
+
+const PERMISSIONS: Record<Role, PermissionMap> = {
+	super_admin: {
+		menu: ["manage"],
+		orders: ["manage"],
+		users: ["manage"],
+		branches: ["manage"],
+		customers: ["manage"],
+		reviews: ["manage"],
+		finance: ["manage"],
+		payouts: ["manage"],
+		chat: ["manage"],
+		system: ["manage"],
+		ai: ["manage"],
+		employee: ["manage"],
+		reports: ["manage"],
+		notifications: ["manage"],
+		maps: ["manage"],
+	},
+	branch_manager: {
+		menu: ["create", "read", "update", "delete"],
+		orders: ["read", "update", "process"],
+		users: ["read", "update"],
+		branches: ["read", "update"],
+		customers: ["read"],
+		reviews: ["read", "update", "approve"],
+		finance: ["read"],
+		chat: ["read", "create"],
+		employee: ["create", "read", "update", "process"],
+		reports: ["read"],
+		setoran: ["create", "read", "update", "approve"],
+		ai: ["read"],
+		system: ["read"],
+		notifications: ["read"],
+		maps: ["read"],
+	},
+	franchise_owner: {
+		orders: ["read", "process"],
+		users: ["read", "update"],
+		branches: ["read"],
+		reviews: ["read"],
+		finance: ["read"],
+		payouts: ["create", "read"],
+		chat: ["read", "create"],
+		reports: ["read"],
+		setoran: ["read"],
+		notifications: ["read"],
+		maps: ["read"],
+	},
+	cashier: {
+		menu: ["read"],
+		orders: ["create", "read"],
+		customers: ["create", "read"],
+		branches: ["read"],
+		chat: ["read", "create"],
+		setoran: ["create", "read", "delete"],
+		reports: ["read"],
+		notifications: ["read"],
+		finance: ["create", "read"],
+		users: ["read", "update"],
+		maps: ["read"],
+	},
+	barista: {
+		menu: ["read"],
+		orders: ["read", "update", "process"],
+		branches: ["read"],
+		chat: ["read", "create"],
+		reports: ["read"],
+		notifications: ["read"],
+		users: ["read", "update"],
+		maps: ["read"],
+	},
+	visitor: {
+		users: ["read", "update"],
+	},
+};
+
+export function can(role: Role, action: Action, resource: Resource): boolean {
+	if (role === "super_admin") return true;
+
+	const rolePerms = PERMISSIONS[role]?.[resource];
+	if (!rolePerms) return false;
+
+	return rolePerms.includes(action);
+}
