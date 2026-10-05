@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
-import { authPlugin } from "../../plugins/auth.js";
 import { idParams } from "../../lib/schema.js";
+import { authPlugin } from "../../plugins/auth.js";
 import {
 	assignFranchiseSchema,
 	createBranchSchema,

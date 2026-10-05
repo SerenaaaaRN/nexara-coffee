@@ -1,6 +1,5 @@
 import { t } from "elysia";
 
-
 export const createCustomerBody = t.Object({
 	fullName: t.String({ minLength: 2, maxLength: 100 }),
 	email: t.Optional(t.String({ format: "email" })),

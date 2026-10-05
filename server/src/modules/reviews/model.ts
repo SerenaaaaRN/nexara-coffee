@@ -6,7 +6,6 @@ export const reviewsQuery = t.Object({
 	rating: t.Optional(t.Numeric({ minimum: 1, maximum: 5 })),
 });
 
-
 export const replyReviewBody = t.Object({
 	reply: t.String({ minLength: 1, maxLength: 1000 }),
 });

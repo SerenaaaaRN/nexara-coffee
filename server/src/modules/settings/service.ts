@@ -1,23 +1,22 @@
 import { eq, inArray, ne } from "drizzle-orm";
-import { db } from "../../db/index.js";
-import { user as userTable } from "../../db/schema/auth-schema.js";
-import { branches } from "../../db/schema/branches.js";
-import { logAudit } from "../../utils/effects.js";
 import type { CurrentUser } from "../../access/index.js";
-import { uploadImageBase64 } from "../../infra/images.js";
 import {
 	ACTIONS,
 	type Action,
 	can,
+	getAccessibleBranchIds,
 	NAV_GUARDS,
 	RESOURCES,
 	type Resource,
 	ROLES,
 	type Role,
 } from "../../access/index.js";
+import { db } from "../../db/index.js";
+import { user as userTable } from "../../db/schema/auth-schema.js";
+import { branches } from "../../db/schema/branches.js";
+import { uploadImageBase64 } from "../../infra/images.js";
 import { fail, ok } from "../../lib/http.js";
-import { getAccessibleBranchIds } from "../../access/index.js";
-import { checkRate } from "../../utils/effects.js";
+import { checkRate, logAudit } from "../../utils/effects.js";
 
 export const getUsers = async (user: CurrentUser) => {
 	const myLevel = (ROLES as Record<string, number>)[user.role] ?? 999;

@@ -11,4 +11,3 @@ export const requestPayoutBody = t.Object({
 	periodStart: t.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
 	periodEnd: t.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
 });
-

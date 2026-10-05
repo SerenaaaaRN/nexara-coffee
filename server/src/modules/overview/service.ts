@@ -1,28 +1,23 @@
 import { and, asc, count, desc, eq, gte, sql } from "drizzle-orm";
-import { db } from "../../db/index.js";
 import type { CurrentUser } from "../../access/index.js";
-import { ok, fail } from "../../lib/http.js";
+import { branchFilter, getAccessibleBranchIds } from "../../access/index.js";
+import { db } from "../../db/index.js";
 import { branches as br } from "../../db/schema/branches.js";
 import { customers } from "../../db/schema/customers.js";
 import { transactions } from "../../db/schema/finance.js";
 import { menuCategories, menuItems } from "../../db/schema/menu.js";
 import { dailySetorans, orderItems, orders } from "../../db/schema/orders.js";
-
-import {
-	branchFilter,
-	getAccessibleBranchIds,
-} from "../../access/index.js";
+import { fail, ok } from "../../lib/http.js";
 
 export const getOverviewDashboard = async (
 	user: CurrentUser,
 	branch?: string | null,
 ) => {
-
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	const branchId = branch ?? null;
 
 	if (branchId && ids !== null && !ids.includes(branchId)) {
-		return fail(403, "Forbidden branch access",);
+		return fail(403, "Forbidden branch access");
 	}
 
 	const startDate = new Date();
@@ -198,54 +193,54 @@ export const getOverviewDashboard = async (
 	]);
 
 	return ok({
-			stats: {
-				totalRevenue: Number(revenueRow?.[0]?.value ?? 0),
-				totalOrders: Number(ordersRow?.[0]?.cnt ?? 0),
-				activeBranches: Number(activeRow?.[0]?.cnt ?? 0),
-				avgOrderValue: Number(ordersRow?.[0]?.avg ?? 0),
-			},
-			revenueData: revenueData.map((x) => ({
-				date: x.date,
-				revenue: Number(x.revenue),
-			})),
-			branchRevenue: branchRevenue.map((x) => ({
-				branch: x.branch,
-				total: Number(x.total),
-				count: x.count,
-			})),
-			paymentMethods: paymentMethods.map((x) => ({
-				method: x.method,
-				count: x.count,
-				amount: Number(x.amount),
-			})),
-			orderStatuses: orderStatuses.map((x) => ({
-				status: x.status,
-				count: x.count,
-			})),
-			shiftData: shiftData.map((x) => ({
-				count: x.count,
-				amount: Number(x.amount),
-			})),
-			topItems: topItems.map((x) => ({
-				name: x.name,
-				qty: Number(x.qty),
-				revenue: Number(x.revenue),
-			})),
-			recentOrders: recentOrders as unknown as typeof recentOrders,
-			customerTiers: customerTiers.map((x) => ({
-				tier: x.tier,
-				count: x.count,
-			})),
-			categoryPerf: categoryPerf.map((x) => ({
-				category: x.category,
-				qty: Number(x.qty),
-				revenue: Number(x.revenue),
-			})),
-			branchRanking: branchRanking.map((x) => ({
-				branchId: x.branchId,
-				branch: x.branch,
-				revenue: Number(x.revenue),
-				setoranCount: x.setoranCount,
-			})),
-		},);
+		stats: {
+			totalRevenue: Number(revenueRow?.[0]?.value ?? 0),
+			totalOrders: Number(ordersRow?.[0]?.cnt ?? 0),
+			activeBranches: Number(activeRow?.[0]?.cnt ?? 0),
+			avgOrderValue: Number(ordersRow?.[0]?.avg ?? 0),
+		},
+		revenueData: revenueData.map((x) => ({
+			date: x.date,
+			revenue: Number(x.revenue),
+		})),
+		branchRevenue: branchRevenue.map((x) => ({
+			branch: x.branch,
+			total: Number(x.total),
+			count: x.count,
+		})),
+		paymentMethods: paymentMethods.map((x) => ({
+			method: x.method,
+			count: x.count,
+			amount: Number(x.amount),
+		})),
+		orderStatuses: orderStatuses.map((x) => ({
+			status: x.status,
+			count: x.count,
+		})),
+		shiftData: shiftData.map((x) => ({
+			count: x.count,
+			amount: Number(x.amount),
+		})),
+		topItems: topItems.map((x) => ({
+			name: x.name,
+			qty: Number(x.qty),
+			revenue: Number(x.revenue),
+		})),
+		recentOrders: recentOrders as unknown as typeof recentOrders,
+		customerTiers: customerTiers.map((x) => ({
+			tier: x.tier,
+			count: x.count,
+		})),
+		categoryPerf: categoryPerf.map((x) => ({
+			category: x.category,
+			qty: Number(x.qty),
+			revenue: Number(x.revenue),
+		})),
+		branchRanking: branchRanking.map((x) => ({
+			branchId: x.branchId,
+			branch: x.branch,
+			revenue: Number(x.revenue),
+			setoranCount: x.setoranCount,
+		})),
+	});
 };

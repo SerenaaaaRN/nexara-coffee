@@ -1,20 +1,20 @@
 import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import type { CurrentUser } from "../../access/index.js";
+import {
+	assertBranchAccess,
+	emptyScope,
+	getAccessibleBranchIds,
+} from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { customers } from "../../db/schema/customers.js";
 import { menuItems } from "../../db/schema/menu.js";
 import { orderItems, orders } from "../../db/schema/orders.js";
-import type { CurrentUser } from "../../access/index.js";
 import { fail, ok } from "../../lib/http.js";
 import { publishAbly } from "../../utils/effects.js";
 import { earnedPointsForTotal, tierForPoints } from "../../utils/loyalty.js";
-import {
-	assertBranchAccess,
-	emptyScope,
-	getAccessibleBranchIds,
-} from "../../access/index.js";
 
 const guardTerminalTransition = (
 	current: string,
@@ -161,6 +161,9 @@ export const createOrder = async (
 	const denied = assertBranchAccess(ids, parsed.branchId);
 	if (denied) return denied;
 
+	// orderId manual tetap dibutuhkan: dipakai menurunkan orderNumber +
+	// FK orderItems sebelum insert (skema $defaultFn hanya untuk kolom id
+	// yang tidak diisi — lihat orderItems di bawah yang mengandalkannya).
 	const orderId = crypto.randomUUID();
 	const total = parsed.items.reduce(
 		(sum, i) => sum + Number(i.price) * i.qty,
@@ -181,7 +184,6 @@ export const createOrder = async (
 
 	await db.insert(orderItems).values(
 		parsed.items.map((item) => ({
-			id: crypto.randomUUID(),
 			orderId,
 			menuItemId: item.menuItemId,
 			nameSnapshot: item.variant ? `${item.name} (${item.variant})` : item.name,

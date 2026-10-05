@@ -1,20 +1,16 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { db } from "../../db/index.js";
 import type { CurrentUser } from "../../access/index.js";
-import { fail, ok } from "../../lib/http.js";
+import { emptyScope, getAccessibleBranchIds } from "../../access/index.js";
+import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches, franchiseBranches } from "../../db/schema/branches.js";
 import { chatChannels } from "../../db/schema/collaboration.js";
 import { employeeDetails } from "../../db/schema/employee.js";
+import { fail, ok } from "../../lib/http.js";
 import { logAudit } from "../../utils/effects.js";
 
-import { getAccessibleBranchIds } from "../../access/index.js";
-import { emptyScope } from "../../access/index.js";
-
 export const getBranches = async (user: CurrentUser) => {
-
-	// Parity coffee getBranchesFn: filter branch-scope + join manager + employeeCount.
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	if (emptyScope(ids)) {
 		return ok([]);
@@ -58,7 +54,8 @@ export const getBranches = async (user: CurrentUser) => {
 		}
 	}
 
-	return ok(rows.map((r) => ({
+	return ok(
+		rows.map((r) => ({
 			id: r.id,
 			name: r.name,
 			address: r.address,
@@ -76,7 +73,8 @@ export const getBranches = async (user: CurrentUser) => {
 				? { id: r.managerIdJoined, name: r.managerName, email: r.managerEmail }
 				: null,
 			employeeCount: empCounts.get(r.id) ?? 0,
-		})),);
+		})),
+	);
 };
 
 export const createBranch = async (
@@ -110,8 +108,7 @@ export const updateBranch = async (
 		.set(data as never)
 		.where(eq(branches.id, id))
 		.returning();
-	if (!branch)
-		return fail(404, "Branch not found");
+	if (!branch) return fail(404, "Branch not found");
 	void logAudit({
 		actorId: user.id,
 		action: "update",
@@ -123,10 +120,7 @@ export const updateBranch = async (
 	return ok(branch);
 };
 
-export const deleteBranch = async (
-	user: CurrentUser,
-	id: string,
-) => {
+export const deleteBranch = async (user: CurrentUser, id: string) => {
 	await db.delete(branches).where(eq(branches.id, id));
 	void logAudit({
 		actorId: user.id,

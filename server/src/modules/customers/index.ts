@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
-import { authPlugin } from "../../plugins/auth.js";
 import { idParams } from "../../lib/schema.js";
+import { authPlugin } from "../../plugins/auth.js";
 import {
 	createCustomerBody,
 	findOrCreateBody,
@@ -36,7 +36,8 @@ export const customers = new Elysia({ prefix: "/customers" })
 	})
 	.post(
 		"/find-or-create",
-		async ({ body, user }) => findOrCreateCustomer(user, body.fullName, body.phone),
+		async ({ body, user }) =>
+			findOrCreateCustomer(user, body.fullName, body.phone),
 		{
 			body: "customers.findOrCreate",
 			requireRole: ["customers", "create"],
@@ -60,7 +61,8 @@ export const customers = new Elysia({ prefix: "/customers" })
 	})
 	.patch(
 		"/:id/loyalty",
-		async ({ params, body, user }) => updateLoyaltyPoints(user, params.id, body.points),
+		async ({ params, body, user }) =>
+			updateLoyaltyPoints(user, params.id, body.points),
 		{
 			params: "customers.params",
 			body: "customers.loyalty",

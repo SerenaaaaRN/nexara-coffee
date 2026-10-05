@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
-import { authPlugin } from "../../plugins/auth.js";
 import { idParams } from "../../lib/schema.js";
+import { authPlugin } from "../../plugins/auth.js";
 import {
 	expectedCashQuery,
 	kasirApproveBody,
@@ -27,7 +27,8 @@ export const kasir = new Elysia({ prefix: "/kasir" })
 	})
 	.get(
 		"/expected-cash",
-		async ({ query, user }) => getExpectedCash(user, query.branchId, query.date),
+		async ({ query, user }) =>
+			getExpectedCash(user, query.branchId, query.date),
 		{
 			query: "kasir.expectedCash",
 			requireRole: ["finance", "read"],
@@ -36,7 +37,8 @@ export const kasir = new Elysia({ prefix: "/kasir" })
 	)
 	.get(
 		"/setorans",
-		async ({ query, user }) => getSetorans(user, query.branch ?? null, query.limit),
+		async ({ query, user }) =>
+			getSetorans(user, query.branch ?? null, query.limit, query.offset ?? 0),
 		{
 			query: "kasir.setorans",
 			requireRole: ["setoran", "read"],
@@ -52,14 +54,19 @@ export const kasir = new Elysia({ prefix: "/kasir" })
 			detail: { tags: ["kasir"] },
 		},
 	)
-	.post("/setorans/:id/delete", async ({ params, user }) => deleteSetoran(user, params.id), {
-		params: "kasir.params",
-		requireRole: ["setoran", "delete"],
-		detail: { tags: ["kasir"] },
-	})
+	.post(
+		"/setorans/:id/delete",
+		async ({ params, user }) => deleteSetoran(user, params.id),
+		{
+			params: "kasir.params",
+			requireRole: ["setoran", "delete"],
+			detail: { tags: ["kasir"] },
+		},
+	)
 	.post(
 		"/setorans/:id/approve",
-		async ({ params, body, user }) => approveSetoran(user, params.id, body.formData.notes),
+		async ({ params, body, user }) =>
+			approveSetoran(user, params.id, body.formData.notes),
 		{
 			params: "kasir.params",
 			body: "kasir.decision",
@@ -69,7 +76,8 @@ export const kasir = new Elysia({ prefix: "/kasir" })
 	)
 	.post(
 		"/setorans/:id/reject",
-		async ({ params, body, user }) => rejectSetoran(user, params.id, body.formData.notes),
+		async ({ params, body, user }) =>
+			rejectSetoran(user, params.id, body.formData.notes),
 		{
 			params: "kasir.params",
 			body: "kasir.decision",

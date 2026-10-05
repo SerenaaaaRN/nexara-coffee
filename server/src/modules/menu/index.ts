@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
-import { authPlugin } from "../../plugins/auth.js";
 import { idParams } from "../../lib/schema.js";
+import { authPlugin } from "../../plugins/auth.js";
 import {
 	categoryOrderBody,
 	createCategoryBody,
@@ -38,15 +38,11 @@ export const menu = new Elysia({ prefix: "/menu" })
 		requireRole: ["menu", "read"],
 		detail: { tags: ["menu"] },
 	})
-	.get(
-		"/items",
-		async ({ query }) => getMenuItems(query.categoryId ?? null),
-		{
-			query: "menu.itemsQuery",
-			requireRole: ["menu", "read"],
-			detail: { tags: ["menu"] },
-		},
-	)
+	.get("/items", async ({ query }) => getMenuItems(query.categoryId ?? null), {
+		query: "menu.itemsQuery",
+		requireRole: ["menu", "read"],
+		detail: { tags: ["menu"] },
+	})
 	.post("/categories", async ({ body }) => createCategory(body), {
 		body: "menu.createCategory",
 		requireRole: ["menu", "create"],
@@ -69,7 +65,8 @@ export const menu = new Elysia({ prefix: "/menu" })
 	})
 	.patch(
 		"/categories/:id/order",
-		async ({ params, body }) => updateCategoryOrder(params.id, body.displayOrder),
+		async ({ params, body }) =>
+			updateCategoryOrder(params.id, body.displayOrder),
 		{
 			params: "menu.idParams",
 			body: "menu.categoryOrder",
@@ -99,7 +96,8 @@ export const menu = new Elysia({ prefix: "/menu" })
 	})
 	.patch(
 		"/items/:id/availability",
-		async ({ params, body }) => toggleMenuAvailability(params.id, body.isAvailable),
+		async ({ params, body }) =>
+			toggleMenuAvailability(params.id, body.isAvailable),
 		{
 			params: "menu.idParams",
 			body: "menu.availability",

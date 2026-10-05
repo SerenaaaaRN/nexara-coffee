@@ -1,11 +1,7 @@
 import { Elysia } from "elysia";
-import { authPlugin } from "../../plugins/auth.js";
 import { idParams } from "../../lib/schema.js";
-import {
-	moderateReviewBody,
-	replyReviewBody,
-	reviewsQuery,
-} from "./model.js";
+import { authPlugin } from "../../plugins/auth.js";
+import { moderateReviewBody, replyReviewBody, reviewsQuery } from "./model.js";
 import { getReviews, moderateReview, replyReview } from "./service.js";
 
 export const reviews = new Elysia({ prefix: "/reviews" })

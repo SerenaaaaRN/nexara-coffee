@@ -1,10 +1,7 @@
 import { Elysia, t } from "elysia";
-import { authPlugin } from "../../plugins/auth.js";
 import { idParams } from "../../lib/schema.js";
-import {
-	createDirectChannelBody,
-	sendMessageBody,
-} from "./model.js";
+import { authPlugin } from "../../plugins/auth.js";
+import { createDirectChannelBody, sendMessageBody } from "./model.js";
 import {
 	createDirectChannel,
 	getAvailableUsers,

@@ -1,15 +1,18 @@
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import type { CurrentUser } from "../../access/index.js";
+import {
+	assertBranchAccess,
+	branchFilter,
+	getAccessibleBranchIds,
+} from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { transactions } from "../../db/schema/finance.js";
 import { dailySetorans } from "../../db/schema/orders.js";
-import { logAudit } from "../../utils/effects.js";
-import type { CurrentUser } from "../../access/index.js";
 import { fail, ok } from "../../lib/http.js";
-import { branchFilter } from "../../access/index.js";
-import { assertBranchAccess, getAccessibleBranchIds } from "../../access/index.js";
+import { logAudit } from "../../utils/effects.js";
 
 export const getExpectedCash = async (
 	user: CurrentUser,
@@ -59,6 +62,7 @@ export const getSetorans = async (
 	user: CurrentUser,
 	branch?: string | null,
 	limit?: number,
+	offset = 0,
 ) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	const take = limit ?? 300;
@@ -89,7 +93,8 @@ export const getSetorans = async (
 		.leftJoin(verifierUser, eq(dailySetorans.verifiedBy, verifierUser.id))
 		.where(conditions)
 		.orderBy(desc(dailySetorans.createdAt))
-		.limit(take);
+		.limit(take)
+		.offset(offset);
 
 	return ok(rows);
 };

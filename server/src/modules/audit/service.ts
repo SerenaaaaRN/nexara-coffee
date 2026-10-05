@@ -9,7 +9,7 @@ import { ok } from "../../lib/http.js";
 
 export const getAuditLogs = async (
 	user: CurrentUser,
-	params?: { branch?: string; action?: string; limit?: number },
+	params?: { branch?: string; action?: string; limit?: number; offset?: number },
 ) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	const conditions = [];
@@ -34,6 +34,7 @@ export const getAuditLogs = async (
 		.leftJoin(branches, eq(auditLogs.branchId, branches.id))
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		.orderBy(desc(auditLogs.createdAt))
-		.limit(params?.limit ?? 100);
+		.limit(params?.limit ?? 100)
+		.offset(params?.offset ?? 0);
 	return ok(rows);
 };

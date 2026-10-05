@@ -1,4 +1,6 @@
 import { and, desc, eq, inArray, lt, ne, or, sql } from "drizzle-orm";
+import type { CurrentUser } from "../../access/index.js";
+import { getAccessibleBranchIds } from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
@@ -7,9 +9,7 @@ import {
 	chatChannels,
 	chatMessages,
 } from "../../db/schema/collaboration.js";
-import type { CurrentUser } from "../../access/index.js";
 import { fail, ok } from "../../lib/http.js";
-import { getAccessibleBranchIds } from "../../access/index.js";
 import { checkRate, publishAbly } from "../../utils/effects.js";
 
 export const getUserChannels = async (user: CurrentUser) => {

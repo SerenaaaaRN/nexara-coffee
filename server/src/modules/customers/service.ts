@@ -1,11 +1,10 @@
 import { count, eq } from "drizzle-orm";
+import type { CurrentUser } from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { customers } from "../../db/schema/customers.js";
 import { orders } from "../../db/schema/orders.js";
-import { logAudit } from "../../utils/effects.js";
-import type { CurrentUser } from "../../access/index.js";
 import { fail, ok } from "../../lib/http.js";
-import { checkRate } from "../../utils/effects.js";
+import { checkRate, logAudit } from "../../utils/effects.js";
 import { normalizePhone, tierForPoints } from "../../utils/loyalty.js";
 
 export const getCustomers = async () => {

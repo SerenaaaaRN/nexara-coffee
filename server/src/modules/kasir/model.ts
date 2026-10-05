@@ -8,8 +8,8 @@ export const expectedCashQuery = t.Object({
 export const setoransQuery = t.Object({
 	branch: t.Optional(t.String()),
 	limit: t.Optional(t.Numeric({ minimum: 1, maximum: 1000 })),
+	offset: t.Optional(t.Numeric({ minimum: 0 })),
 });
-
 
 export const createSetoranSchema = t.Object({
 	amount: t.Number({ minimum: 0, exclusiveMinimum: 0 }),

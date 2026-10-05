@@ -1,8 +1,8 @@
 import { and, desc, eq } from "drizzle-orm";
-import { db } from "../../db/index.js";
 import type { CurrentUser } from "../../access/index.js";
-import { ok, fail } from "../../lib/http.js";
+import { db } from "../../db/index.js";
 import { notifications } from "../../db/schema/system.js";
+import { fail, ok } from "../../lib/http.js";
 
 export const getNotifications = async (user: CurrentUser) => {
 	const rows = await db
@@ -14,17 +14,13 @@ export const getNotifications = async (user: CurrentUser) => {
 	return ok(rows);
 };
 
-export const markNotificationRead = async (
-	user: CurrentUser,
-	id: string,
-) => {
+export const markNotificationRead = async (user: CurrentUser, id: string) => {
 	const [row] = await db
 		.update(notifications)
 		.set({ isRead: true } as never)
 		.where(and(eq(notifications.id, id), eq(notifications.userId, user.id)))
 		.returning();
-	if (!row)
-		return fail(404, "Notification not found",);
+	if (!row) return fail(404, "Notification not found");
 	return ok(row);
 };
 

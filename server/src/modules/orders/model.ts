@@ -15,7 +15,6 @@ export const getOrdersQuery = t.Object({
 	dateTo: t.Optional(t.String()),
 });
 
-
 export const createOrderSchema = t.Object({
 	branchId: t.String({ minLength: 1 }),
 	customerId: t.Optional(t.String()),

@@ -1,9 +1,9 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "../../db/index.js";
-import { ok } from "../../lib/http.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
+import { ok } from "../../lib/http.js";
 
 export const getMapBranches = async () => {
 	const manager = alias(userTable, "manager");

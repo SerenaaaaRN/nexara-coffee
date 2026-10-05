@@ -1,10 +1,7 @@
 import { Elysia } from "elysia";
-import { authPlugin } from "../../plugins/auth.js";
 import { idParams } from "../../lib/schema.js";
-import {
-	createEmployeeBody,
-	updateEmployeeBody,
-} from "./model.js";
+import { authPlugin } from "../../plugins/auth.js";
+import { createEmployeeBody, updateEmployeeBody } from "./model.js";
 import {
 	createEmployee,
 	deleteEmployee,
@@ -38,16 +35,12 @@ export const employee = new Elysia({ prefix: "/employees" })
 		requireRole: ["employee", "create"],
 		detail: { tags: ["employees"] },
 	})
-	.put(
-		"/:id",
-		async ({ params, body }) => updateEmployee(params.id, body),
-		{
-			params: "employee.params",
-			body: "employee.update",
-			requireRole: ["employee", "update"],
-			detail: { tags: ["employees"] },
-		},
-	)
+	.put("/:id", async ({ params, body }) => updateEmployee(params.id, body), {
+		params: "employee.params",
+		body: "employee.update",
+		requireRole: ["employee", "update"],
+		detail: { tags: ["employees"] },
+	})
 	.delete("/:id", async ({ params }) => deleteEmployee(params.id), {
 		params: "employee.params",
 		requireRole: ["employee", "delete"],

@@ -1,12 +1,11 @@
 import { eq, inArray, sql } from "drizzle-orm";
-import { db } from "../../db/index.js";
 import type { CurrentUser } from "../../access/index.js";
-import { ok, fail } from "../../lib/http.js";
+import { getAccessibleBranchIds } from "../../access/index.js";
+import { db } from "../../db/index.js";
 import { branches } from "../../db/schema/branches.js";
 import { transactions } from "../../db/schema/finance.js";
 import { orders } from "../../db/schema/orders.js";
-
-import { getAccessibleBranchIds } from "../../access/index.js";
+import { fail, ok } from "../../lib/http.js";
 
 export const getTransactions = async (user: CurrentUser) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
@@ -35,17 +34,13 @@ export const getTransactions = async (user: CurrentUser) => {
 	return ok(rows);
 };
 
-export const getTransactionDetail = async (
-	user: CurrentUser,
-	id: string,
-) => {
+export const getTransactionDetail = async (user: CurrentUser, id: string) => {
 	const [row] = await db
 		.select()
 		.from(transactions)
 		.where(eq(transactions.id, id))
 		.limit(1);
-	if (!row)
-		return fail(404, "Transaction not found",);
+	if (!row) return fail(404, "Transaction not found");
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	if (ids !== null && !ids.includes(row.branchId))
 		return fail(403, "Forbidden");
@@ -103,8 +98,7 @@ export const refundTransaction = async (
 		.from(transactions)
 		.where(eq(transactions.id, transactionId))
 		.limit(1);
-	if (!existing)
-		return fail(404, "Transaction not found",);
+	if (!existing) return fail(404, "Transaction not found");
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	if (ids !== null && !ids.includes(existing.branchId))
 		return fail(403, "Forbidden");

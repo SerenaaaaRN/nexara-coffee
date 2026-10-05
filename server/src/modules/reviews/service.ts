@@ -1,11 +1,14 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import { fail, ok } from "../../lib/http.js";
 import { branches } from "../../db/schema/branches.js";
 import { customers, reviews } from "../../db/schema/customers.js";
+import { fail, ok } from "../../lib/http.js";
 
-export const getReviews = async (params?: { branchId?: string; status?: string; rating?: number },
-) => {
+export const getReviews = async (params?: {
+	branchId?: string;
+	status?: string;
+	rating?: number;
+}) => {
 	const conditions = [];
 	if (params?.branchId) conditions.push(eq(reviews.branchId, params.branchId));
 	if (params?.status) conditions.push(eq(reviews.status, params.status));
@@ -33,21 +36,19 @@ export const getReviews = async (params?: { branchId?: string; status?: string; 
 	return ok(rows);
 };
 
-export const replyReview = async (id: string,
-	reply: string,
-) => {
+export const replyReview = async (id: string, reply: string) => {
 	// Parity coffee replyReviewFn: hanya set reply, status tidak diubah.
 	const [row] = await db
 		.update(reviews)
 		.set({ reply: reply || null } as never)
 		.where(eq(reviews.id, id))
 		.returning();
-	if (!row)
-		return fail(404, "Review not found");
+	if (!row) return fail(404, "Review not found");
 	return ok(row);
 };
 
-export const moderateReview = async (id: string,
+export const moderateReview = async (
+	id: string,
 	reviewStatus: "approved" | "rejected",
 ) => {
 	const [row] = await db
@@ -55,7 +56,6 @@ export const moderateReview = async (id: string,
 		.set({ status: reviewStatus } as never)
 		.where(eq(reviews.id, id))
 		.returning();
-	if (!row)
-		return fail(404, "Review not found");
+	if (!row) return fail(404, "Review not found");
 	return ok(row);
 };

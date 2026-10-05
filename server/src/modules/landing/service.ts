@@ -6,8 +6,6 @@ import { menuCategories, menuItems } from "../../db/schema/menu.js";
 import { ok } from "../../lib/http.js";
 import { checkRate } from "../../utils/effects.js";
 
-/** Endpoint publik landing — tanpa auth, checkRate 60/menit (port useLandingQueries.ts). */
-
 export const getPublicBranches = async () => {
 	const limited = checkRate("landing:public-branches", 60, 60_000);
 	if (limited) return limited;

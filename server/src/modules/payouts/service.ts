@@ -1,13 +1,12 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { db } from "../../db/index.js";
 import type { CurrentUser } from "../../access/index.js";
-import { ok, fail } from "../../lib/http.js";
+import { getAccessibleBranchIds } from "../../access/index.js";
+import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { payouts } from "../../db/schema/finance.js";
-
-import { getAccessibleBranchIds } from "../../access/index.js";
+import { fail, ok } from "../../lib/http.js";
 
 export const getPayouts = async (
 	user: CurrentUser,
@@ -67,16 +66,12 @@ export const requestPayout = async (
 	return ok(payout);
 };
 
-export const approvePayout = async (
-	user: CurrentUser,
-	payoutId: string,
-) => {
+export const approvePayout = async (user: CurrentUser, payoutId: string) => {
 	const [payout] = await db
 		.update(payouts)
 		.set({ status: "approved", approvedBy: user.id } as never)
 		.where(eq(payouts.id, payoutId))
 		.returning();
-	if (!payout)
-		return fail(404, "Payout not found");
+	if (!payout) return fail(404, "Payout not found");
 	return ok(payout);
 };

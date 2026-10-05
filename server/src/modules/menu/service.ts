@@ -1,12 +1,12 @@
 import { asc, count, eq, isNotNull } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import { fail, ok } from "../../lib/http.js";
 import { menuCategories, menuItems } from "../../db/schema/menu.js";
 import {
 	deleteImage,
 	getPublicId,
 	uploadImageBase64,
 } from "../../infra/images.js";
+import { fail, ok } from "../../lib/http.js";
 
 export const getMenuCategories = async () => {
 	const rows = await db
@@ -16,8 +16,7 @@ export const getMenuCategories = async () => {
 	return ok(rows);
 };
 
-export const getMenuItems = async (categoryId?: string | null,
-) => {
+export const getMenuItems = async (categoryId?: string | null) => {
 	const cond = categoryId
 		? eq(menuItems.categoryId, categoryId)
 		: isNotNull(menuItems.categoryId);
@@ -40,8 +39,10 @@ export const getMenuItems = async (categoryId?: string | null,
 	return ok(rows);
 };
 
-export const createCategory = async (data: { name: string; displayOrder?: number },
-) => {
+export const createCategory = async (data: {
+	name: string;
+	displayOrder?: number;
+}) => {
 	const [cat] = await db
 		.insert(menuCategories)
 		.values({ name: data.name, displayOrder: data.displayOrder ?? 0 })
@@ -49,7 +50,8 @@ export const createCategory = async (data: { name: string; displayOrder?: number
 	return ok(cat);
 };
 
-export const updateCategory = async (id: string,
+export const updateCategory = async (
+	id: string,
 	data: { name?: string; displayOrder?: number },
 ) => {
 	const updates: Record<string, unknown> = {};
@@ -60,27 +62,26 @@ export const updateCategory = async (id: string,
 		.set(updates)
 		.where(eq(menuCategories.id, id))
 		.returning();
-	if (!cat)
-		return fail(404, "Category not found",);
+	if (!cat) return fail(404, "Category not found");
 	return ok(cat);
 };
 
-export const deleteCategory = async (id: string,
-) => {
+export const deleteCategory = async (id: string) => {
 	const [itemCount] = await db
 		.select({ cnt: count() })
 		.from(menuItems)
 		.where(eq(menuItems.categoryId, id));
 	if (itemCount && Number(itemCount.cnt) > 0) {
-		return fail(400, `Cannot delete — ${itemCount.cnt} menu item(s) still use this category`,);
+		return fail(
+			400,
+			`Cannot delete — ${itemCount.cnt} menu item(s) still use this category`,
+		);
 	}
 	await db.delete(menuCategories).where(eq(menuCategories.id, id));
 	return ok(null);
 };
 
-export const updateCategoryOrder = async (id: string,
-	displayOrder: number,
-) => {
+export const updateCategoryOrder = async (id: string, displayOrder: number) => {
 	await db
 		.update(menuCategories)
 		.set({ displayOrder })
@@ -89,15 +90,14 @@ export const updateCategoryOrder = async (id: string,
 };
 
 export const createMenuItem = async (data: {
-		categoryId: string;
-		name: string;
-		description?: string;
-		price: number;
-		variants?: { name: string; price: number }[];
-		imageUrl?: string;
-		imageBase64?: string;
-	},
-) => {
+	categoryId: string;
+	name: string;
+	description?: string;
+	price: number;
+	variants?: { name: string; price: number }[];
+	imageUrl?: string;
+	imageBase64?: string;
+}) => {
 	let imageUrl = data.imageUrl;
 	if (data.imageBase64) {
 		const result = await uploadImageBase64(data.imageBase64);
@@ -115,12 +115,13 @@ export const createMenuItem = async (data: {
 		})
 		.returning();
 	return ok({
-			...item,
-			variants: item.variants as { name: string; price: number }[] | null,
-		},);
+		...item,
+		variants: item.variants as { name: string; price: number }[] | null,
+	});
 };
 
-export const updateMenuItem = async (id: string,
+export const updateMenuItem = async (
+	id: string,
 	data: {
 		categoryId?: string;
 		name?: string;
@@ -153,16 +154,14 @@ export const updateMenuItem = async (id: string,
 		.set(updates)
 		.where(eq(menuItems.id, id))
 		.returning();
-	if (!item)
-		return fail(404, "Menu item not found",);
+	if (!item) return fail(404, "Menu item not found");
 	return ok({
-			...item,
-			variants: item.variants as { name: string; price: number }[] | null,
-		},);
+		...item,
+		variants: item.variants as { name: string; price: number }[] | null,
+	});
 };
 
-export const deleteMenuItem = async (id: string,
-) => {
+export const deleteMenuItem = async (id: string) => {
 	const [item] = await db
 		.select()
 		.from(menuItems)
@@ -176,7 +175,8 @@ export const deleteMenuItem = async (id: string,
 	return ok(null);
 };
 
-export const toggleMenuAvailability = async (id: string,
+export const toggleMenuAvailability = async (
+	id: string,
 	isAvailable: boolean,
 ) => {
 	const [item] = await db
@@ -184,10 +184,9 @@ export const toggleMenuAvailability = async (id: string,
 		.set({ isAvailable })
 		.where(eq(menuItems.id, id))
 		.returning();
-	if (!item)
-		return fail(404, "Menu item not found",);
+	if (!item) return fail(404, "Menu item not found");
 	return ok({
-			...item,
-			variants: item.variants as { name: string; price: number }[] | null,
-		},);
+		...item,
+		variants: item.variants as { name: string; price: number }[] | null,
+	});
 };

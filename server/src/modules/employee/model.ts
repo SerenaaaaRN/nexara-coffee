@@ -1,6 +1,5 @@
 import { t } from "elysia";
 
-
 export const createEmployeeBody = t.Object({
 	userId: t.String({ minLength: 1 }),
 	branchId: t.String({ minLength: 1 }),

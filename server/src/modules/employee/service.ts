@@ -1,12 +1,11 @@
 import { eq, inArray, notInArray, sql } from "drizzle-orm";
-import { db } from "../../db/index.js";
 import type { CurrentUser } from "../../access/index.js";
-import { ok, fail } from "../../lib/http.js";
+import { getAccessibleBranchIds } from "../../access/index.js";
+import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { employeeDetails } from "../../db/schema/employee.js";
-
-import { getAccessibleBranchIds } from "../../access/index.js";
+import { fail, ok } from "../../lib/http.js";
 
 export const getEmployees = async (user: CurrentUser) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
@@ -61,12 +60,11 @@ export const getBranchesForEmployee = async () => {
 };
 
 export const createEmployee = async (data: {
-		userId: string;
-		branchId: string;
-		baseSalary: number;
-		hireDate: string;
-	},
-) => {
+	userId: string;
+	branchId: string;
+	baseSalary: number;
+	hireDate: string;
+}) => {
 	const [row] = await db
 		.insert(employeeDetails)
 		.values({
@@ -79,7 +77,8 @@ export const createEmployee = async (data: {
 	return ok(row);
 };
 
-export const updateEmployee = async (id: string,
+export const updateEmployee = async (
+	id: string,
 	data: { branchId?: string; baseSalary?: number; hireDate?: string },
 ) => {
 	const updates: Record<string, unknown> = {};
@@ -92,13 +91,11 @@ export const updateEmployee = async (id: string,
 		.set(updates as never)
 		.where(eq(employeeDetails.id, id))
 		.returning();
-	if (!row)
-		return fail(404, "Employee not found",);
+	if (!row) return fail(404, "Employee not found");
 	return ok(row);
 };
 
-export const deleteEmployee = async (id: string,
-) => {
+export const deleteEmployee = async (id: string) => {
 	await db.delete(employeeDetails).where(eq(employeeDetails.id, id));
 	return ok(null);
 };
