@@ -3,7 +3,6 @@ import type { api, GetData } from "@/lib/eden";
 
 /**
  * Entity cabang — sumber kebenaran dari backend (Eden treaty).
- * Tidak lagi diturunkan dari `@database/types`.
  */
 export type Branch = GetData<typeof api.branches.post>;
 export type BranchRow = GetData<typeof api.branches.get>[number];

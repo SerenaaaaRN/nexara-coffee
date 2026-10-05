@@ -8,7 +8,7 @@ import {
     menuItemsOptions,
 } from "@/features/menu/hooks/useMenuQueries";
 import { POSPage } from "@/features/pos/components/pos-page";
-import { getSessionFn, loadDashboardFn } from "@/lib/auth-utils";
+import { getSession, loadDashboard } from "@/lib/session";
 import { getDefaultRouteForRole, type Role } from "@/lib/rbac";
 
 const posSearchSchema = z.object({
@@ -20,7 +20,7 @@ const posSearchSchema = z.object({
 export const Route = createFileRoute("/pos")({
     validateSearch: posSearchSchema,
     beforeLoad: async () => {
-        const session = await getSessionFn();
+        const session = await getSession();
         if (!session) throw redirect({ to: "/login" });
         const role = session.user.role;
         if (
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/pos")({
         const [_, __, dashboardData] = await Promise.all([
             queryClient.ensureQueryData(menuCategoriesOptions()),
             queryClient.ensureQueryData(menuItemsOptions()),
-            loadDashboardFn(),
+            loadDashboard(),
         ]);
         return { dashboardData };
     },

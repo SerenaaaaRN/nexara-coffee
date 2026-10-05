@@ -1,16 +1,11 @@
-import netlify from "@netlify/vite-plugin-tanstack-start";
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
-import { devtools } from "@tanstack/devtools-vite";
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const config = defineConfig({
     resolve: { tsconfigPaths: true },
     server: {
-        // NOTE(transisi): eksplisit per modul — /api/auth/* SENGAJA tidak
-        // diproxy agar tetap ke handler Start sampai cutover Fase 2.
         proxy: {
             "/api/landing": "http://localhost:3000",
             "/api/maps": "http://localhost:3000",
@@ -29,18 +24,13 @@ const config = defineConfig({
             "/api/my": "http://localhost:3000",
             "/api/overview": "http://localhost:3000",
             "/api/ably": "http://localhost:3000",
+            "/api/auth": "http://localhost:3000",
+            "/dashboard": "http://localhost:3000",
             "/openapi": "http://localhost:3000",
         },
     },
     plugins: [
-        devtools(),
         tailwindcss(),
-        tanstackStart({
-            spa: {
-                enabled: true,
-            },
-        }),
-        ...(process.env.NODE_ENV === "production" ? [netlify()] : []),
         viteReact(),
         babel({ presets: [reactCompilerPreset()] }),
     ],

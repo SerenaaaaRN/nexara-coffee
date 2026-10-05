@@ -18,7 +18,7 @@ import {
     SidebarProvider,
     SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { getSessionFn, loadDashboardFn } from "@/lib/auth-utils";
+import { getSession, loadDashboard } from "@/lib/session";
 import {
     type Action,
     can,
@@ -43,7 +43,7 @@ const DASHBOARD_GUARDS = {
 
 export const Route = createFileRoute("/_dashboard")({
     beforeLoad: async ({ location }) => {
-        const session = await getSessionFn();
+        const session = await getSession();
         if (!session) throw redirect({ to: "/login" });
         if (session.user.role === "visitor") throw redirect({ to: "/my" });
         const guard =
@@ -57,7 +57,7 @@ export const Route = createFileRoute("/_dashboard")({
         return { session };
     },
     loader: async () => {
-        return loadDashboardFn();
+        return loadDashboard();
     },
     component: DashboardLayout,
     pendingMs: 0,

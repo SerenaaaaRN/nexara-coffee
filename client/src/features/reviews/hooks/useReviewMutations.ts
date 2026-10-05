@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { reviewKeys } from "@/features/query-keys";
-import type { Review, replyReviewSchema } from "@/features/reviews/types";
-import { api, type Envelope, toEnvelope } from "@/lib/eden";
+import type { replyReviewSchema } from "@/features/reviews/types";
+import { api, toEnvelope } from "@/lib/eden";
 
 /**
  * Membalas sebuah review (moderasi).
@@ -10,7 +10,7 @@ import { api, type Envelope, toEnvelope } from "@/lib/eden";
  */
 export const replyReview = async (
     input: z.infer<typeof replyReviewSchema> & { id: string },
-): Promise<Envelope<Review>> => {
+) => {
     const { data, error } = await api
         .reviews({ id: input.id })
         .reply.post({ reply: input.reply ?? "" });
@@ -41,7 +41,7 @@ const moderateReviewSchema = z.object({
 export const moderateReview = async (input: {
     id: string;
     status: "approved" | "rejected";
-}): Promise<Envelope<Review>> => {
+}) => {
     const { data, error } = await api
         .reviews({ id: input.id })
         .moderate.post({ status: input.status });

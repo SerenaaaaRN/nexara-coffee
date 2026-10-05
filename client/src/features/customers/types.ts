@@ -37,7 +37,6 @@ export function normalizePhone(phone: string): string {
 
 /**
  * Entity customer — sumber kebenaran dari backend (Eden treaty).
- * Tidak lagi diturunkan dari `@database/types`.
  */
 export type Customer = GetData<
     (typeof api.customers)["find-or-create"]["post"]

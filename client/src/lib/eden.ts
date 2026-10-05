@@ -30,7 +30,7 @@ export type GetData<
  */
 export const toEnvelope = <T>(
     data: Envelope<T> | null | undefined,
-    error: { status: number | string; value: unknown } | null,
+    error: { status: unknown; value: unknown } | null,
 ): Envelope<T> => {
     if (error) {
         const v = error.value as
