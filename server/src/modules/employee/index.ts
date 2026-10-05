@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { betterAuth } from "../../plugins/auth.js";
+import { authPlugin } from "../../plugins/auth.js";
 import {
 	createEmployeeBody,
 	employeeIdParams,
@@ -15,64 +15,36 @@ import {
 } from "./service.js";
 
 export const employee = new Elysia({ prefix: "/employees" })
-	.use(betterAuth)
-	.get(
-		"/",
-		async ({ user }) => getEmployees(user as { id: string; role: string }),
-		{
-			auth: true,
-			detail: { tags: ["employees"] },
-		},
-	)
-	.get(
-		"/available-users",
-		async ({ user }) => getAvailableUsers(user as { id: string; role: string }),
-		{
-			auth: true,
-			detail: { tags: ["employees"] },
-		},
-	)
-	.get(
-		"/branches",
-		async ({ user }) =>
-			getBranchesForEmployee(user as { id: string; role: string }),
-		{
-			auth: true,
-			detail: { tags: ["employees"] },
-		},
-	)
-	.post(
-		"/",
-		async ({ body, user }) =>
-			createEmployee(user as { id: string; role: string }, body as never),
-		{
-			body: createEmployeeBody,
-			auth: true,
-			detail: { tags: ["employees"] },
-		},
-	)
+	.use(authPlugin)
+	.get("/", async ({ user }) => getEmployees(user), {
+		requireRole: ["employee", "read"],
+		detail: { tags: ["employees"] },
+	})
+	.get("/available-users", async ({ user }) => getAvailableUsers(user), {
+		requireRole: ["employee", "read"],
+		detail: { tags: ["employees"] },
+	})
+	.get("/branches", async ({ user }) => getBranchesForEmployee(user), {
+		requireRole: ["employee", "read"],
+		detail: { tags: ["employees"] },
+	})
+	.post("/", async ({ body, user }) => createEmployee(user, body as never), {
+		body: createEmployeeBody,
+		requireRole: ["employee", "create"],
+		detail: { tags: ["employees"] },
+	})
 	.put(
 		"/:id",
-		async ({ params, body, user }) =>
-			updateEmployee(
-				user as { id: string; role: string },
-				params.id,
-				body as never,
-			),
+		async ({ params, body, user }) => updateEmployee(user, params.id, body as never),
 		{
 			params: employeeIdParams,
 			body: updateEmployeeBody,
-			auth: true,
+			requireRole: ["employee", "update"],
 			detail: { tags: ["employees"] },
 		},
 	)
-	.delete(
-		"/:id",
-		async ({ params, user }) =>
-			deleteEmployee(user as { id: string; role: string }, params.id),
-		{
-			params: employeeIdParams,
-			auth: true,
-			detail: { tags: ["employees"] },
-		},
-	);
+	.delete("/:id", async ({ params, user }) => deleteEmployee(user, params.id), {
+		params: employeeIdParams,
+		requireRole: ["employee", "delete"],
+		detail: { tags: ["employees"] },
+	});

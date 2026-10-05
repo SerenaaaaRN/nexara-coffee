@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { betterAuth } from "../../plugins/auth.js";
+import { authPlugin } from "../../plugins/auth.js";
 import { createDirectChannelBody, sendMessageBody } from "./model.js";
 import {
 	createDirectChannel,
@@ -10,61 +10,50 @@ import {
 } from "./service.js";
 
 export const chat = new Elysia({ prefix: "/chat" })
-	.use(betterAuth)
-	.get(
-		"/channels",
-		async ({ user }) => getUserChannels(user as { id: string; role: string }),
-		{
-			auth: true,
-			detail: { tags: ["chat"] },
-		},
-	)
+	.use(authPlugin)
+	.get("/channels", async ({ user }) => getUserChannels(user), {
+		requireRole: ["chat", "read"],
+		detail: { tags: ["chat"] },
+	})
 	.get(
 		"/channels/:id/messages",
 		async ({ params, query, user }) =>
 			getChannelMessages(
-				user as { id: string; role: string },
+				user,
 				params.id,
 				(query as { before?: string })?.before,
 				(query as { limit?: number })?.limit,
 			),
 		{
-			auth: true,
+			requireRole: ["chat", "read"],
 			detail: { tags: ["chat"] },
 		},
 	)
-	.get(
-		"/available-users",
-		async ({ user }) => getAvailableUsers(user as { id: string; role: string }),
-		{
-			auth: true,
-			detail: { tags: ["chat"] },
-		},
-	)
+	.get("/available-users", async ({ user }) => getAvailableUsers(user), {
+		requireRole: ["chat", "read"],
+		detail: { tags: ["chat"] },
+	})
 	.post(
 		"/messages",
 		async ({ body, user }) =>
 			sendMessage(
-				user as never,
+				user,
 				(body as { channelId: string }).channelId,
 				(body as { content: string }).content,
 			),
 		{
 			body: sendMessageBody,
-			auth: true,
+			requireRole: ["chat", "create"],
 			detail: { tags: ["chat"] },
 		},
 	)
 	.post(
 		"/channels/direct",
 		async ({ body, user }) =>
-			createDirectChannel(
-				user as { id: string; role: string },
-				(body as { targetUserId: string }).targetUserId,
-			),
+			createDirectChannel(user, (body as { targetUserId: string }).targetUserId),
 		{
 			body: createDirectChannelBody,
-			auth: true,
+			requireRole: ["chat", "create"],
 			detail: { tags: ["chat"] },
 		},
 	);

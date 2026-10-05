@@ -1,16 +1,16 @@
 import { Elysia } from "elysia";
 import { getAblyRest } from "../../lib/ably.server.js";
-import { betterAuth } from "../../plugins/auth.js";
+import { ok } from "../../lib/response.js";
+import { authPlugin } from "../../plugins/auth.js";
 
-export const ably = new Elysia({ prefix: "/ably" }).use(betterAuth).post(
+export const ably = new Elysia({ prefix: "/ably" }).use(authPlugin).post(
 	"/token",
 	async ({ user }) => {
-		const u = user as { id: string; role: string };
 		const ablyRest = getAblyRest();
 		const tokenRequest = await ablyRest.auth.createTokenRequest({
-			clientId: u.id,
+			clientId: user.id,
 		});
-		return { success: true as const, data: tokenRequest };
+		return ok(tokenRequest);
 	},
 	{
 		auth: true,

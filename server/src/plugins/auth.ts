@@ -1,7 +1,9 @@
 import { Elysia } from "elysia";
 import { auth } from "../lib/auth.js";
+import type { CurrentUser } from "../lib/auth-user.js";
+import { type Action, can, type Resource, type Role } from "../lib/rbac.js";
 
-export const betterAuth = new Elysia({ name: "better-auth" })
+export const betterAuth = new Elysia({ name: "auth" })
 	.mount(auth.handler)
 	.macro({
 		auth: {
@@ -13,11 +15,31 @@ export const betterAuth = new Elysia({ name: "better-auth" })
 						error: "Unauthorized",
 					});
 				return {
-					user: session.user,
+					user: session.user as unknown as CurrentUser,
 					session: session.session,
 				};
 			},
 		},
+		requireRole: ([resource, action]: [Resource, Action]) => ({
+			seed: `${resource}:${action}`,
+			async resolve({ status, request: { headers } }) {
+				const session = await auth.api.getSession({ headers });
+				if (!session)
+					return status(401, {
+						success: false as const,
+						error: "Unauthorized",
+					});
+				if (!can(session.user.role as Role, action, resource))
+					return status(403, {
+						success: false as const,
+						error: "Forbidden",
+					});
+				return {
+					user: session.user as unknown as CurrentUser,
+					session: session.session,
+				};
+			},
+		}),
 	});
 
 export const authPlugin = betterAuth;
