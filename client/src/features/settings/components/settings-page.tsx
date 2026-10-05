@@ -83,7 +83,8 @@ export const SettingsPage = () => {
         currentRole === "super_admin" || currentRole === "branch_manager";
 
     const usersResponse = useUsers();
-    const users = usersResponse.data?.data ?? [];
+    const usersData = usersResponse.data;
+    const users = usersData && usersData.success ? usersData.data : [];
 
     const activeSectionKey = section ?? "profile";
 

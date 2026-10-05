@@ -30,18 +30,21 @@ export const employee = new Elysia({ prefix: "/employees" })
 		requireRole: ["employee", "read"],
 		detail: { tags: ["employees"] },
 	})
-	.post("/", async ({ body }) => createEmployee(body), {
+	.post("/", async ({ body, user }) => createEmployee(user, body), {
 		body: "employee.create",
 		requireRole: ["employee", "create"],
 		detail: { tags: ["employees"] },
 	})
-	.put("/:id", async ({ params, body }) => updateEmployee(params.id, body), {
+	.put("/:id", async ({ params, body, user }) =>
+		updateEmployee(user, params.id, body),
+	{
 		params: "employee.params",
 		body: "employee.update",
 		requireRole: ["employee", "update"],
 		detail: { tags: ["employees"] },
-	})
-	.delete("/:id", async ({ params }) => deleteEmployee(params.id), {
+	},
+	)
+	.delete("/:id", async ({ params, user }) => deleteEmployee(user, params.id), {
 		params: "employee.params",
 		requireRole: ["employee", "delete"],
 		detail: { tags: ["employees"] },

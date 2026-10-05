@@ -9,12 +9,6 @@ import type { CustomerRow } from "@/features/customers/types";
 
 /**
  * State & handler untuk CustomerSheet.
- *
- * Ngatur edit loyalty points, dialog edit customer, dan konfirmasi hapus.
- *
- * @param customer - Data customer yang sedang dibuka
- * @param onOpenChange - Callback tutup sheet utama (dipanggil setelah hapus sukses)
- * @returns State, setter, dan handler aksi sheet
  */
 export const useCustomerSheet = (
     customer: CustomerRow,

@@ -20,9 +20,9 @@ export const EmployeePage = () => {
 
     const deleteMutation = useDeleteEmployee();
 
-    const employees = employeesData?.data ?? [];
-    const users = usersData?.data ?? [];
-    const branches = branchesData?.data ?? [];
+    const employees = employeesData?.success ? employeesData.data : [];
+    const users = usersData?.success ? usersData.data : [];
+    const branches = branchesData?.success ? branchesData.data : [];
 
     const [editEmployee, setEditEmployee] = useState<EmployeeRow | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
@@ -66,7 +66,7 @@ export const EmployeePage = () => {
                 employees={employees}
                 onEdit={setEditEmployee}
                 onDelete={(e) =>
-                    setDeleteTarget({ id: e.id, name: e.user.name })
+                    setDeleteTarget({ id: e.id, name: e.userName ?? e.userId })
                 }
                 onCreateOpen={setCreateOpen}
             />

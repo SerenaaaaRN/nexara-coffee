@@ -1,17 +1,12 @@
-import type { BranchRow as DBBranch, UserRow as DBUser } from "@database/types";
 import { z } from "zod";
-import type { ToCamelCase } from "@/utils/convert-types";
+import type { api, GetData } from "@/lib/eden";
 
-export type Branch = ToCamelCase<DBBranch>;
-
-export type BranchJoined = DBBranch & {
-    manager: Pick<DBUser, "id" | "name" | "email"> | null;
-};
-
-export type BranchRow = Branch & {
-    manager: Pick<DBUser, "id" | "name" | "email"> | null;
-    employeeCount: number;
-};
+/**
+ * Entity cabang — sumber kebenaran dari backend (Eden treaty).
+ */
+export type Branch = GetData<typeof api.branches.post>;
+export type BranchRow = GetData<typeof api.branches.get>[number];
+export type FranchiseAssignment = GetData<typeof api.branches.franchise.post>;
 
 const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 

@@ -1,5 +1,5 @@
 import * as Ably from "ably";
-import { getAblyTokenFn } from "@/hooks/useAblyToken";
+import { getAblyToken } from "@/hooks/useAblyToken";
 
 let client: Ably.Realtime | null = null;
 
@@ -11,7 +11,7 @@ export function getRealtimeClient(): Ably.Realtime {
         client = new Ably.Realtime({
             authCallback: async (_data, callback) => {
                 try {
-                    const token = await getAblyTokenFn();
+                    const token = await getAblyToken();
                     callback(null, token);
                 } catch (err) {
                     callback(

@@ -8,9 +8,9 @@
 > - Backend work (`server/`) → §Server Structure, §Backend API Conventions, §Transition.
 > - Cross-cutting (auth, RBAC, DB, env) → §Better Auth, §RBAC, §Database, §Environment Variables.
 >
-> **Current status: `client/` (Vite SPA) and `server/` (Elysia API) are NOT yet connected.**
-> The frontend still fetches data through its own `createServerFn` + Supabase layer.
-> TanStack Start is transitional and will be removed (see §Transition).
+> **Current status: `client/` (Vite SPA murni) memanggil `server/` (Elysia API)
+> via Eden Treaty, same-origin. TanStack Start sudah dilepas total
+> (server-fns, Nitro/SSR bits, `api/auth/$.ts` — lihat §Transition yang sudah selesai).
 
 ## Available Skills
 
@@ -18,7 +18,7 @@ These skills are installed and can be loaded with `skill` tool when working on r
 
 | Skill | When to use |
 |---|---|
-| [tanstack-start](skill:tanstack-start) | ⚠️ TRANSITIONAL — legacy `client/` server functions only. Do NOT use for new endpoints/features |
+| [tanstack-start](skill:tanstack-start) | 🗄️ ARSIP — Start sudah dilepas dari repo. Jangan dipakai; hanya referensi historis |
 | [tanstack-router](skill:tanstack-router) | File-based routing, route loaders, `beforeLoad`, search params (stays — router is not removed) |
 | [tanstack-query-best-practices](skill:tanstack-query-best-practices) | Query keys, staleTime, cache invalidation, mutations (client) |
 | [tanstack-table](skill:tanstack-table) | Headless table logic, sorting, filtering, pagination (client) |
@@ -38,10 +38,10 @@ Monorepo with bun workspaces + turbo (`client/`, `server/`). Root scripts: `dev`
 
 | Package | Role | Status |
 |---|---|---|
-| `client/` | Vite SPA dashboard (React 19). TanStack Start in **SPA mode** (`spa.enabled: true`), data via own `createServerFn` + Supabase | Standalone, NOT connected to `server/` |
-| `server/` | Elysia 1.4.30 API (Bun). Drizzle ORM + `postgres.js`, 19 modules, OpenAPI at `/openapi/json` | Live standalone (`bun run src/index.ts`), NOT consumed by `client/` yet |
+| `client/` | Vite SPA dashboard (React 19). Tanpa TanStack Start (`index.html` → `src/main.tsx` → `RouterProvider`), data via Eden Treaty ke `server/` | Terhubung ke `server/`, same-origin |
+| `server/` | Elysia 1.4.30 API (Bun). Drizzle ORM + `postgres.js`, 19 modul, OpenAPI at `/openapi/json` | Live standalone (`bun run src/index.ts`), dikonsumsi `client/` via Eden |
 
-Known duplication (conscious, to be unified during §Transition): two DB layers (`client/database` supabase-js vs `server/src/db` Drizzle) and two Better Auth setups (`client/src/lib/auth.ts` vs `server/src/lib/auth.ts`).
+Satu lapis DB (`server/src/db` Drizzle) dan satu setup Better Auth (`server/src/lib/auth.ts`, drizzle adapter).
 
 ### Business Model
 - Head office sets menu standards, base prices, and brand guidelines
@@ -51,9 +51,9 @@ Known duplication (conscious, to be unified during §Transition): two DB layers 
 
 **Built (client):** overview dashboard (3 tabs, 8 charts, 2 tables), auth flow (login/register/forgot-reset password/Google OAuth), customers (card grid + sheet detail + edit/delete — TANPA manual add, akun lahir via self-register; order count via rpc `get_customer_order_counts`), kasir & setoran harian (input + approve/reject + POS reconciliation), orders (queue + status management + Ably realtime), POS (single-file client + hooks `usePosCart`/`usePosCatalog`/`useChargeOrder`, checkout + member lookup via HP saja — field Customer Name dihapus), chat (realtime messaging, DM, branch channels, Ably integration — staff only), maps (MapLibre GL, branch markers, popup, search), menu CRUD (grid, categories, Cloudinary image upload, RHF forms), branches CRUD (table + form + franchise owner assignment), employee CRUD (TanStack Table + shadcn + FilterToolbar), reviews (list + moderate + customer self-review per completed order), transactions (list + filter), payouts (list + approve), notifications (list + mark read), audit log (timeline with search, action/table filter, expandable metadata), customer portal `/my` (order history infinite scroll 20/page incl. offline cashier-recorded orders, loyalty member card, account self-service, per-order review dialog).
 
-**Built (server):** 19 Elysia modules (overview, kasir, orders, menu, branches, customers, employee, transactions, payouts, reviews, chat, notifications, audit, settings, maps, my-portal, landing, ably + dashboard meta), `requireRole` RBAC macro, `.model()` + string-ref validation (52 named schemas), `ok()/fail()` envelope, token-bucket rate limiting, branch-scope filtering. Refactor log: `PLAN.md` (Fase 0–4 + 3.5 + parsial 5).
+**Built (server):** 19 Elysia modules (overview, kasir, orders, menu, branches, customers, employee, transactions, payouts, reviews, chat, notifications, audit, settings, maps, my-portal, landing, ably + dashboard meta), `requireRole` RBAC macro, `.model()` + string-ref validation (52 named schemas), `ok()/fail()` envelope, token-bucket rate limiting, branch-scope filtering.
 
-**Not yet implemented:** AI Assistant page; frontend↔backend connection (see §Transition).
+**Not yet implemented:** AI Assistant page.
 
 ### Who Uses This Dashboard
 | Role | Description |
@@ -90,19 +90,14 @@ Visitor = customer. Separate layout (`routes/my.tsx` + `my/` children, own shell
 
 ## Project Structure
 
-### `client/` — frontend SPA (TanStack Start, transitional)
+### `client/` — frontend SPA (Vite murni, TanStack Router)
 
 ```
 client/
-├── database/                      # ⚠️ TRANSITIONAL Supabase layer (supabase-js) — akan dilepas, pindah ke server/
-│   ├── schema/                    # DDL SQL per domain — source of truth skema client-era
-│   ├── migrations/                # Migrasi SQL bernomor — apply via psql "$DIRECT_URL" -f
-│   ├── server.ts                  # supabaseAdmin (service_role, server-only)
-│   ├── client.ts                  # supabase browser (publishable key, realtime)
-│   └── types.ts                   # Row types + Database (manual, mengikuti SQL)
+├── index.html / src/main.tsx        # Entry: StrictMode → providers → RouterProvider
 ├── src/
-│   ├── routes/                    # TanStack Router file-based routes (STAYS — router tidak dilepas)
-│   │   ├── __root.tsx / _auth.tsx / _dashboard.tsx / pos.tsx / my.tsx / api/auth/$.ts
+│   ├── routes/                    # TanStack Router file-based routes
+│   │   ├── __root.tsx / _auth.tsx / _dashboard.tsx / pos.tsx / my.tsx
 │   │   ├── _dashboard/            # overview, kasir, orders, menu, branches, maps, customers,
 │   │   │                          # reviews, transactions, employee, payouts, chat, audit,
 │   │   │                          # notifications, settings (+ index → overview)
@@ -116,8 +111,8 @@ client/
 │   │   └── fallbacks/             # Auth, Dashboard, POS, error-page (skeletons + shared error/404)
 │   ├── features/{domain}/         # Domain logic — self-contained
 │   │   ├── hooks/
-│   │   │   ├── use{Domain}Queries.ts    # ⚠️ TRANSITIONAL: createServerFn + TanStack Query hooks
-│   │   │   ├── use{Domain}Mutations.ts  # ⚠️ TRANSITIONAL: akan diganti Eden Treaty calls
+│   │   │   ├── use{Domain}Queries.ts    # Eden Treaty queryFn + TanStack Query hooks
+│   │   │   ├── use{Domain}Mutations.ts  # Eden Treaty mutationFn
 │   │   │   └── ...                      # Domain-specific hooks (table, realtime, etc.)
 │   │   ├── components/            # TSX — max 250 lines per file
 │   │   ├── types.ts / utils.ts / data.ts
@@ -125,21 +120,20 @@ client/
 │   ├── features/stale-time.ts     # staleTime constants (STAYS)
 │   ├── features/customer-portal/  # Portal /my (visitor)
 │   ├── lib/
-│   │   ├── auth.ts                # ⚠️ TRANSITIONAL Better Auth instance (client-side Start)
-│   │   ├── auth-client.ts         # Client auth client (STAYS — dipakai Eden auth header nanti)
-│   │   ├── auth-utils.ts          # ⚠️ TRANSITIONAL getSessionFn, loadDashboardFn (server functions)
+│   │   ├── eden.ts                # Eden Treaty client (`treaty<App>`, same-origin) + `Envelope`/`toEnvelope`/`GetData`
+│   │   ├── session.ts             # `getSession()` + `loadDashboard()` via server (guards/loaders)
+│   │   ├── auth-client.ts         # `createAuthClient()` same-origin, `inferAdditionalFields` dari tipe auth server
 │   │   ├── rbac.ts                # Matriks permission — cermin dari server/src/access/rbac.ts
-│   │   ├── with-auth.server.ts    # ⚠️ TRANSITIONAL requireAccess* untuk server functions
-│   │   ├── rate-limit.ts / resend.ts / ably.server.ts / audit-log.ts / cloudinary.ts
 │   │   └── realtime.ts            # Ably Realtime client (browser-side, STAYS)
 │   ├── stores/                    # Zustand: branch.ts, sidebar.ts (STAYS)
 │   ├── hooks/                     # Shared hooks (STAYS): useConfirmAction, useFormDialog, useImageUpload,
 │   │                              # useMobile, useTableState, useTheme, useAblyToken
 │   ├── integrations/tanstack-query/ # Query client setup, provider, devtools (STAYS)
-│   ├── utils/                     # cn, convert-types, format, branch-scope, group-by, status
-│   ├── styles.css / router.tsx / routeTree.gen.ts
-├── vite.config.ts                 # tanstackStart({ spa: { enabled: true } }) — SSR off
-└── RULES.md                       # Client-side rule detail (server functions pattern, dll.)
+│   ├── utils/                     # cn, convert-types, format, group-by, status
+│   │                              # (branch-scope dilepas — scope dihitung di server)
+│   ├── styles.css / router.tsx / routeTree.gen.ts / main.tsx
+├── vite.config.ts                 # Vite murni + TanStackRouterVite + proxy /api/* → :3000 (dev)
+└── RULES.md                       # Client-side rule detail
 ```
 
 ### `server/` — backend API (Elysia, source of truth untuk API)
@@ -188,7 +182,6 @@ Module pattern: `model.ts` (TypeBox schemas, single source of truth) → `.model
 - **Routes are thin** — only routing config: `validateSearch`, `beforeLoad`, `loader`, `head`, `pendingComponent`, `errorComponent`. No inline page components.
 - **Feature page components are self-contained** — each route's component lives in `features/{domain}/components/{domain}-page.tsx`, uses `getRouteApi()` + `useSession()` internally.
 - **No Shell/Client intermediary layers** — absorb into the page component or split into focused sub-components.
-- **No NEW `createServerFn`** — endpoint/fitur data baru WAJIB ke `server/` (Elysia). `createServerFn` existing hanya dirawat sampai migrasi §Transition selesai.
 - Each feature is built **vertically**: types → hooks → components → route. Finish each feature 100% (buildable) before moving on; refactor only after complete.
 - **TSX files: 250 is the split floor** — below 250 lines do not split; compose same-flow components in 1 file. Split only above ~350 lines or when logic separates cleanly. **Non-TSX files** have no line limit.
 - **Global layout components** stay in `src/components/layout/`, not in features.
@@ -218,21 +211,19 @@ Module pattern: `model.ts` (TypeBox schemas, single source of truth) → `.model
 ## Tech Stack
 
 ### Core
-- React 19 + Vite SPA (client) — TanStack Start in SPA mode, **transitional, will be removed** (SSR/Nitro/server-fns go away; TanStack Router stays)
+- React 19 + Vite SPA (client) — TanStack Router file-based; Start fully removed
 - Elysia 1.4.30 on Bun (server) — file `server/src/app.ts`, standalone `bun run src/index.ts`, deploy via `bun build` → `api/index.ts`
 - TypeScript (strict mode, `tsc --noEmit` must stay green in both packages)
 
 ### Database & Backend
-- **Better Auth** — dua setup selama transisi (`client/src/lib/auth.ts` vs `server/src/lib/auth.ts`); disatukan saat §Transition. Google OAuth, default role `visitor`, cookie-cache JWT session (`maxAge: 300`, nol query DB per `getSession`).
+- **Better Auth** — single setup (`server/src/lib/auth.ts`, drizzle adapter). Google OAuth, default role `visitor`, cookie-cache JWT session (`maxAge: 300`, nol query DB per `getSession`).
 - **Resend** — password reset emails (`server/src/infra/email.ts`).
-- **Postgres (prod)** — DUA lapis akses selama transisi:
-  - client: `supabase-js` (`supabaseAdmin`, service_role, server-only) + `client/database/schema/*.sql` + `migrations/` via `psql "$DIRECT_URL"`. `DATABASE_URL` = pooler `6543`, `DIRECT_URL` = direct `5432`.
-  - server: Drizzle ORM + `postgres.js` (`server/src/db`), skema per domain dengan `$defaultFn(crypto.randomUUID())`, migrasi via `drizzle-kit` (`db:generate/migrate/push/pull`).
+- **Postgres (prod)** — single Drizzle ORM + `postgres.js` layer (`server/src/db`).
+Skema per domain dengan `$defaultFn(crypto.randomUUID())`, migrasi via `drizzle-kit` (`db:generate/migrate/push/pull`).
 - **Ably** — chat, live orders, activity feed (`server/src/infra/ably.ts` + `publishAbly()` fire-and-forget).
-- **Eden Treaty** (`@elysiajs/eden` 1.4.9, sudah di devDeps) — konektor resmi client→server (lihat §Transition). OpenAPI JSON di `/openapi/json` (62 paths / 52 schemas, terverifikasi).
-- **Agregat berat** — client-era via `rpc` SQL function (PostgREST tak bisa group-by); server-era via query builder + `Promise.all` (contoh overview: 13 agregat paralel). Expected-cash kasir (volume kecil) di-sum dari baris harian.
-- **Batas PostgREST client-era (pelajaran insiden)** — response ke-cap 1000 rows diam-diam; `.in()` > ~100 UUID → 400. Jangan fetch-then-count di JS untuk tabel unbounded.
-- **RBAC code-level, RLS off** — di kedua sisi sampai transisi selesai.
+- **Eden Treaty** — konektor resmi client→server. OpenAPI JSON di `/openapi/json` (62 paths / 52 schemas, terverifikasi).
+- **Agregat berat** — server-era via query builder + `Promise.all` (contoh overview: 13 agregat paralel). Expected-cash kasir (volume kecil) di-sum dari baris harian.
+- **RBAC code-level, RLS off**.
 
 ### UI & Styling (client, unchanged)
 - Tailwind CSS v4
@@ -241,8 +232,7 @@ Module pattern: `model.ts` (TypeBox schemas, single source of truth) → `.model
 
 ### Data Fetching & State (client)
 - Zustand (active branch, sidebar) + TanStack Query (server state).
-- **Current (transitional):** TanStack Query hooks call `createServerFn` directly. Route loaders optional SSR prefetch only.
-- **Target (§Transition):** TanStack Query hooks call Eden Treaty client (`treaty(app)`). Query keys, staleTime, invalidasi TIDAK berubah.
+- TanStack Query hooks call Eden Treaty client (`treaty(app)`). Query keys, staleTime, invalidasi TIDAK berubah.
 - TanStack Router search params — URL state (replaces `nuqs`); route `.loader()` optional prefetch only.
 
 ### Form & Validation (client)
@@ -256,12 +246,12 @@ Module pattern: `model.ts` (TypeBox schemas, single source of truth) → `.model
 
 | Decision | Choice | Reason |
 |---|---|---|
-| Frontend | Vite SPA (TanStack Start in SPA mode, transitional) | Router + build tetap; SSR/Nitro/server-fns dilepas |
+| Frontend | Vite SPA murni (Start dilepas total) | Router file-based + build tetap; tanpa SSR/Nitro/server-fns |
 | API Framework | Elysia 1.4.30 on Bun (not Nitro server-fns) | Type-safe, macro/guard, OpenAPI + Eden dari satu sumber model |
 | ORM (server) | Drizzle + `postgres.js` (not Prisma) | Thin typed SQL layer, `$defaultFn`, drizzle-kit migrations |
-| Data Access (client, transitional) | supabase-js | Akan diganti Eden calls per fitur (§Transition) |
+| Data Access (client) | Eden Treaty calls | Semua `queryFn`/`mutationFn` via `treaty` ke Elysia |
 | Client↔Server | Eden Treaty (not plain fetch) | End-to-end type safety dari `App` type; `eden` sudah di devDeps |
-| Auth | Better Auth (not Supabase Auth) | Self-hosted, Google OAuth, disatukan saat transisi |
+| Auth | Better Auth (not Supabase Auth) | Self-hosted, Google OAuth, single setup di server |
 | RBAC | Custom code-level (not RLS, not CASL/casbin) | Dievaluasi-ditolak: CASL adapter Drizzle masih rc + butuh rewrite relational; RLS tak terkontrol untuk multi-scope |
 | State | Zustand (client UI) + TanStack Query (server state) | Tidak berubah saat transisi |
 | Data Fetching | TanStack Query (keys/stale/invalidasi tidak berubah) | Hanya `queryFn` diganti: `*Fn` → Eden |
@@ -288,7 +278,7 @@ modules/{domain}/index.ts   → new Elysia({ prefix }) + .use(authPlugin) + .mod
 
 ### Auth macro (`plugins/auth.ts`)
 
-- `auth: true` — login saja (untuk `/my` own-scope, `/ably/token`, `/dashboard/meta`).
+- `auth: true` — login saja (untuk `/my` own-scope, `/ably/token`, `/api/dashboard/meta`).
 - `requireRole: [resource, action]` — login + `can(role, action, resource)`, 401/403 otomatis. Satu-satunya cara otorisasi route staff.
 - `user` terinferensi `CurrentUser` — tidak ada cast di controller.
 
@@ -315,48 +305,40 @@ modules/{domain}/index.ts   → new Elysia({ prefix }) + .use(authPlugin) + .mod
 - DO NOT use `?? ""` on critical env vars — throw at startup (`env.ts`).
 - Skema baru = tulis Drizzle schema dulu (`server/src/db/schema/`), migrasi via `drizzle-kit`. Semua FK wajib ada index (`{table}_{column}_idx`).
 
-## Transition: Client → Server (Eden Treaty)
+## Transition: Client → Server (Eden Treaty) — ✅ SELESAI
 
-Target: frontend Vite SPA murni memanggil Elysia; TanStack Start (server-fns, Nitro, SSR bits) dilepas. TanStack Router, Query keys, staleTime, invalidasi, dan UI **tidak berubah**.
+Status: frontend Vite SPA murni memanggil Elysia; TanStack Start (server-fns, Nitro, SSR bits) dilepas total. TanStack Router, Query keys, staleTime, invalidasi, dan UI **tidak berubah**. Bagian ini dipertahankan sebagai dokumentasi pola koneksi.
 
-### Connection pattern (target)
+### Connection pattern
 
 ```ts
-// client/src/lib/eden.ts (akan dibuat)
+// client/src/lib/eden.ts
 import { treaty } from "@elysiajs/eden";
-import type { App } from "../../server/src/app"; // via workspace/bundled types
-export const api = treaty<App>(import.meta.env.VITE_API_URL);
+import type { App } from "../../../server/src/app";
+export const api = treaty<App>(window.location.origin).api;
 
-// di hook (ganti queryFn, kunci + invalidasi tetap):
+// di hook (kunci + invalidasi tetap, queryFn via Eden):
 useSuspenseQuery({ queryKey: menuKeys.lists(), queryFn: () => api.menu.items.get({ query }) })
 useMutation({ mutationFn: (b) => api.menu.items.post(b),
   onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }) })
 ```
 
-Auth: cookie Better Auth dikirim otomatis (same-site/fetch `credentials`), atau Bearer — diputuskan saat migrasi auth pertama (login). Ably tetap langsung dari browser (`realtime.ts`).
+Same-origin satu domain: tanpa CORS, tanpa `VITE_API_URL`. Dev lewat Vite proxy (`/api`, `/openapi` catch-all) → `:3000`; prod via `vercel.json` rewrites. Auth: cookie Better Auth dikirim otomatis. Ably tetap langsung dari browser (`realtime.ts`).
 
-### Migration order (modul mandiri dulu)
+### Type conventions (Eden boundary)
 
-1. `maps`, `landing`, `notifications` (read-heavy, tanpa own-scope rumit)
-2. CRUD: `menu`, `branches`, `customers`, `reviews`, `transactions`, `employee`, `payouts`, `settings`, `audit`
-3. Terakhir: `orders`, `kasir`, `chat` (realtime), `my` (own-scope + infinite scroll), `overview` (agregat), auth flow
-
-Per fitur: server endpoint sudah ada → ganti `queryFn`/`mutationFn` → hapus `*Fn` lama → typecheck + smoke route-nya.
-
-### Drop list (berurutan, jangan sekaligus)
-
-1. Mulai sekarang: **dilarang menambah `createServerFn` baru**.
-2. Per fitur termigrasi: hapus `*Fn` + `with-auth.server` usage-nya.
-3. Setelah semua fitur: hapus `client/database/`, `auth-utils.ts`, `with-auth.server.ts`, `tanstackStartCookies`, `@tanstack/react-start` + `ssr-query` + plugin Nitro/Netlify-Start, `api/auth/$.ts` (pindah ke server Better Auth handler).
-4. RBAC matrix client (`lib/rbac.ts`) jadi cermin read-only dari server (atau di-serve via `/dashboard/meta` abilities — sudah ada).
+- Backend = source of truth untuk tipe. Entity client diturunkan via `GetData<typeof api...>` (slim types), bukan duplikat manual.
+- Wrapper `queryFn`/`mutationFn` tanpa anotasi return — inferensi Eden yang mengalir. Anotasi hanya di titik adaptor disengaja (filter/sort client-side, koersi `Number()` agregat).
+- Konsumsi envelope di komponen wajib narrowing: `data && data.success ? data.data : []`.
+- Service boundary return JSON-safe: kolom `timestamp` → ISO string via `.toISOString()` di service (wire format nol berubah, tipe jadi jujur). Skema DB tidak diubah.
 
 ## Better Auth — Conventions
 
 **Server (`server/src/lib/auth.ts`, drizzle adapter):** handler di-mount via `plugins/auth.ts` (`.mount(auth.handler)`); `macro auth/requireRole` resolve `auth.api.getSession({ headers })`; cookie-cache JWT (`maxAge: 300`, nol query DB, `role` ikut ter-cache).
 
-**Client (`client/src/lib/auth.ts`, kysely adapter — transitional):** `auth.handler(request)` di `src/routes/api/auth/$.ts`; `tanstackStartCookies()`; client via `createAuthClient()` dari `better-auth/react`.
+**Client (`client/src/lib/auth-client.ts`):** `createAuthClient()` same-origin (tanpa `baseURL` → `/api/auth/*`), `inferAdditionalFields` dari tipe auth **server**. Guards/loaders via `lib/session.ts` (`GET /api/auth/session`, `GET /api/dashboard/meta`), bukan via instance lokal.
 
-**Keduanya:** Google OAuth redirect `http://localhost:5173/api/auth/callback/google` (+ IP variant saat dev via IP); default role `visitor`; no email OTP (`signUp.email` langsung); CSRF `csrf: { enabled: true, origin: BETTER_AUTH_URL }`; uniform error messages di endpoint publik; sensitive endpoints pakai `checkRate` (server) — client-era pakai `rateLimit()` dari `@/lib/rate-limit`.
+**Konvensi:** Google OAuth redirect `http://localhost:5173/api/auth/callback/google` (+ IP variant saat dev via IP); default role `visitor`; no email OTP (`signUp.email` langsung); CSRF `csrf: { enabled: true, origin: BETTER_AUTH_URL }`; uniform error messages di endpoint publik; sensitive endpoints pakai `checkRate` (server).
 
 ## RBAC — Permission Matrix
 
@@ -393,22 +375,20 @@ Per fitur: server endpoint sudah ada → ganti `queryFn`/`mutationFn` → hapus 
 
 ### RBAC Implementation
 - Server: `can()` + `requireRole` macro di `server/src/access/` + `getAccessibleBranchIds()` (tanpa visitor case — unknown roles → `[]`).
-- Client (transitional mirror): `can()` di `client/src/lib/rbac.ts`; `getDefaultRouteForRole(role)`: staff → `/overview`, visitor → `/my`.
+- Client (mirror): `can()` di `client/src/lib/rbac.ts`; `getDefaultRouteForRole(role)`: staff → `/overview`, visitor → `/my`.
 - Visitor lockout: `_dashboard.tsx` and `my.tsx` `beforeLoad` redirect by role (`_dashboard` rejects visitor → `/my`, `/my` rejects staff → `/overview`, `/pos` allows super_admin/branch_manager/cashier only).
 - Customer portal own-scope: filter by `session.user.id`, never grant visitor global perms. Visitor matrix keeps only `users: ["read","update"]`.
 - RBAC is staff-only by design — no visitor branches in feature code.
 
 ## Data Fetching Pattern
 
-**Current (client, transitional):** TanStack Query hooks call `createServerFn` directly.
+**Current (client):** TanStack Query hooks call Eden Treaty directly.
 
 ```
 Component
-  └→ useSuspenseQuery({ queryKey, queryFn: () => serverFn({ branch }) })
+  └→ useSuspenseQuery({ queryKey, queryFn: () => getXxx() })   # getXxx = Eden wrapper di hooks/
 Mutation: useMutation({ mutationFn, onSuccess: invalidateQueries })
 ```
-
-**Target (Eden, see §Transition):** same shape, `queryFn`/`mutationFn` call `treaty` client. Keys, staleTime, invalidation unchanged.
 
 ### Caching & staleTime (client, unchanged)
 
@@ -430,11 +410,10 @@ Sorting `getSortedRowModel()`, filtering `getFilteredRowModel()`, global search,
 
 ## Database
 
-- **Postgres (prod)** — single cluster, dua lapis akses selama transisi (lihat §About). Baru: perubahan skema untuk API ditulis di `server/src/db/schema/` + migrasi `drizzle-kit`.
-- **Client layer (transitional):** `client/database/schema/*.sql` (9 file, 22 tabel) source of truth era-client; `migrations/` via `psql "$DIRECT_URL"`; `supabaseAdmin` service_role, import dinamis di handler; agregat berat via `rpc`; pelajaran insiden PostgREST (cap 1000 rows, `.in()` > ~100 UUID → 400) tetap berlaku untuk kode client yang tersisa.
-- **Server layer:** Drizzle + `postgres.js` (`server/src/db/index.ts`, pool `max: 20`); semua id `text` + `$defaultFn(crypto.randomUUID())`; FK wajib index manual (`{table}_{column}_idx`); agregat via query builder + `Promise.all`.
-- **RBAC code-level, RLS off** — di kedua sisi.
-- Connection: `DATABASE_URL` (pooler `6543`, adapter auth) + `DIRECT_URL` (direct `5432`, migrasi SQL) + `SUPABASE_SERVICE_ROLE_KEY` (client server-only) dari `.env.local`.
+- **Postgres (prod)** — single cluster, satu lapis akses: Drizzle + `postgres.js` (`server/src/db`). Perubahan skema ditulis di `server/src/db/schema/` + migrasi `drizzle-kit`.
+- **Server layer:** semua id `text` + `$defaultFn(crypto.randomUUID())`; FK wajib index manual (`{table}_{column}_idx`); agregat via query builder + `Promise.all`.
+- **RBAC code-level, RLS off**.
+- Connection: `DATABASE_URL` (pooler `6543`) + `DIRECT_URL` (direct `5432`) dari environment.
 
 ## TanStack Query Best Practices (client — tetap berlaku penuh saat transisi)
 
@@ -458,7 +437,6 @@ Sorting `getSortedRowModel()`, filtering `getFilteredRowModel()`, global search,
 - Inline handling hanya untuk data non-kritis.
 
 ### Important Constraints
-- **DO NOT add new `createServerFn`** — new data needs go to `server/`
 - **DO NOT use Supabase Auth / RLS / Pusher / Uploadthing / Prisma / `nuqs`** (client) — dan no CASL/casbin/rate-limit-plugin/Zod di `server/`
 
 ## Database Schema (ERD)
@@ -487,17 +465,14 @@ Key entities (sama di kedua lapis):
 | `RESEND_API_KEY` / `EMAIL_FROM` | ✅ | ✅ |
 | `ABLY_API_KEY` | ✅ | ✅ |
 | `CLOUDINARY_*` / `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | ✅ | ✅ |
-| `VITE_SUPABASE_URL` / `VITE_SUPABASE_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | ✅ (transitional) | — |
-| `VITE_API_URL` (target transisi Eden) | ✅ (akan dipakai) | — |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | — (dilepas) | — |
 | `PORT` (default 3000) | — | ✅ |
 
 ## Common Mistakes to Avoid
 
 ### Feature Hooks (client)
-- ❌ Do NOT add new `createServerFn` — use `server/` + Eden (see §Transition).
 - ✅ Return shape `{ success: true, data } | { success: false, error }` — cocok dengan envelope server.
-- ✅ Split `use{Domain}Queries.ts` / `use{Domain}Mutations.ts`. JSDoc Indonesia untuk `getXxxFn`, `@see {@link}` untuk hook wrapper.
-- ✅ `.validator()` → panggil `fn({ data: { branch } })`, bukan `fn({ branch })`.
+- ✅ Split `use{Domain}Queries.ts` / `use{Domain}Mutations.ts`. JSDoc Indonesia untuk wrapper query/mutasi, `@see {@link}` untuk hook wrapper.
 - ✅ `useQuery` untuk data reaktif terhadap input user; `useSuspenseQuery` untuk data route-level.
 
 ### RBAC
@@ -511,8 +486,7 @@ Key entities (sama di kedua lapis):
 - ❌ No new `*IdParams` — use shared `idParams`. No new rate-limit store — use `checkRate`.
 - ✅ `.model()` + string-ref untuk semua schema; pesan 404 = `"{Entity} not found"`.
 
-### Supabase / Drizzle
-- Client-era rules (supabaseAdmin dinamis, join types manual, `updates` typed, agregat via `rpc`, FK index, SQL-dulu) tetap berlaku untuk kode client tersisa.
+### Drizzle
 - Server: Drizzle schema-first, `$defaultFn` untuk id, migrasi via `drizzle-kit`.
 
 ### Env & Config / Router (unchanged)

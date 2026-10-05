@@ -156,8 +156,8 @@ export function MenuPage() {
     const { data: catData } = useMenuCategories();
     const { data: itemData } = useMenuItems(category);
 
-    const categories = catData.data ?? [];
-    const items = itemData?.data ?? [];
+    const categories = catData.success ? catData.data : [];
+    const items = itemData?.success ? itemData.data : [];
     const activeTab = category ?? "all";
 
     const [itemDialogOpen, setItemDialogOpen] = useState(false);

@@ -10,7 +10,7 @@ features/{domain}/
 │   ├── {domain}-{component}.tsx  ← dumb UI / sub-component fokus
 │   └── ...
 ├── hooks/
-│   ├── use{Domain}Queries.ts     ← server fns + query hooks
+│   ├── use{Domain}Queries.ts     ← Eden query wrappers + query hooks
 │   ├── use{Domain}Mutations.ts   ← mutation hooks
 │   └── use{Domain}{Logic}.ts     ← UI logic hook (optional)
 ├── types.ts                     ← types + Zod schemas
@@ -20,7 +20,7 @@ features/{domain}/
 ### Tiga lapisan
 | Lapisan | File | Tanggung jawab |
 |---|---|---|
-| Data fetching | `use{Domain}Queries.ts` / `use{Domain}Mutations.ts` | Server fns, TanStack Query hooks |
+| Data fetching | `use{Domain}Queries.ts` / `use{Domain}Mutations.ts` | Eden Treaty wrappers, TanStack Query hooks |
 | UI Logic | `use{Domain}{Logic}.ts` | State, filtering, derived data (tanpa JSX) |
 | Orchestrator | `{domain}-page.tsx` | Hook → sub-components. Pake `getRouteApi()` + `useSession()` |
 | Dumb UI | `{domain}-{component}.tsx` | Render murni, terima props, ga fetching data |
@@ -146,7 +146,7 @@ import { SectionHeader } from "@/components/shared/section-header";
 
 ## JSDoc
 
-### Server functions (`createServerFn`)
+### Query/mutation wrapper (Eden Treaty)
 Wajib. Pake **Bahasa Indonesia**:
 
 ```tsx
@@ -157,17 +157,13 @@ Wajib. Pake **Bahasa Indonesia**:
  *
  * @returns {BranchRow[]} Daftar cabang
  */
-export const getBranchesFn = createServerFn({ method: "GET" }).handler(...)
+export const getBranches = () => api.branches.get({ query });
 ```
 
-### Query options + hooks
-Cukup referensi ke server function:
+### Hooks
+Cukup referensi ke wrapper-nya:
 
 ```tsx
-/** @see {@link getBranchesFn} */
-export const branchesOptions = () => queryOptions({ ... });
-
-/** @see {@link getBranchesFn} */
 export function useBranches() { ... }
 ```
 
@@ -178,9 +174,6 @@ Pake **Bahasa Indonesia** (singkat):
 /**
  * Filter & search audit log di sisi client.
  * Ngatur state pencarian, filter aksi, dan filter tabel.
- *
- * @param logs - Seluruh data audit log
- * @returns State, setter, hasil filter/group
  */
 export function useAuditFilters(logs: AuditLogRow[]) { ... }
 ```

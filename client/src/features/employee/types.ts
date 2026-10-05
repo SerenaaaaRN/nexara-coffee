@@ -1,22 +1,27 @@
-import type {
-    BranchRow as DBBranch,
-    EmployeeDetailsRow as DBEmployee,
-    UserRow as DBUser,
-} from "@database/types";
 import { z } from "zod";
-import type { ToCamelCase } from "@/utils/convert-types";
+import type { api, GetData } from "@/lib/eden";
 
-export type Employee = ToCamelCase<DBEmployee>;
+/**
+ * Baris employee — from eden treaty (source of truth: server).
+ * Join user/cabang berbentuk FLAT (`userName`, `userEmail`, `userRole`,
+ * `branchName`), bukan nested object.
+ */
+export type EmployeeRow = GetData<typeof api.employees.get>[number];
 
-export type EmployeeRow = Employee & {
-    user: { id: string; name: string; email: string; role: string };
-    branch: { id: string; name: string };
-};
+export type Employee = Omit<
+    EmployeeRow,
+    "userName" | "userEmail" | "userRole" | "branchName"
+>;
 
-export type EmployeeJoined = DBEmployee & {
-    user: Pick<DBUser, "id" | "name" | "email" | "role"> | null;
-    branches: Pick<DBBranch, "id" | "name"> | null;
-};
+/** Calon user tanpa employee — from eden treaty. */
+export type AvailableUser = GetData<
+    (typeof api.employees)["available-users"]["get"]
+>[number];
+
+/** Opsi cabang untuk form employee — from eden treaty. */
+export type EmployeeBranchOption = GetData<
+    (typeof api.employees)["branches"]["get"]
+>[number];
 
 export const createEmployeeSchema = z.object({
     userId: z.string().min(1, "User is required"),

@@ -1,33 +1,19 @@
-import type {
-    MenuCategoryRow as DBMenuCategory,
-    MenuItemRow as DBMenuItem,
-} from "@database/types";
 import { z } from "zod";
-import type { ToCamelCase } from "@/utils/convert-types";
+import type { api, GetData } from "@/lib/eden";
 
-export type MenuCategory = ToCamelCase<DBMenuCategory>;
+/** Kategori menu — from eden treaty (source of truth: server). */
+export type MenuCategory = GetData<typeof api.menu.categories.get>[number];
+
+/**
+ * Item menu — from eden treaty. Server selalu menyertakan `variants`
+ * dan join `category` sebagai nested object.
+ */
+export type MenuItem = GetData<typeof api.menu.items.get>[number];
 
 export interface MenuItemVariant {
     name: string;
     price: number;
 }
-
-export type MenuItem = Pick<
-    ToCamelCase<DBMenuItem>,
-    | "id"
-    | "categoryId"
-    | "name"
-    | "description"
-    | "price"
-    | "imageUrl"
-    | "isAvailable"
-> & {
-    variants: MenuItemVariant[] | null;
-};
-
-export type MenuItemJoined = DBMenuItem & {
-    category: Pick<DBMenuCategory, "id" | "name" | "display_order"> | null;
-};
 
 export type MenuItemRow = MenuItem & {
     category: MenuCategory;

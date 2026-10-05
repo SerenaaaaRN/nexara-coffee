@@ -1,8 +1,8 @@
-import type { NotificationRow as DBNotification } from "@database/types";
 import { z } from "zod";
-import type { ToCamelCase } from "@/utils/convert-types";
+import type { api, GetData } from "@/lib/eden";
 
-export type Notification = ToCamelCase<DBNotification>;
+/** Notifikasi — from eden treaty  */
+export type Notification = GetData<typeof api.notifications.get>[number];
 
 export type NotificationRow = Notification;
 

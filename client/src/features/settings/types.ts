@@ -1,5 +1,5 @@
-import type { UserRow as DBUser } from "@database/types";
 import { z } from "zod";
+import type { api, GetData } from "@/lib/eden";
 
 export const profileSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -38,7 +38,5 @@ export type ProfileFormValues = z.infer<typeof profileSchema>;
 export type PasswordFormValues = z.infer<typeof passwordSchema>;
 export type ChangeRoleFormValues = z.infer<typeof changeRoleSchema>;
 
-export type SettingsUser = Pick<
-    DBUser,
-    "id" | "name" | "email" | "role" | "image"
->;
+/** User untuk tabel settings — from eden treaty (source of truth: server). */
+export type SettingsUser = GetData<typeof api.settings.users.get>[number];

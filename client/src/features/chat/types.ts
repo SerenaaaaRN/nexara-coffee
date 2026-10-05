@@ -1,44 +1,34 @@
-import type {
-    BranchRow as DBBranch,
-    ChatChannelRow as DBChannel,
-    ChatMessageRow as DBChatMessage,
-    UserRow as DBUser,
-} from "@database/types";
 import { z } from "zod";
-import type { ToCamelCase } from "@/utils/convert-types";
+import type { api, GetData } from "@/lib/eden";
 
-export type Channel = ToCamelCase<DBChannel>;
+/**
+ * Baris channel — from eden treaty (source of truth: server).
+ * Termasuk `branchName` + `lastMessage{content,senderName,createdAt}` +
+ * `memberCount` dari service.
+ */
+export type ChannelRow = GetData<typeof api.chat.channels.get>[number];
 
-export type ChatMessage = Pick<
-    ToCamelCase<DBChatMessage>,
-    "id" | "channelId" | "senderId" | "content"
-> & {
-    createdAt: Date;
-};
+export type Channel = Omit<
+    ChannelRow,
+    "branchName" | "lastMessage" | "memberCount"
+>;
 
-export type ChannelRow = Channel & {
-    lastMessage: {
-        content: string;
-        senderName: string;
-        createdAt: Date;
-    } | null;
-    memberCount: number;
-    branchName: string | null;
-};
+type ChannelMessagesRoute = ReturnType<typeof api.chat.channels>["messages"];
 
-export type MessageRow = ChatMessage & {
-    senderName: string | null;
-    senderImage: string | null;
+type ServerMessage = GetData<ChannelMessagesRoute["get"]>["messages"][number];
+
+/**
+ * Baris pesan — from eden treaty. `isOwn` dihitung client-side
+ * dari sesi (server mengembalikan `false` sebagai default).
+ */
+export type MessageRow = ServerMessage & {
     isOwn: boolean;
 };
 
-export type ChatChannelJoined = DBChannel & {
-    branches: Pick<DBBranch, "id" | "name"> | null;
-};
-
-export type ChatMessageJoined = DBChatMessage & {
-    sender: Pick<DBUser, "id" | "name" | "image"> | null;
-};
+export type ChatMessage = Omit<
+    MessageRow,
+    "senderName" | "senderImage" | "isOwn"
+>;
 
 export const sendMessageSchema = z.object({
     content: z.string().min(1, "Message cannot be empty").max(500),

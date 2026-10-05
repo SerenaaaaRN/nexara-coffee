@@ -4,11 +4,6 @@ import { getRealtimeClient } from "@/lib/realtime";
 /**
  * Mengelola indikator "sedang mengetik" via Ably realtime.
  * Event berhenti otomatis (debounce) setelah 3 detik tanpa aktivitas.
- *
- * @param channelId - ID channel chat aktif
- * @param currentUserId - ID user saat ini
- * @param currentUserName - Nama user saat ini
- * @returns Fungsi trigger `startTyping` dan `stopTyping`
  */
 export function useChatTyping(
     channelId: string | null,

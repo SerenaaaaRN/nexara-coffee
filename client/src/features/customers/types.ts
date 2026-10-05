@@ -1,6 +1,5 @@
-import type { CustomerRow as DBCustomer } from "@database/types";
 import { z } from "zod";
-import type { ToCamelCase } from "@/utils/convert-types";
+import type { api, GetData } from "@/lib/eden";
 
 export const CUSTOMER_SEGMENTS = ["regular", "vip", "new"] as const;
 export type CustomerSegment = (typeof CUSTOMER_SEGMENTS)[number];
@@ -36,11 +35,14 @@ export function normalizePhone(phone: string): string {
     return phone.replace(/\D/g, "");
 }
 
-export type Customer = ToCamelCase<DBCustomer>;
+/**
+ * Entity customer — sumber kebenaran dari backend (Eden treaty).
+ */
+export type Customer = GetData<
+    (typeof api.customers)["find-or-create"]["post"]
+>;
 
-export type CustomerRow = Customer & {
-    orderCount: number;
-};
+export type CustomerRow = GetData<typeof api.customers.get>[number];
 
 export const createCustomerSchema = z.object({
     fullName: z.string().min(1, "Name is required"),

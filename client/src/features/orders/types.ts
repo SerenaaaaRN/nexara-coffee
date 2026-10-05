@@ -1,41 +1,22 @@
-import type {
-    BranchRow as DBBranch,
-    CustomerRow as DBCustomer,
-    MenuItemRow as DBMenuItem,
-    OrderRow as DBOrder,
-    OrderItemRow as DBOrderItem,
-    UserRow as DBUser,
-} from "@database/types";
 import { z } from "zod";
-import type { ToCamelCase } from "@/utils/convert-types";
+import type { api, GetData } from "@/lib/eden";
 import { ORDER_STATUSES, type OrderStatus } from "./data";
 
-export type Order = ToCamelCase<DBOrder>;
+/**
+ * Baris order — from eden treaty (source of truth: server).
+ * Termasuk `branchName`, `customerName`, `createdByName` flat hasil join.
+ */
+export type OrderRow = GetData<typeof api.orders.get>[number];
 
-export type OrderItem = ToCamelCase<DBOrderItem>;
+/** Detail order + items — from eden treaty. */
+export type OrderDetail = GetData<ReturnType<typeof api.orders>["get"]>;
 
-export type OrderRow = Order & {
-    branchName: string | null;
-    customerName: string | null;
-    createdByName: string | null;
-};
+export type Order = Omit<
+    OrderRow,
+    "branchName" | "customerName" | "createdByName"
+>;
 
-export type OrderDetail = Order & {
-    branchName: string | null;
-    customerName: string | null;
-    createdByName: string | null;
-    items: (OrderItem & { menuItemName?: string | null })[];
-};
-
-export type OrderJoined = DBOrder & {
-    branches: Pick<DBBranch, "id" | "name"> | null;
-    customers: Pick<DBCustomer, "id" | "full_name"> | null;
-    created_by_user: Pick<DBUser, "id" | "name"> | null;
-};
-
-export type OrderItemJoined = DBOrderItem & {
-    menu_items: Pick<DBMenuItem, "id" | "name"> | null;
-};
+export type OrderItem = OrderDetail["items"][number];
 
 export const createOrderSchema = z.object({
     branchId: z.string().min(1, "Branch is required"),

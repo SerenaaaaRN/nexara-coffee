@@ -9,7 +9,12 @@ import { ok } from "../../lib/http.js";
 
 export const getAuditLogs = async (
 	user: CurrentUser,
-	params?: { branch?: string; action?: string; limit?: number; offset?: number },
+	params?: {
+		branch?: string;
+		action?: string;
+		limit?: number;
+		offset?: number;
+	},
 ) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	const conditions = [];
@@ -36,5 +41,5 @@ export const getAuditLogs = async (
 		.orderBy(desc(auditLogs.createdAt))
 		.limit(params?.limit ?? 100)
 		.offset(params?.offset ?? 0);
-	return ok(rows);
+	return ok(rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })));
 };

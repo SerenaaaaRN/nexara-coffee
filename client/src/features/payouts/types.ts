@@ -1,24 +1,17 @@
-import type {
-    BranchRow as DBBranch,
-    PayoutRow as DBPayout,
-    UserRow as DBUser,
-} from "@database/types";
 import { z } from "zod";
-import type { ToCamelCase } from "@/utils/convert-types";
+import type { api, GetData } from "@/lib/eden";
 
-export type Payout = ToCamelCase<DBPayout>;
+/**
+ * Baris payout — from eden treaty (source of truth: server).
+ * Termasuk 3 nama join flat (`franchiseOwnerName`, `branchName`,
+ * `approvedByName`) dari service.
+ */
+export type PayoutRow = GetData<typeof api.payouts.get>[number];
 
-export type PayoutRow = Payout & {
-    franchiseOwnerName: string | null;
-    branchName: string | null;
-    approvedByName: string | null;
-};
-
-export type PayoutJoined = DBPayout & {
-    franchise_owner: Pick<DBUser, "id" | "name"> | null;
-    branches: Pick<DBBranch, "id" | "name"> | null;
-    approved_by_user: Pick<DBUser, "id" | "name"> | null;
-};
+export type Payout = Omit<
+    PayoutRow,
+    "franchiseOwnerName" | "branchName" | "approvedByName"
+>;
 
 export const PAYOUT_STATUSES = ["pending", "approved", "paid"] as const;
 

@@ -1,32 +1,19 @@
-import type {
-    BranchRow as DBBranch,
-    DailySetoranRow as DBSetoran,
-    UserRow as DBUser,
-} from "@database/types";
 import { z } from "zod";
-import type { ToCamelCase } from "@/utils/convert-types";
+import type { api, GetData } from "@/lib/eden";
 
-export type Setoran = ToCamelCase<DBSetoran>;
+/**
+ * Baris setoran — from eden treaty (source of truth: server).
+ * Termasuk `branchName`, `cashierName`, `verifiedByName` flat hasil join.
+ */
+export type SetoranRow = GetData<typeof api.kasir.setorans.get>[number];
 
-export type SetoranRow = Setoran & {
-    branchName: string | null;
-    cashierName: string | null;
-    verifiedByName: string | null;
-};
+export type Setoran = Omit<
+    SetoranRow,
+    "branchName" | "cashierName" | "verifiedByName"
+>;
 
-export type SetoranJoined = DBSetoran & {
-    branches: Pick<DBBranch, "id" | "name"> | null;
-    cashier: Pick<DBUser, "id" | "name"> | null;
-    verified_by_user: Pick<DBUser, "id" | "name"> | null;
-};
-
-export interface ExpectedCash {
-    cashTotal: number;
-    qrisTotal: number;
-    debitTotal: number;
-    creditTotal: number;
-    total: number;
-}
+/** Ringkasan kas harian dari POS — from eden treaty. */
+export type ExpectedCash = GetData<(typeof api.kasir)["expected-cash"]["get"]>;
 
 export const createSetoranSchema = z.object({
     amount: z.coerce.number().positive("Amount must be positive"),

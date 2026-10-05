@@ -14,8 +14,8 @@ const settingsSearchSchema = z.object({
 export const Route = createFileRoute("/_dashboard/settings")({
     validateSearch: settingsSearchSchema,
     loader: async ({ context: { queryClient } }) => {
-        const { getSessionFn } = await import("@/lib/auth-utils");
-        const session = await getSessionFn();
+        const { getSession } = await import("@/lib/session");
+        const session = await getSession();
         if (
             session &&
             (session.user.role === "super_admin" ||

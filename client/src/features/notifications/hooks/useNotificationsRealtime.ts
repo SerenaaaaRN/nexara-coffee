@@ -16,9 +16,6 @@ type NotificationCallback = (notification: NotificationEvent) => void;
  * Notifikasi realtime via Ably.
  * Subscribe ke channel `notifications:user:{userId}` untuk menerima
  * notifikasi baru secara langsung.
- *
- * @param userId — ID user yang akan menerima notifikasi
- * @param onNotification — Callback ketika ada notifikasi baru masuk
  */
 export function useNotificationsRealtime(
     userId: string | null,

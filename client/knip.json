@@ -17,7 +17,6 @@
       "**/components/ui/*"
     ],
     "ignoreDependencies": [
-      "@netlify/vite-plugin-tanstack-start",
       "shadcn",
       "tailwindcss",
       "tw-animate-css",

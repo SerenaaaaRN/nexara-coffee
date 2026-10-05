@@ -37,7 +37,6 @@ import { Route as MyIndexRouteImport } from './routes/my/index'
 import { Route as MyAccountRouteImport } from './routes/my/account'
 import { Route as MyMemberRouteImport } from './routes/my/member'
 import { Route as MyOrdersRouteImport } from './routes/my/orders'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -177,11 +176,6 @@ const MyOrdersRoute = MyOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => MyRoute,
 } as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -210,7 +204,6 @@ export interface FileRoutesByFullPath {
   '/my/member': typeof MyMemberRoute
   '/my/orders': typeof MyOrdersRoute
   '/my/': typeof MyIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -238,7 +231,6 @@ export interface FileRoutesByTo {
   '/my/member': typeof MyMemberRoute
   '/my/orders': typeof MyOrdersRoute
   '/my': typeof MyIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -270,7 +262,6 @@ export interface FileRoutesById {
   '/my/member': typeof MyMemberRoute
   '/my/orders': typeof MyOrdersRoute
   '/my/': typeof MyIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -301,7 +292,6 @@ export interface FileRouteTypes {
     | '/my/member'
     | '/my/orders'
     | '/my/'
-    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -329,7 +319,6 @@ export interface FileRouteTypes {
     | '/my/member'
     | '/my/orders'
     | '/my'
-    | '/api/auth/$'
   id:
     | '__root__'
     | '/'
@@ -360,7 +349,6 @@ export interface FileRouteTypes {
     | '/my/member'
     | '/my/orders'
     | '/my/'
-    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -369,7 +357,6 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   MyRoute: typeof MyRouteWithChildren
   PosRoute: typeof PosRoute
-  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -570,13 +557,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MyOrdersRouteImport
       parentRoute: typeof MyRoute
     }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -658,17 +638,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   MyRoute: MyRouteWithChildren,
   PosRoute: PosRoute,
-  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
