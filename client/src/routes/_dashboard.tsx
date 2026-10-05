@@ -18,7 +18,6 @@ import {
     SidebarProvider,
     SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { getSession, loadDashboard } from "@/lib/session";
 import {
     type Action,
     can,
@@ -26,6 +25,7 @@ import {
     type Resource,
     type Role,
 } from "@/lib/rbac";
+import { getSession, loadDashboard } from "@/lib/session";
 
 const DASHBOARD_GUARDS = {
     "/overview": ["read", "reports"],

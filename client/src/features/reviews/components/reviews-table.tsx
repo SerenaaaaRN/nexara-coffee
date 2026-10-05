@@ -47,8 +47,7 @@ import { pluralize } from "@/utils/format";
 
 export function ReviewsTable() {
     const { data: reviewsData } = useReviews();
-    const allReviews =
-        reviewsData && reviewsData.success ? reviewsData.data : [];
+    const allReviews = reviewsData?.success ? reviewsData.data : [];
     const replyMutation = useReplyReview();
     const moderateMutation = useModerateReview();
 

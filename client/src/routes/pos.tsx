@@ -8,8 +8,8 @@ import {
     menuItemsOptions,
 } from "@/features/menu/hooks/useMenuQueries";
 import { POSPage } from "@/features/pos/components/pos-page";
-import { getSession, loadDashboard } from "@/lib/session";
 import { getDefaultRouteForRole, type Role } from "@/lib/rbac";
+import { getSession, loadDashboard } from "@/lib/session";
 
 const posSearchSchema = z.object({
     branch: z.string().optional(),

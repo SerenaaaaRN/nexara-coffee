@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { LoginForm } from "@/features/auth/components/login-form";
-import { getSession } from "@/lib/session";
 import { getDefaultRouteForRole, type Role } from "@/lib/rbac";
+import { getSession } from "@/lib/session";
 
 export const Route = createFileRoute("/_auth/login")({
     beforeLoad: async () => {

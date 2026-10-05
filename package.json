@@ -16,7 +16,7 @@
     }
   },
   "devDependencies": {
-    "turbo": "2.9.6"
+    "turbo": "^2.11.7"
   },
   "scripts": {
     "dev": "turbo run dev",

@@ -84,7 +84,7 @@ export const SettingsPage = () => {
 
     const usersResponse = useUsers();
     const usersData = usersResponse.data;
-    const users = usersData && usersData.success ? usersData.data : [];
+    const users = usersData?.success ? usersData.data : [];
 
     const activeSectionKey = section ?? "profile";
 
