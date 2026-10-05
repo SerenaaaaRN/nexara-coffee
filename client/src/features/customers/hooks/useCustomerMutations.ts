@@ -22,10 +22,6 @@ export const findOrCreateCustomer = async (input: {
 
 /**
  * Memperbarui data customer. Partial update.
- *
- * Server hanya menerima fullName/email/phone/segment — loyalty dikirim
- * terpisah ke endpoint loyalty agar UX form (yang mengedit semuanya
- * sekaligus) tetap sama seperti era-supabase.
  */
 export const updateCustomer = async ({
     id,

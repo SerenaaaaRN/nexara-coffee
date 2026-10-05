@@ -25,11 +25,8 @@
     "@hookform/resolvers": "^5.4.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/match-sorter-utils": "latest",
-    "@tanstack/react-devtools": "latest",
     "@tanstack/react-query": "latest",
-    "@tanstack/react-query-devtools": "latest",
     "@tanstack/react-router": "1.170.18",
-    "@tanstack/react-router-devtools": "latest",
     "@tanstack/react-table": "8.21.3",
     "ably": "^2.25.0",
     "better-auth": "1.6.23",
@@ -41,7 +38,6 @@
     "maplibre-gl": "^5.24.0",
     "motion": "^13.4.2",
     "next-themes": "^0.4.6",
-    "postgres": "^3.4.9",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.86.0",
@@ -58,22 +54,17 @@
     "@biomejs/biome": "2.4.5",
     "@rolldown/plugin-babel": "^0.2.3",
     "@tanstack/devtools-vite": "latest",
+    "@tanstack/react-devtools": "^0.10.13",
+    "@tanstack/react-query-devtools": "^5.104.1",
+    "@tanstack/react-router-devtools": "^1.167.2",
     "@tanstack/router-cli": "^1.132.0",
     "@types/node": "^22.10.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
-    "dotenv": "^17.3.1",
     "knip": "5",
-    "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "lightningcss"
-    ]
   }
 }

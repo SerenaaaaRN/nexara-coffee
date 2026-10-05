@@ -278,7 +278,7 @@ modules/{domain}/index.ts   → new Elysia({ prefix }) + .use(authPlugin) + .mod
 
 ### Auth macro (`plugins/auth.ts`)
 
-- `auth: true` — login saja (untuk `/my` own-scope, `/ably/token`, `/dashboard/meta`).
+- `auth: true` — login saja (untuk `/my` own-scope, `/ably/token`, `/api/dashboard/meta`).
 - `requireRole: [resource, action]` — login + `can(role, action, resource)`, 401/403 otomatis. Satu-satunya cara otorisasi route staff.
 - `user` terinferensi `CurrentUser` — tidak ada cast di controller.
 
@@ -323,7 +323,7 @@ useMutation({ mutationFn: (b) => api.menu.items.post(b),
   onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }) })
 ```
 
-Same-origin satu domain: tanpa CORS, tanpa `VITE_API_URL`. Dev lewat Vite proxy `/api/*` (+ `/dashboard`, `/openapi`) → `:3000`; prod via `vercel.json` rewrites. Auth: cookie Better Auth dikirim otomatis. Ably tetap langsung dari browser (`realtime.ts`).
+Same-origin satu domain: tanpa CORS, tanpa `VITE_API_URL`. Dev lewat Vite proxy (`/api`, `/openapi` catch-all) → `:3000`; prod via `vercel.json` rewrites. Auth: cookie Better Auth dikirim otomatis. Ably tetap langsung dari browser (`realtime.ts`).
 
 ### Type conventions (Eden boundary)
 
@@ -336,7 +336,7 @@ Same-origin satu domain: tanpa CORS, tanpa `VITE_API_URL`. Dev lewat Vite proxy 
 
 **Server (`server/src/lib/auth.ts`, drizzle adapter):** handler di-mount via `plugins/auth.ts` (`.mount(auth.handler)`); `macro auth/requireRole` resolve `auth.api.getSession({ headers })`; cookie-cache JWT (`maxAge: 300`, nol query DB, `role` ikut ter-cache).
 
-**Client (`client/src/lib/auth-client.ts`):** `createAuthClient()` same-origin (tanpa `baseURL` → `/api/auth/*`), `inferAdditionalFields` dari tipe auth **server**. Guards/loaders via `lib/session.ts` (`GET /api/auth/session`, `GET /dashboard/meta`), bukan via instance lokal.
+**Client (`client/src/lib/auth-client.ts`):** `createAuthClient()` same-origin (tanpa `baseURL` → `/api/auth/*`), `inferAdditionalFields` dari tipe auth **server**. Guards/loaders via `lib/session.ts` (`GET /api/auth/session`, `GET /api/dashboard/meta`), bukan via instance lokal.
 
 **Konvensi:** Google OAuth redirect `http://localhost:5173/api/auth/callback/google` (+ IP variant saat dev via IP); default role `visitor`; no email OTP (`signUp.email` langsung); CSRF `csrf: { enabled: true, origin: BETTER_AUTH_URL }`; uniform error messages di endpoint publik; sensitive endpoints pakai `checkRate` (server).
 
