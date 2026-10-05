@@ -6,12 +6,24 @@ import { fail, ok } from "../../lib/http.js";
 
 export const getNotifications = async (user: CurrentUser) => {
 	const rows = await db
-		.select()
+		.select({
+			id: notifications.id,
+			userId: notifications.userId,
+			type: notifications.type,
+			title: notifications.title,
+			body: notifications.body,
+			isRead: notifications.isRead,
+			createdAt: notifications.createdAt,
+		})
 		.from(notifications)
 		.where(eq(notifications.userId, user.id))
 		.orderBy(desc(notifications.createdAt))
 		.limit(100);
-	return ok(rows);
+	const data = rows.map((r) => ({
+		...r,
+		createdAt: r.createdAt.toISOString(),
+	}));
+	return ok(data);
 };
 
 export const markNotificationRead = async (user: CurrentUser, id: string) => {

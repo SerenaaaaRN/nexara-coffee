@@ -8,7 +8,7 @@ export function NotificationsPage() {
     const { data: session } = useSession();
     const queryClient = useQueryClient();
     const { data } = useSuspenseQuery(notificationsOptions());
-    const notifications = data?.data ?? [];
+    const notifications = data?.success ? data.data : [];
 
     const handleRefresh = () => {
         queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
