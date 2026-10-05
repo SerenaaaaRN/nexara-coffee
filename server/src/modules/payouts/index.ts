@@ -5,18 +5,23 @@ import { approvePayout, getPayouts, requestPayout } from "./service.js";
 
 export const payouts = new Elysia({ prefix: "/payouts" })
 	.use(authPlugin)
-	.get("/", async ({ query, user }) => getPayouts(user, query as never), {
-		query: payoutsQuery,
+	.model({
+		"payouts.query": payoutsQuery,
+		"payouts.request": requestPayoutBody,
+		"payouts.params": payoutIdParams,
+	})
+	.get("/", async ({ query, user }) => getPayouts(user, query), {
+		query: "payouts.query",
 		requireRole: ["payouts", "read"],
 		detail: { tags: ["payouts"] },
 	})
-	.post("/request", async ({ body, user }) => requestPayout(user, body as never), {
-		body: requestPayoutBody,
+	.post("/request", async ({ body, user }) => requestPayout(user, body), {
+		body: "payouts.request",
 		requireRole: ["payouts", "create"],
 		detail: { tags: ["payouts"] },
 	})
 	.post("/:id/approve", async ({ params, user }) => approvePayout(user, params.id), {
-		params: payoutIdParams,
+		params: "payouts.params",
 		requireRole: ["payouts", "approve"],
 		detail: { tags: ["payouts"] },
 	});

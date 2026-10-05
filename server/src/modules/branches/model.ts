@@ -20,5 +20,5 @@ export const updateBranchSchema = t.Partial(createBranchSchema);
 export const assignFranchiseSchema = t.Object({
 	userId: t.String({ minLength: 1 }),
 	branchId: t.String({ minLength: 1 }),
-	commissionRate: t.Optional(t.Numeric({ minimum: 0, maximum: 100 })),
+	commissionRate: t.Optional(t.Number({ minimum: 0, maximum: 100 })),
 });

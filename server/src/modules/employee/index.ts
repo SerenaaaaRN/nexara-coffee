@@ -16,35 +16,40 @@ import {
 
 export const employee = new Elysia({ prefix: "/employees" })
 	.use(authPlugin)
+	.model({
+		"employee.params": employeeIdParams,
+		"employee.create": createEmployeeBody,
+		"employee.update": updateEmployeeBody,
+	})
 	.get("/", async ({ user }) => getEmployees(user), {
 		requireRole: ["employee", "read"],
 		detail: { tags: ["employees"] },
 	})
-	.get("/available-users", async ({ user }) => getAvailableUsers(user), {
+	.get("/available-users", async () => getAvailableUsers(), {
 		requireRole: ["employee", "read"],
 		detail: { tags: ["employees"] },
 	})
-	.get("/branches", async ({ user }) => getBranchesForEmployee(user), {
+	.get("/branches", async () => getBranchesForEmployee(), {
 		requireRole: ["employee", "read"],
 		detail: { tags: ["employees"] },
 	})
-	.post("/", async ({ body, user }) => createEmployee(user, body as never), {
-		body: createEmployeeBody,
+	.post("/", async ({ body }) => createEmployee(body), {
+		body: "employee.create",
 		requireRole: ["employee", "create"],
 		detail: { tags: ["employees"] },
 	})
 	.put(
 		"/:id",
-		async ({ params, body, user }) => updateEmployee(user, params.id, body as never),
+		async ({ params, body }) => updateEmployee(params.id, body),
 		{
-			params: employeeIdParams,
-			body: updateEmployeeBody,
+			params: "employee.params",
+			body: "employee.update",
 			requireRole: ["employee", "update"],
 			detail: { tags: ["employees"] },
 		},
 	)
-	.delete("/:id", async ({ params, user }) => deleteEmployee(user, params.id), {
-		params: employeeIdParams,
+	.delete("/:id", async ({ params }) => deleteEmployee(params.id), {
+		params: "employee.params",
 		requireRole: ["employee", "delete"],
 		detail: { tags: ["employees"] },
 	});

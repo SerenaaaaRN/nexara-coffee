@@ -1,19 +1,18 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { status } from "elysia";
 import { db } from "../../db/index.js";
+import type { CurrentUser } from "../../lib/auth-user.js";
+import { ok, fail } from "../../lib/response.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { payouts } from "../../db/schema/finance.js";
-import { can, type Role } from "../../lib/rbac.js";
+
 import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
 
 export const getPayouts = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	params?: { branchId?: string; status?: string },
 ) => {
-	if (!can(user.role as Role, "read", "payouts"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	const franchiseOwner = alias(userTable, "franchise_owner");
 	const approvedByUser = alias(userTable, "approved_by");
@@ -43,11 +42,11 @@ export const getPayouts = async (
 		.leftJoin(approvedByUser, eq(payouts.approvedBy, approvedByUser.id))
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		.orderBy(desc(payouts.createdAt));
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
 export const requestPayout = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	data: {
 		branchId: string;
 		amount: number;
@@ -55,8 +54,6 @@ export const requestPayout = async (
 		periodEnd: string;
 	},
 ) => {
-	if (!can(user.role as Role, "create", "payouts"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	const [payout] = await db
 		.insert(payouts)
 		.values({
@@ -67,21 +64,19 @@ export const requestPayout = async (
 			periodEnd: data.periodEnd,
 		} as never)
 		.returning();
-	return { success: true as const, data: payout };
+	return ok(payout);
 };
 
 export const approvePayout = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	payoutId: string,
 ) => {
-	if (!can(user.role as Role, "approve", "payouts"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	const [payout] = await db
 		.update(payouts)
 		.set({ status: "approved", approvedBy: user.id } as never)
 		.where(eq(payouts.id, payoutId))
 		.returning();
 	if (!payout)
-		return status(404, { success: false as const, error: "Payout not found" });
-	return { success: true as const, data: payout };
+		return fail(404, "Payout not found");
+	return ok(payout);
 };

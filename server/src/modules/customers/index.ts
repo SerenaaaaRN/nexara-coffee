@@ -18,51 +18,52 @@ import {
 
 export const customers = new Elysia({ prefix: "/customers" })
 	.use(authPlugin)
-	.get("/", async ({ user }) => getCustomers(user), {
+	.model({
+		"customers.params": customerIdParams,
+		"customers.create": createCustomerBody,
+		"customers.update": updateCustomerBody,
+		"customers.findOrCreate": findOrCreateBody,
+		"customers.loyalty": loyaltyBody,
+	})
+	.get("/", async () => getCustomers(), {
 		requireRole: ["customers", "read"],
 		detail: { tags: ["customers"] },
 	})
-	.post("/", async ({ body, user }) => createCustomer(user, body as never), {
-		body: createCustomerBody,
+	.post("/", async ({ body, user }) => createCustomer(user, body), {
+		body: "customers.create",
 		requireRole: ["customers", "create"],
 		detail: { tags: ["customers"] },
 	})
 	.post(
 		"/find-or-create",
-		async ({ body, user }) =>
-			findOrCreateCustomer(
-				user,
-				(body as { fullName: string }).fullName,
-				(body as { phone?: string }).phone,
-			),
+		async ({ body, user }) => findOrCreateCustomer(user, body.fullName, body.phone),
 		{
-			body: findOrCreateBody,
+			body: "customers.findOrCreate",
 			requireRole: ["customers", "create"],
 			detail: { tags: ["customers"] },
 		},
 	)
 	.put(
 		"/:id",
-		async ({ params, body, user }) => updateCustomer(user, params.id, body as never),
+		async ({ params, body, user }) => updateCustomer(user, params.id, body),
 		{
-			params: customerIdParams,
-			body: updateCustomerBody,
+			params: "customers.params",
+			body: "customers.update",
 			requireRole: ["customers", "update"],
 			detail: { tags: ["customers"] },
 		},
 	)
 	.delete("/:id", async ({ params, user }) => deleteCustomer(user, params.id), {
-		params: customerIdParams,
+		params: "customers.params",
 		requireRole: ["customers", "delete"],
 		detail: { tags: ["customers"] },
 	})
 	.patch(
 		"/:id/loyalty",
-		async ({ params, body, user }) =>
-			updateLoyaltyPoints(user, params.id, (body as { points: number }).points),
+		async ({ params, body, user }) => updateLoyaltyPoints(user, params.id, body.points),
 		{
-			params: customerIdParams,
-			body: loyaltyBody,
+			params: "customers.params",
+			body: "customers.loyalty",
 			requireRole: ["customers", "update"],
 			detail: { tags: ["customers"] },
 		},

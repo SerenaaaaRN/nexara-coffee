@@ -4,7 +4,7 @@ import { getMapBranches } from "./service.js";
 
 export const maps = new Elysia({ prefix: "/maps" })
 	.use(authPlugin)
-	.get("/branches", async ({ user }) => getMapBranches(user), {
+	.get("/branches", async () => getMapBranches(), {
 		requireRole: ["maps", "read"],
 		detail: { tags: ["maps"] },
 	});

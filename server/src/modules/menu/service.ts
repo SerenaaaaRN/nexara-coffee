@@ -1,32 +1,23 @@
 import { asc, count, eq, isNotNull } from "drizzle-orm";
-import { status } from "elysia";
 import { db } from "../../db/index.js";
+import { fail, ok } from "../../lib/response.js";
 import { menuCategories, menuItems } from "../../db/schema/menu.js";
 import {
 	deleteImage,
 	getPublicId,
 	uploadImageBase64,
 } from "../../lib/cloudinary.js";
-import { can, type Role } from "../../lib/rbac.js";
 
-export const getMenuCategories = async (user: { id: string; role: string }) => {
-	if (!can(user.role as Role, "read", "menu")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
+export const getMenuCategories = async () => {
 	const rows = await db
 		.select()
 		.from(menuCategories)
 		.orderBy(asc(menuCategories.displayOrder));
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
-export const getMenuItems = async (
-	user: { id: string; role: string },
-	categoryId?: string | null,
+export const getMenuItems = async (categoryId?: string | null,
 ) => {
-	if (!can(user.role as Role, "read", "menu")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const cond = categoryId
 		? eq(menuItems.categoryId, categoryId)
 		: isNotNull(menuItems.categoryId);
@@ -46,31 +37,21 @@ export const getMenuItems = async (
 			})),
 		);
 
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
-export const createCategory = async (
-	user: { id: string; role: string },
-	data: { name: string; displayOrder?: number },
+export const createCategory = async (data: { name: string; displayOrder?: number },
 ) => {
-	if (!can(user.role as Role, "create", "menu")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const [cat] = await db
 		.insert(menuCategories)
 		.values({ name: data.name, displayOrder: data.displayOrder ?? 0 })
 		.returning();
-	return { success: true as const, data: cat };
+	return ok(cat);
 };
 
-export const updateCategory = async (
-	user: { id: string; role: string },
-	id: string,
+export const updateCategory = async (id: string,
 	data: { name?: string; displayOrder?: number },
 ) => {
-	if (!can(user.role as Role, "update", "menu")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const updates: Record<string, unknown> = {};
 	if (data.name !== undefined) updates.name = data.name;
 	if (data.displayOrder !== undefined) updates.displayOrder = data.displayOrder;
@@ -80,52 +61,34 @@ export const updateCategory = async (
 		.where(eq(menuCategories.id, id))
 		.returning();
 	if (!cat)
-		return status(404, {
-			success: false as const,
-			error: "Category not found",
-		});
-	return { success: true as const, data: cat };
+		return fail(404, "Category not found",);
+	return ok(cat);
 };
 
-export const deleteCategory = async (
-	user: { id: string; role: string },
-	id: string,
+export const deleteCategory = async (id: string,
 ) => {
-	if (!can(user.role as Role, "delete", "menu")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const [itemCount] = await db
 		.select({ cnt: count() })
 		.from(menuItems)
 		.where(eq(menuItems.categoryId, id));
 	if (itemCount && Number(itemCount.cnt) > 0) {
-		return status(400, {
-			success: false as const,
-			error: `Cannot delete — ${itemCount.cnt} menu item(s) still use this category`,
-		});
+		return fail(400, `Cannot delete — ${itemCount.cnt} menu item(s) still use this category`,);
 	}
 	await db.delete(menuCategories).where(eq(menuCategories.id, id));
-	return { success: true as const, data: null };
+	return ok(null);
 };
 
-export const updateCategoryOrder = async (
-	user: { id: string; role: string },
-	id: string,
+export const updateCategoryOrder = async (id: string,
 	displayOrder: number,
 ) => {
-	if (!can(user.role as Role, "update", "menu")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	await db
 		.update(menuCategories)
 		.set({ displayOrder })
 		.where(eq(menuCategories.id, id));
-	return { success: true as const, data: null };
+	return ok(null);
 };
 
-export const createMenuItem = async (
-	user: { id: string; role: string },
-	data: {
+export const createMenuItem = async (data: {
 		categoryId: string;
 		name: string;
 		description?: string;
@@ -135,9 +98,6 @@ export const createMenuItem = async (
 		imageBase64?: string;
 	},
 ) => {
-	if (!can(user.role as Role, "create", "menu")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	let imageUrl = data.imageUrl;
 	if (data.imageBase64) {
 		const result = await uploadImageBase64(data.imageBase64);
@@ -154,18 +114,13 @@ export const createMenuItem = async (
 			imageUrl,
 		})
 		.returning();
-	return {
-		success: true as const,
-		data: {
+	return ok({
 			...item,
 			variants: item.variants as { name: string; price: number }[] | null,
-		},
-	};
+		},);
 };
 
-export const updateMenuItem = async (
-	user: { id: string; role: string },
-	id: string,
+export const updateMenuItem = async (id: string,
 	data: {
 		categoryId?: string;
 		name?: string;
@@ -176,9 +131,6 @@ export const updateMenuItem = async (
 		imageBase64?: string;
 	},
 ) => {
-	if (!can(user.role as Role, "update", "menu")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	let imageUrl = data.imageUrl;
 	if (data.imageBase64) {
 		const result = await uploadImageBase64(data.imageBase64);
@@ -202,26 +154,15 @@ export const updateMenuItem = async (
 		.where(eq(menuItems.id, id))
 		.returning();
 	if (!item)
-		return status(404, {
-			success: false as const,
-			error: "Menu item not found",
-		});
-	return {
-		success: true as const,
-		data: {
+		return fail(404, "Menu item not found",);
+	return ok({
 			...item,
 			variants: item.variants as { name: string; price: number }[] | null,
-		},
-	};
+		},);
 };
 
-export const deleteMenuItem = async (
-	user: { id: string; role: string },
-	id: string,
+export const deleteMenuItem = async (id: string,
 ) => {
-	if (!can(user.role as Role, "delete", "menu")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const [item] = await db
 		.select()
 		.from(menuItems)
@@ -232,32 +173,21 @@ export const deleteMenuItem = async (
 		if (publicId) await deleteImage(publicId);
 	}
 	await db.delete(menuItems).where(eq(menuItems.id, id));
-	return { success: true as const, data: null };
+	return ok(null);
 };
 
-export const toggleMenuAvailability = async (
-	user: { id: string; role: string },
-	id: string,
+export const toggleMenuAvailability = async (id: string,
 	isAvailable: boolean,
 ) => {
-	if (!can(user.role as Role, "update", "menu")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 	const [item] = await db
 		.update(menuItems)
 		.set({ isAvailable })
 		.where(eq(menuItems.id, id))
 		.returning();
 	if (!item)
-		return status(404, {
-			success: false as const,
-			error: "Menu item not found",
-		});
-	return {
-		success: true as const,
-		data: {
+		return fail(404, "Menu item not found",);
+	return ok({
 			...item,
 			variants: item.variants as { name: string; price: number }[] | null,
-		},
-	};
+		},);
 };

@@ -22,10 +22,5 @@ export const findOrCreateBody = t.Object({
 });
 
 export const loyaltyBody = t.Object({
-	points: t.Numeric({ minimum: 0 }),
-});
-
-export const customersQuery = t.Object({
-	search: t.Optional(t.String()),
-	segment: t.Optional(t.String()),
+	points: t.Number({ minimum: 0 }),
 });

@@ -5,8 +5,9 @@ import { getAuditLogs } from "./service.js";
 
 export const audit = new Elysia({ prefix: "/audit" })
 	.use(authPlugin)
-	.get("/logs", async ({ query, user }) => getAuditLogs(user, query as never), {
-		query: auditQuery,
+	.model({ "audit.query": auditQuery })
+	.get("/logs", async ({ query, user }) => getAuditLogs(user, query), {
+		query: "audit.query",
 		requireRole: ["system", "read"],
 		detail: { tags: ["audit"] },
 	});

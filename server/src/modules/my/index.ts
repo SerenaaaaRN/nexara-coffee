@@ -6,8 +6,12 @@ import { createMyReview, getMyLoyalty, getMyOrders } from "./service.js";
 /** Own-scope portal /my — tanpa requireRole global, filter by session.user.id (visitor allowed). */
 export const myPortal = new Elysia({ prefix: "/my" })
 	.use(authPlugin)
-	.get("/orders", async ({ query, user }) => getMyOrders(user, query as never), {
-		query: myOrdersQuery,
+	.model({
+		"my.ordersQuery": myOrdersQuery,
+		"my.review": createMyReviewBody,
+	})
+	.get("/orders", async ({ query, user }) => getMyOrders(user, query), {
+		query: "my.ordersQuery",
 		auth: true,
 		detail: { tags: ["my"] },
 	})
@@ -15,8 +19,8 @@ export const myPortal = new Elysia({ prefix: "/my" })
 		auth: true,
 		detail: { tags: ["my"] },
 	})
-	.post("/reviews", async ({ body, user }) => createMyReview(user, body as never), {
-		body: createMyReviewBody,
+	.post("/reviews", async ({ body, user }) => createMyReview(user, body), {
+		body: "my.review",
 		auth: true,
 		detail: { tags: ["my"] },
 	});

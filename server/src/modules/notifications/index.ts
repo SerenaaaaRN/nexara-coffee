@@ -9,12 +9,13 @@ import {
 
 export const notifications = new Elysia({ prefix: "/notifications" })
 	.use(authPlugin)
+	.model({ "notifications.params": notificationIdParams })
 	.get("/", async ({ user }) => getNotifications(user), {
 		requireRole: ["notifications", "read"],
 		detail: { tags: ["notifications"] },
 	})
 	.post("/:id/read", async ({ params, user }) => markNotificationRead(user, params.id), {
-		params: notificationIdParams,
+		params: "notifications.params",
 		requireRole: ["notifications", "read"],
 		detail: { tags: ["notifications"] },
 	})

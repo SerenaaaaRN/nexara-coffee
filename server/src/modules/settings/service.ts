@@ -1,11 +1,10 @@
 import { eq, inArray, ne } from "drizzle-orm";
-import { status } from "elysia";
 import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { logAudit } from "../../lib/audit-log.js";
+import type { CurrentUser } from "../../lib/auth-user.js";
 import { uploadImageBase64 } from "../../lib/cloudinary.js";
-import { rateLimit } from "../../lib/rate-limit.js";
 import {
 	ACTIONS,
 	type Action,
@@ -16,11 +15,11 @@ import {
 	ROLES,
 	type Role,
 } from "../../lib/rbac.js";
+import { fail, ok } from "../../lib/response.js";
 import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
+import { checkRate } from "../../utils/effects.js";
 
-export const getUsers = async (user: { id: string; role: string }) => {
-	if (!can(user.role as Role, "read", "users"))
-		return status(403, { success: false as const, error: "Forbidden" });
+export const getUsers = async (user: CurrentUser) => {
 	const myLevel = (ROLES as Record<string, number>)[user.role] ?? 999;
 	const rows = await db
 		.select({
@@ -34,62 +33,55 @@ export const getUsers = async (user: { id: string; role: string }) => {
 		.from(userTable)
 		.where(ne(userTable.id, user.id))
 		.orderBy(userTable.name);
-	return {
-		success: true as const,
-		data: rows.filter(
+	return ok(
+		rows.filter(
 			(r) => ((ROLES as Record<string, number>)[r.role] ?? 999) > myLevel,
 		),
-	};
+	);
 };
 
 export const updateProfile = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	data: { name: string },
 ) => {
-	if (!can(user.role as Role, "update", "users"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`settings-profile:${user.id}`, 20, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+	const limited = checkRate(`settings-profile:${user.id}`, 20, 60_000);
+	if (limited) return limited;
 	const [updated] = await db
 		.update(userTable)
 		.set({ name: data.name } as never)
 		.where(eq(userTable.id, user.id))
 		.returning();
-	return { success: true as const, data: updated };
+	return ok(updated);
 };
 
 export const changeUserRole = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	data: { userId: string; role: string },
 ) => {
-	if (!can(user.role as Role, "manage", "users"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	if (
 		user.role === "branch_manager" &&
 		!["cashier", "barista"].includes(data.role)
 	) {
-		return status(403, {
-			success: false as const,
-			error: "Branch managers can only assign cashier or barista roles",
-		});
+		return fail(
+			403,
+			"Branch managers can only assign cashier or barista roles",
+		);
 	}
-	if (!rateLimit(`settings-role:${user.id}`, 10, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+	const limited = checkRate(`settings-role:${user.id}`, 10, 60_000);
+	if (limited) return limited;
 	const [targetUser] = await db
 		.select({ id: userTable.id, role: userTable.role })
 		.from(userTable)
 		.where(eq(userTable.id, data.userId))
 		.limit(1);
-	if (!targetUser)
-		return status(404, { success: false as const, error: "User not found" });
+	if (!targetUser) return fail(404, "User not found");
 	const myLevel = (ROLES as Record<string, number>)[user.role] ?? 999;
 	const targetLevel = (ROLES as Record<string, number>)[targetUser.role] ?? 999;
 	if (targetLevel <= myLevel)
-		return status(403, {
-			success: false as const,
-			error:
-				"You cannot change the role of users with the same or higher level",
-		});
+		return fail(
+			403,
+			"You cannot change the role of users with the same or higher level",
+		);
 	const [updated] = await db
 		.update(userTable)
 		.set({ role: data.role } as never)
@@ -102,43 +94,32 @@ export const changeUserRole = async (
 		targetId: data.userId,
 		metadata: { fromRole: targetUser.role, toRole: data.role },
 	});
-	return { success: true as const, data: updated };
+	return ok(updated);
 };
 
-export const uploadAvatar = async (
-	user: { id: string; role: string },
-	base64: string,
-) => {
-	if (!can(user.role as Role, "update", "users"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`settings-avatar:${user.id}`, 5, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+export const uploadAvatar = async (user: CurrentUser, base64: string) => {
+	const limited = checkRate(`settings-avatar:${user.id}`, 5, 60_000);
+	if (limited) return limited;
 	const result = await uploadImageBase64(base64, "nexara/avatars");
-	if (!result)
-		return status(500, {
-			success: false as const,
-			error: "Gagal upload gambar",
-		});
+	if (!result) return fail(500, "Gagal upload gambar");
 	await db
 		.update(userTable)
 		.set({ image: result.url } as never)
 		.where(eq(userTable.id, user.id));
-	return { success: true as const, data: { url: result.url } };
+	return ok({ url: result.url });
 };
 
-export const removeAvatar = async (user: { id: string; role: string }) => {
-	if (!can(user.role as Role, "update", "users"))
-		return status(403, { success: false as const, error: "Forbidden" });
-	if (!rateLimit(`settings-avatar:${user.id}`, 5, 60_000))
-		return status(429, { success: false as const, error: "Too many requests" });
+export const removeAvatar = async (user: CurrentUser) => {
+	const limited = checkRate(`settings-avatar:${user.id}`, 5, 60_000);
+	if (limited) return limited;
 	await db
 		.update(userTable)
 		.set({ image: null } as never)
 		.where(eq(userTable.id, user.id));
-	return { success: true as const, data: null };
+	return ok(null);
 };
 
-export const getDashboardMeta = async (user: { id: string; role: string }) => {
+export const getDashboardMeta = async (user: CurrentUser) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	const isSuperAdmin = user.role === "super_admin";
 	const branchList =
@@ -177,17 +158,14 @@ export const getDashboardMeta = async (user: { id: string; role: string }) => {
 			: (Object.keys(ROLES) as Role[]).filter(
 					(r) => ((ROLES as Record<string, number>)[r] ?? 999) > myLevel,
 				);
-	return {
-		success: true as const,
-		data: {
-			isSuperAdmin,
-			branchList,
-			defaultBranchId,
-			abilities,
-			defaultRoute,
-			navGuards: NAV_GUARDS,
-			roles,
-			assignableRoles,
-		},
-	};
+	return ok({
+		isSuperAdmin,
+		branchList,
+		defaultBranchId,
+		abilities,
+		defaultRoute,
+		navGuards: NAV_GUARDS,
+		roles,
+		assignableRoles,
+	});
 };

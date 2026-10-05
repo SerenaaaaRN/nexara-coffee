@@ -10,22 +10,26 @@ import {
 
 export const transactions = new Elysia({ prefix: "/transactions" })
 	.use(authPlugin)
+	.model({
+		"transactions.params": transactionIdParams,
+		"transactions.record": recordTransactionBody,
+	})
 	.get("/", async ({ user }) => getTransactions(user), {
 		requireRole: ["finance", "read"],
 		detail: { tags: ["transactions"] },
 	})
 	.get("/:id", async ({ params, user }) => getTransactionDetail(user, params.id), {
-		params: transactionIdParams,
+		params: "transactions.params",
 		requireRole: ["finance", "read"],
 		detail: { tags: ["transactions"] },
 	})
-	.post("/record", async ({ body, user }) => recordTransaction(user, body as never), {
-		body: recordTransactionBody,
+	.post("/record", async ({ body, user }) => recordTransaction(user, body), {
+		body: "transactions.record",
 		requireRole: ["finance", "create"],
 		detail: { tags: ["transactions"] },
 	})
 	.post("/:id/refund", async ({ params, user }) => refundTransaction(user, params.id), {
-		params: transactionIdParams,
+		params: "transactions.params",
 		requireRole: ["finance", "update"],
 		detail: { tags: ["transactions"] },
 	});

@@ -1,6 +1,10 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
-import { createDirectChannelBody, sendMessageBody } from "./model.js";
+import {
+	channelIdParams,
+	createDirectChannelBody,
+	sendMessageBody,
+} from "./model.js";
 import {
 	createDirectChannel,
 	getAvailableUsers,
@@ -11,6 +15,15 @@ import {
 
 export const chat = new Elysia({ prefix: "/chat" })
 	.use(authPlugin)
+	.model({
+		"chat.channelParams": channelIdParams,
+		"chat.send": sendMessageBody,
+		"chat.direct": createDirectChannelBody,
+		"chat.messagesQuery": t.Object({
+			before: t.Optional(t.String()),
+			limit: t.Optional(t.Numeric()),
+		}),
+	})
 	.get("/channels", async ({ user }) => getUserChannels(user), {
 		requireRole: ["chat", "read"],
 		detail: { tags: ["chat"] },
@@ -18,13 +31,10 @@ export const chat = new Elysia({ prefix: "/chat" })
 	.get(
 		"/channels/:id/messages",
 		async ({ params, query, user }) =>
-			getChannelMessages(
-				user,
-				params.id,
-				(query as { before?: string })?.before,
-				(query as { limit?: number })?.limit,
-			),
+			getChannelMessages(user, params.id, query.before, query.limit),
 		{
+			params: "chat.channelParams",
+			query: "chat.messagesQuery",
 			requireRole: ["chat", "read"],
 			detail: { tags: ["chat"] },
 		},
@@ -35,24 +45,18 @@ export const chat = new Elysia({ prefix: "/chat" })
 	})
 	.post(
 		"/messages",
-		async ({ body, user }) =>
-			sendMessage(
-				user,
-				(body as { channelId: string }).channelId,
-				(body as { content: string }).content,
-			),
+		async ({ body, user }) => sendMessage(user, body.channelId, body.content),
 		{
-			body: sendMessageBody,
+			body: "chat.send",
 			requireRole: ["chat", "create"],
 			detail: { tags: ["chat"] },
 		},
 	)
 	.post(
 		"/channels/direct",
-		async ({ body, user }) =>
-			createDirectChannel(user, (body as { targetUserId: string }).targetUserId),
+		async ({ body, user }) => createDirectChannel(user, body.targetUserId),
 		{
-			body: createDirectChannelBody,
+			body: "chat.direct",
 			requireRole: ["chat", "create"],
 			detail: { tags: ["chat"] },
 		},

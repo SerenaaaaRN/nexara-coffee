@@ -1,33 +1,28 @@
 import { and, asc, count, desc, eq, gte, sql } from "drizzle-orm";
-import { status } from "elysia";
 import { db } from "../../db/index.js";
+import type { CurrentUser } from "../../lib/auth-user.js";
+import { ok, fail } from "../../lib/response.js";
 import { branches as br } from "../../db/schema/branches.js";
 import { customers } from "../../db/schema/customers.js";
 import { transactions } from "../../db/schema/finance.js";
 import { menuCategories, menuItems } from "../../db/schema/menu.js";
 import { dailySetorans, orderItems, orders } from "../../db/schema/orders.js";
-import { can, type Role } from "../../lib/rbac.js";
+
 import {
 	branchFilter,
 	getAccessibleBranchIds,
 } from "../../utils/branch-scope.js";
 
 export const getOverviewDashboard = async (
-	user: { id: string; role: string },
+	user: CurrentUser,
 	branch?: string | null,
 ) => {
-	if (!can(user.role as Role, "read", "reports")) {
-		return status(403, { success: false as const, error: "Forbidden" });
-	}
 
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	const branchId = branch ?? null;
 
 	if (branchId && ids !== null && !ids.includes(branchId)) {
-		return status(403, {
-			success: false as const,
-			error: "Forbidden branch access",
-		});
+		return fail(403, "Forbidden branch access",);
 	}
 
 	const startDate = new Date();
@@ -202,9 +197,7 @@ export const getOverviewDashboard = async (
 			.orderBy(desc(sql`COALESCE(SUM(${dailySetorans.amount}), 0)`)),
 	]);
 
-	return {
-		success: true as const,
-		data: {
+	return ok({
 			stats: {
 				totalRevenue: Number(revenueRow?.[0]?.value ?? 0),
 				totalOrders: Number(ordersRow?.[0]?.cnt ?? 0),
@@ -254,6 +247,5 @@ export const getOverviewDashboard = async (
 				revenue: Number(x.revenue),
 				setoranCount: x.setoranCount,
 			})),
-		},
-	};
+		},);
 };

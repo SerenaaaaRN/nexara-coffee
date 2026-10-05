@@ -17,31 +17,35 @@ import {
 
 export const orders = new Elysia({ prefix: "/orders" })
 	.use(authPlugin)
-	.get("/", async ({ query, user }) => getOrders(user, query as never), {
-		query: getOrdersQuery,
+	.model({
+		"orders.query": getOrdersQuery,
+		"orders.params": orderIdParams,
+		"orders.create": createOrderSchema,
+		"orders.status": updateStatusBody,
+		"orders.cancel": cancelOrderBody,
+	})
+	.get("/", async ({ query, user }) => getOrders(user, query), {
+		query: "orders.query",
 		requireRole: ["orders", "read"],
 		detail: { tags: ["orders"] },
 	})
 	.get("/:id", async ({ params, user }) => getOrderDetail(user, params.id), {
-		params: orderIdParams,
+		params: "orders.params",
 		requireRole: ["orders", "read"],
 		detail: { tags: ["orders"] },
 	})
-	.post("/", async ({ body, user }) => createOrder(user, body as never), {
-		body: createOrderSchema as never,
+	.post("/", async ({ body, user }) => createOrder(user, body), {
+		body: "orders.create",
 		requireRole: ["orders", "create"],
 		detail: { tags: ["orders"] },
 	})
 	.post(
 		"/:id/status",
 		async ({ params, body, user }) =>
-			updateOrderStatus(user, {
-				orderId: params.id,
-				status: (body as { status: string }).status,
-			}),
+			updateOrderStatus(user, { orderId: params.id, status: body.status }),
 		{
-			params: orderIdParams,
-			body: updateStatusBody as never,
+			params: "orders.params",
+			body: "orders.status",
 			requireRole: ["orders", "update"],
 			detail: { tags: ["orders"] },
 		},
@@ -49,13 +53,10 @@ export const orders = new Elysia({ prefix: "/orders" })
 	.post(
 		"/:id/cancel",
 		async ({ params, body, user }) =>
-			cancelOrder(user, {
-				orderId: params.id,
-				reason: (body as { reason?: string })?.reason,
-			}),
+			cancelOrder(user, { orderId: params.id, reason: body.reason }),
 		{
-			params: orderIdParams,
-			body: cancelOrderBody as never,
+			params: "orders.params",
+			body: "orders.cancel",
 			requireRole: ["orders", "update"],
 			detail: { tags: ["orders"] },
 		},

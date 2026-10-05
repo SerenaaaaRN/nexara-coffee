@@ -1,15 +1,14 @@
 import { eq, inArray, notInArray, sql } from "drizzle-orm";
-import { status } from "elysia";
 import { db } from "../../db/index.js";
+import type { CurrentUser } from "../../lib/auth-user.js";
+import { ok, fail } from "../../lib/response.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { employeeDetails } from "../../db/schema/employee.js";
-import { can, type Role } from "../../lib/rbac.js";
+
 import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
 
-export const getEmployees = async (user: { id: string; role: string }) => {
-	if (!can(user.role as Role, "read", "employee"))
-		return status(403, { success: false as const, error: "Forbidden" });
+export const getEmployees = async (user: CurrentUser) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	const condition = ids
 		? ids.length > 0
@@ -33,12 +32,10 @@ export const getEmployees = async (user: { id: string; role: string }) => {
 		.leftJoin(userTable, eq(employeeDetails.userId, userTable.id))
 		.leftJoin(branches, eq(employeeDetails.branchId, branches.id))
 		.where(condition);
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
-export const getAvailableUsers = async (user: { id: string; role: string }) => {
-	if (!can(user.role as Role, "read", "employee"))
-		return status(403, { success: false as const, error: "Forbidden" });
+export const getAvailableUsers = async () => {
 	const existing = await db
 		.select({ userId: employeeDetails.userId })
 		.from(employeeDetails);
@@ -52,33 +49,24 @@ export const getAvailableUsers = async (user: { id: string; role: string }) => {
 		})
 		.from(userTable)
 		.where(ids.length > 0 ? notInArray(userTable.id, ids) : undefined);
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
-export const getBranchesForEmployee = async (user: {
-	id: string;
-	role: string;
-}) => {
-	if (!can(user.role as Role, "read", "employee"))
-		return status(403, { success: false as const, error: "Forbidden" });
+export const getBranchesForEmployee = async () => {
 	const rows = await db
 		.select({ id: branches.id, name: branches.name })
 		.from(branches)
 		.orderBy(branches.name);
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
-export const createEmployee = async (
-	user: { id: string; role: string },
-	data: {
+export const createEmployee = async (data: {
 		userId: string;
 		branchId: string;
 		baseSalary: number;
 		hireDate: string;
 	},
 ) => {
-	if (!can(user.role as Role, "create", "employee"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	const [row] = await db
 		.insert(employeeDetails)
 		.values({
@@ -88,16 +76,12 @@ export const createEmployee = async (
 			hireDate: data.hireDate,
 		} as never)
 		.returning();
-	return { success: true as const, data: row };
+	return ok(row);
 };
 
-export const updateEmployee = async (
-	user: { id: string; role: string },
-	id: string,
+export const updateEmployee = async (id: string,
 	data: { branchId?: string; baseSalary?: number; hireDate?: string },
 ) => {
-	if (!can(user.role as Role, "update", "employee"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	const updates: Record<string, unknown> = {};
 	if (data.branchId !== undefined) updates.branchId = data.branchId;
 	if (data.baseSalary !== undefined)
@@ -109,19 +93,12 @@ export const updateEmployee = async (
 		.where(eq(employeeDetails.id, id))
 		.returning();
 	if (!row)
-		return status(404, {
-			success: false as const,
-			error: "Employee not found",
-		});
-	return { success: true as const, data: row };
+		return fail(404, "Employee not found",);
+	return ok(row);
 };
 
-export const deleteEmployee = async (
-	user: { id: string; role: string },
-	id: string,
+export const deleteEmployee = async (id: string,
 ) => {
-	if (!can(user.role as Role, "delete", "employee"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	await db.delete(employeeDetails).where(eq(employeeDetails.id, id));
-	return { success: true as const, data: null };
+	return ok(null);
 };

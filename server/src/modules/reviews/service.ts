@@ -1,16 +1,11 @@
 import { and, desc, eq } from "drizzle-orm";
-import { status } from "elysia";
 import { db } from "../../db/index.js";
+import { fail, ok } from "../../lib/response.js";
 import { branches } from "../../db/schema/branches.js";
 import { customers, reviews } from "../../db/schema/customers.js";
-import { can, type Role } from "../../lib/rbac.js";
 
-export const getReviews = async (
-	user: { id: string; role: string },
-	params?: { branchId?: string; status?: string; rating?: number },
+export const getReviews = async (params?: { branchId?: string; status?: string; rating?: number },
 ) => {
-	if (!can(user.role as Role, "read", "reviews"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	const conditions = [];
 	if (params?.branchId) conditions.push(eq(reviews.branchId, params.branchId));
 	if (params?.status) conditions.push(eq(reviews.status, params.status));
@@ -35,16 +30,12 @@ export const getReviews = async (
 		.leftJoin(customers, eq(reviews.customerId, customers.id))
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		.orderBy(desc(reviews.createdAt));
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
 
-export const replyReview = async (
-	user: { id: string; role: string },
-	id: string,
+export const replyReview = async (id: string,
 	reply: string,
 ) => {
-	if (!can(user.role as Role, "update", "reviews"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	// Parity coffee replyReviewFn: hanya set reply, status tidak diubah.
 	const [row] = await db
 		.update(reviews)
@@ -52,23 +43,19 @@ export const replyReview = async (
 		.where(eq(reviews.id, id))
 		.returning();
 	if (!row)
-		return status(404, { success: false as const, error: "Review not found" });
-	return { success: true as const, data: row };
+		return fail(404, "Review not found");
+	return ok(row);
 };
 
-export const moderateReview = async (
-	user: { id: string; role: string },
-	id: string,
+export const moderateReview = async (id: string,
 	reviewStatus: "approved" | "rejected",
 ) => {
-	if (!can(user.role as Role, "update", "reviews"))
-		return status(403, { success: false as const, error: "Forbidden" });
 	const [row] = await db
 		.update(reviews)
 		.set({ status: reviewStatus } as never)
 		.where(eq(reviews.id, id))
 		.returning();
 	if (!row)
-		return status(404, { success: false as const, error: "Review not found" });
-	return { success: true as const, data: row };
+		return fail(404, "Review not found");
+	return ok(row);
 };

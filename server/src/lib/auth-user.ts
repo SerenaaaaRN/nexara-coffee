@@ -5,4 +5,5 @@ export type CurrentUser = {
 	role: Role;
 	name?: string;
 	email?: string | null;
+	image?: string | null;
 };

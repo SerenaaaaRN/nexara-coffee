@@ -1,14 +1,11 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { status } from "elysia";
 import { db } from "../../db/index.js";
+import { ok } from "../../lib/response.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
-import { can, type Role } from "../../lib/rbac.js";
 
-export const getMapBranches = async (user: { id: string; role: string }) => {
-	if (!can(user.role as Role, "read", "maps"))
-		return status(403, { success: false as const, error: "Forbidden" });
+export const getMapBranches = async () => {
 	const manager = alias(userTable, "manager");
 	const rows = await db
 		.select({
@@ -28,5 +25,5 @@ export const getMapBranches = async (user: { id: string; role: string }) => {
 		.leftJoin(manager, eq(branches.managerId, manager.id))
 		.where(and(isNotNull(branches.lat), isNotNull(branches.lng)))
 		.orderBy(branches.name);
-	return { success: true as const, data: rows };
+	return ok(rows);
 };
