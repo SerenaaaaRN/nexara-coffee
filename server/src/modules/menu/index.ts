@@ -1,10 +1,10 @@
 import { Elysia, t } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
 import {
 	categoryOrderBody,
 	createCategoryBody,
 	createMenuItemBody,
-	menuIdParams,
 	menuItemsQuery,
 	updateCategoryBody,
 	updateMenuItemBody,
@@ -32,7 +32,7 @@ export const menu = new Elysia({ prefix: "/menu" })
 		"menu.categoryOrder": categoryOrderBody,
 		"menu.availability": t.Object({ isAvailable: t.Boolean() }),
 		"menu.itemsQuery": menuItemsQuery,
-		"menu.idParams": menuIdParams,
+		"menu.idParams": idParams,
 	})
 	.get("/categories", async () => getMenuCategories(), {
 		requireRole: ["menu", "read"],

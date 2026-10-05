@@ -1,6 +1,5 @@
 import { t } from "elysia";
 
-export const branchIdParams = t.Object({ id: t.String({ minLength: 1 }) });
 
 export const createBranchSchema = t.Object({
 	name: t.String({ minLength: 2, maxLength: 100 }),

@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import type { CurrentUser } from "../../lib/auth-user.js";
-import { ok, fail } from "../../lib/response.js";
+import type { CurrentUser } from "../../access/index.js";
+import { ok, fail } from "../../lib/http.js";
 import { notifications } from "../../db/schema/system.js";
 
 export const getNotifications = async (user: CurrentUser) => {

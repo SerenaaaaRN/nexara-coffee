@@ -9,8 +9,6 @@ export const ROLES = {
 
 export type Role = keyof typeof ROLES;
 
-const ROLE_HIERARCHY: Record<Role, number> = ROLES;
-
 export type Resource =
 	| "menu"
 	| "orders"
@@ -93,7 +91,6 @@ export const NAV_GUARDS: NavGuard[] = [
 	{ path: "/settings", resource: "users", action: "read" },
 ];
 
-// Each role's permissions. Higher roles inherit from lower ones automatically.
 const PERMISSIONS: Record<Role, PermissionMap> = {
 	super_admin: {
 		menu: ["manage"],
@@ -177,13 +174,4 @@ export function can(role: Role, action: Action, resource: Resource): boolean {
 	if (!rolePerms) return false;
 
 	return rolePerms.includes(action);
-}
-
-/**
- * Check if user's role is at or above a target role level.
- * E.g. canImpersonate("branch_manager", "cashier") → true
- *      canImpersonate("cashier", "branch_manager") → false
- */
-export function hasLevel(role: Role, minRole: Role): boolean {
-	return (ROLE_HIERARCHY[role] ?? 999) <= ROLE_HIERARCHY[minRole];
 }

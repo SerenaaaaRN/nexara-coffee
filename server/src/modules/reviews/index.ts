@@ -1,9 +1,9 @@
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
 import {
 	moderateReviewBody,
 	replyReviewBody,
-	reviewIdParams,
 	reviewsQuery,
 } from "./model.js";
 import { getReviews, moderateReview, replyReview } from "./service.js";
@@ -12,7 +12,7 @@ export const reviews = new Elysia({ prefix: "/reviews" })
 	.use(authPlugin)
 	.model({
 		"reviews.query": reviewsQuery,
-		"reviews.params": reviewIdParams,
+		"reviews.params": idParams,
 		"reviews.reply": replyReviewBody,
 		"reviews.moderate": moderateReviewBody,
 	})

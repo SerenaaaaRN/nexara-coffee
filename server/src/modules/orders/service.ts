@@ -6,15 +6,15 @@ import { branches } from "../../db/schema/branches.js";
 import { customers } from "../../db/schema/customers.js";
 import { menuItems } from "../../db/schema/menu.js";
 import { orderItems, orders } from "../../db/schema/orders.js";
-import type { CurrentUser } from "../../lib/auth-user.js";
-import { fail, ok } from "../../lib/response.js";
+import type { CurrentUser } from "../../access/index.js";
+import { fail, ok } from "../../lib/http.js";
 import { publishAbly } from "../../utils/effects.js";
 import { earnedPointsForTotal, tierForPoints } from "../../utils/loyalty.js";
 import {
 	assertBranchAccess,
 	emptyScope,
 	getAccessibleBranchIds,
-} from "../../utils/scope.js";
+} from "../../access/index.js";
 
 const guardTerminalTransition = (
 	current: string,

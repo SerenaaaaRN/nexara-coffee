@@ -1,8 +1,8 @@
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
 import {
 	createEmployeeBody,
-	employeeIdParams,
 	updateEmployeeBody,
 } from "./model.js";
 import {
@@ -17,7 +17,7 @@ import {
 export const employee = new Elysia({ prefix: "/employees" })
 	.use(authPlugin)
 	.model({
-		"employee.params": employeeIdParams,
+		"employee.params": idParams,
 		"employee.create": createEmployeeBody,
 		"employee.update": updateEmployeeBody,
 	})

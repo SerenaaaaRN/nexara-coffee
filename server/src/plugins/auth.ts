@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
+import type { CurrentUser } from "../access/index.js";
+import { type Action, can, type Resource, type Role } from "../access/index.js";
 import { auth } from "../lib/auth.js";
-import type { CurrentUser } from "../lib/auth-user.js";
-import { type Action, can, type Resource, type Role } from "../lib/rbac.js";
 
 export const betterAuth = new Elysia({ name: "auth" })
 	.mount(auth.handler)

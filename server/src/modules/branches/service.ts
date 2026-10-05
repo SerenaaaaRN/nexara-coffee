@@ -1,16 +1,16 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "../../db/index.js";
-import type { CurrentUser } from "../../lib/auth-user.js";
-import { fail, ok } from "../../lib/response.js";
+import type { CurrentUser } from "../../access/index.js";
+import { fail, ok } from "../../lib/http.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches, franchiseBranches } from "../../db/schema/branches.js";
 import { chatChannels } from "../../db/schema/collaboration.js";
 import { employeeDetails } from "../../db/schema/employee.js";
-import { logAudit } from "../../lib/audit-log.js";
+import { logAudit } from "../../utils/effects.js";
 
-import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
-import { emptyScope } from "../../utils/scope.js";
+import { getAccessibleBranchIds } from "../../access/index.js";
+import { emptyScope } from "../../access/index.js";
 
 export const getBranches = async (user: CurrentUser) => {
 

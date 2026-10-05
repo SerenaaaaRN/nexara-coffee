@@ -1,10 +1,10 @@
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
 import {
 	expectedCashQuery,
 	kasirApproveBody,
 	kasirCreateBody,
-	kasirIdParams,
 	setoransQuery,
 } from "./model.js";
 import {
@@ -21,7 +21,7 @@ export const kasir = new Elysia({ prefix: "/kasir" })
 	.model({
 		"kasir.expectedCash": expectedCashQuery,
 		"kasir.setorans": setoransQuery,
-		"kasir.params": kasirIdParams,
+		"kasir.params": idParams,
 		"kasir.create": kasirCreateBody,
 		"kasir.decision": kasirApproveBody,
 	})

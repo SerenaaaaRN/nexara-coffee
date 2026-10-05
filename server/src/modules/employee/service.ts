@@ -1,12 +1,12 @@
 import { eq, inArray, notInArray, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import type { CurrentUser } from "../../lib/auth-user.js";
-import { ok, fail } from "../../lib/response.js";
+import type { CurrentUser } from "../../access/index.js";
+import { ok, fail } from "../../lib/http.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { employeeDetails } from "../../db/schema/employee.js";
 
-import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
+import { getAccessibleBranchIds } from "../../access/index.js";
 
 export const getEmployees = async (user: CurrentUser) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);

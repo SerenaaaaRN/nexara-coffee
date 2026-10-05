@@ -1,11 +1,11 @@
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
 import {
 	avatarBody,
 	changeRoleBody,
 	dashboardMetaResponse,
 	profileBody,
-	userIdParams,
 } from "./model.js";
 import {
 	changeUserRole,
@@ -22,7 +22,7 @@ export const settings = new Elysia({ prefix: "/settings" })
 		"settings.profile": profileBody,
 		"settings.role": changeRoleBody,
 		"settings.avatar": avatarBody,
-		"settings.userParams": userIdParams,
+		"settings.userParams": idParams,
 	})
 	.get("/users", async ({ user }) => getUsers(user), {
 		requireRole: ["users", "read"],

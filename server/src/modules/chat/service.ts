@@ -7,9 +7,9 @@ import {
 	chatChannels,
 	chatMessages,
 } from "../../db/schema/collaboration.js";
-import type { CurrentUser } from "../../lib/auth-user.js";
-import { fail, ok } from "../../lib/response.js";
-import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
+import type { CurrentUser } from "../../access/index.js";
+import { fail, ok } from "../../lib/http.js";
+import { getAccessibleBranchIds } from "../../access/index.js";
 import { checkRate, publishAbly } from "../../utils/effects.js";
 
 export const getUserChannels = async (user: CurrentUser) => {

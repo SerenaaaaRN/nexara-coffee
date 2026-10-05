@@ -1,6 +1,5 @@
 import { t } from "elysia";
 
-export const transactionIdParams = t.Object({ id: t.String({ minLength: 1 }) });
 
 export const recordTransactionBody = t.Object({
 	orderId: t.String({ minLength: 1 }),

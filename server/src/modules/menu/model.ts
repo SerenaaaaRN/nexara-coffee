@@ -4,9 +4,6 @@ export const menuItemsQuery = t.Object({
 	categoryId: t.Optional(t.String()),
 });
 
-export const menuIdParams = t.Object({
-	id: t.String({ minLength: 1 }),
-});
 
 export const createMenuItemBody = t.Object({
 	categoryId: t.String({ minLength: 1 }),

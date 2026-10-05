@@ -2,9 +2,9 @@ import { eq, inArray, ne } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
-import { logAudit } from "../../lib/audit-log.js";
-import type { CurrentUser } from "../../lib/auth-user.js";
-import { uploadImageBase64 } from "../../lib/cloudinary.js";
+import { logAudit } from "../../utils/effects.js";
+import type { CurrentUser } from "../../access/index.js";
+import { uploadImageBase64 } from "../../infra/images.js";
 import {
 	ACTIONS,
 	type Action,
@@ -14,9 +14,9 @@ import {
 	type Resource,
 	ROLES,
 	type Role,
-} from "../../lib/rbac.js";
-import { fail, ok } from "../../lib/response.js";
-import { getAccessibleBranchIds } from "../../utils/branch-scope.js";
+} from "../../access/index.js";
+import { fail, ok } from "../../lib/http.js";
+import { getAccessibleBranchIds } from "../../access/index.js";
 import { checkRate } from "../../utils/effects.js";
 
 export const getUsers = async (user: CurrentUser) => {

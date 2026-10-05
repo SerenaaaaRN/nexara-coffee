@@ -1,11 +1,11 @@
 import { and, desc, eq } from "drizzle-orm";
+import type { CurrentUser } from "../../access/index.js";
+import { branchFilter, getAccessibleBranchIds } from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { auditLogs } from "../../db/schema/system.js";
-import type { CurrentUser } from "../../lib/auth-user.js";
-import { ok } from "../../lib/response.js";
-import { branchFilter, getAccessibleBranchIds } from "../../utils/branch-scope.js";
+import { ok } from "../../lib/http.js";
 
 export const getAuditLogs = async (
 	user: CurrentUser,

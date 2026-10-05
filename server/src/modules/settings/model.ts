@@ -13,7 +13,6 @@ export const avatarBody = t.Object({
 	base64: t.String({ minLength: 1 }),
 });
 
-export const userIdParams = t.Object({ id: t.String({ minLength: 1 }) });
 
 const roleSchema = t.Union([
 	t.Literal("super_admin"),

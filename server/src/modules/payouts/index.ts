@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
-import { payoutIdParams, payoutsQuery, requestPayoutBody } from "./model.js";
+import { idParams } from "../../lib/schema.js";
+import { payoutsQuery, requestPayoutBody } from "./model.js";
 import { approvePayout, getPayouts, requestPayout } from "./service.js";
 
 export const payouts = new Elysia({ prefix: "/payouts" })
@@ -8,7 +9,7 @@ export const payouts = new Elysia({ prefix: "/payouts" })
 	.model({
 		"payouts.query": payoutsQuery,
 		"payouts.request": requestPayoutBody,
-		"payouts.params": payoutIdParams,
+		"payouts.params": idParams,
 	})
 	.get("/", async ({ query, user }) => getPayouts(user, query), {
 		query: "payouts.query",

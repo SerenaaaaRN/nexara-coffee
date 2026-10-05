@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import { fail, ok } from "../../lib/response.js";
+import { fail, ok } from "../../lib/http.js";
 import { branches } from "../../db/schema/branches.js";
 import { customers, reviews } from "../../db/schema/customers.js";
 

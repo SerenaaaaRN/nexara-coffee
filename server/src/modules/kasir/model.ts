@@ -10,9 +10,6 @@ export const setoransQuery = t.Object({
 	limit: t.Optional(t.Numeric({ minimum: 1, maximum: 1000 })),
 });
 
-export const kasirIdParams = t.Object({
-	id: t.String({ minLength: 1 }),
-});
 
 export const createSetoranSchema = t.Object({
 	amount: t.Number({ minimum: 0, exclusiveMinimum: 0 }),

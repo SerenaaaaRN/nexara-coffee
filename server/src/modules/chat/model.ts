@@ -1,6 +1,5 @@
 import { t } from "elysia";
 
-export const channelIdParams = t.Object({ id: t.String({ minLength: 1 }) });
 
 export const sendMessageBody = t.Object({
 	channelId: t.String({ minLength: 1 }),

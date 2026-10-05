@@ -1,10 +1,10 @@
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
 import {
 	cancelOrderBody,
 	createOrderSchema,
 	getOrdersQuery,
-	orderIdParams,
 	updateStatusBody,
 } from "./model.js";
 import {
@@ -19,7 +19,7 @@ export const orders = new Elysia({ prefix: "/orders" })
 	.use(authPlugin)
 	.model({
 		"orders.query": getOrdersQuery,
-		"orders.params": orderIdParams,
+		"orders.params": idParams,
 		"orders.create": createOrderSchema,
 		"orders.status": updateStatusBody,
 		"orders.cancel": cancelOrderBody,

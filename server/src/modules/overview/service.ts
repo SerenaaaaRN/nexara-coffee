@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import type { CurrentUser } from "../../lib/auth-user.js";
-import { ok, fail } from "../../lib/response.js";
+import type { CurrentUser } from "../../access/index.js";
+import { ok, fail } from "../../lib/http.js";
 import { branches as br } from "../../db/schema/branches.js";
 import { customers } from "../../db/schema/customers.js";
 import { transactions } from "../../db/schema/finance.js";
@@ -11,7 +11,7 @@ import { dailySetorans, orderItems, orders } from "../../db/schema/orders.js";
 import {
 	branchFilter,
 	getAccessibleBranchIds,
-} from "../../utils/branch-scope.js";
+} from "../../access/index.js";
 
 export const getOverviewDashboard = async (
 	user: CurrentUser,

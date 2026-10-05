@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
-import { getAblyRest } from "../../lib/ably.server.js";
-import { ok } from "../../lib/response.js";
+import { getAblyRest } from "../../infra/ably.js";
+import { ok } from "../../lib/http.js";
 import { authPlugin } from "../../plugins/auth.js";
 
 export const ably = new Elysia({ prefix: "/ably" }).use(authPlugin).post(

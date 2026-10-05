@@ -5,11 +5,11 @@ import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { transactions } from "../../db/schema/finance.js";
 import { dailySetorans } from "../../db/schema/orders.js";
-import { logAudit } from "../../lib/audit-log.js";
-import type { CurrentUser } from "../../lib/auth-user.js";
-import { fail, ok } from "../../lib/response.js";
-import { branchFilter } from "../../utils/branch-scope.js";
-import { assertBranchAccess, getAccessibleBranchIds } from "../../utils/scope.js";
+import { logAudit } from "../../utils/effects.js";
+import type { CurrentUser } from "../../access/index.js";
+import { fail, ok } from "../../lib/http.js";
+import { branchFilter } from "../../access/index.js";
+import { assertBranchAccess, getAccessibleBranchIds } from "../../access/index.js";
 
 export const getExpectedCash = async (
 	user: CurrentUser,

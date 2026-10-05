@@ -1,12 +1,12 @@
 import { asc, count, eq, isNotNull } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import { fail, ok } from "../../lib/response.js";
+import { fail, ok } from "../../lib/http.js";
 import { menuCategories, menuItems } from "../../db/schema/menu.js";
 import {
 	deleteImage,
 	getPublicId,
 	uploadImageBase64,
-} from "../../lib/cloudinary.js";
+} from "../../infra/images.js";
 
 export const getMenuCategories = async () => {
 	const rows = await db

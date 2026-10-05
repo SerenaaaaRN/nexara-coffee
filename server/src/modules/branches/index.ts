@@ -1,8 +1,8 @@
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
 import {
 	assignFranchiseSchema,
-	branchIdParams,
 	createBranchSchema,
 	updateBranchSchema,
 } from "./model.js";
@@ -17,7 +17,7 @@ import {
 export const branches = new Elysia({ prefix: "/branches" })
 	.use(authPlugin)
 	.model({
-		"branches.params": branchIdParams,
+		"branches.params": idParams,
 		"branches.create": createBranchSchema,
 		"branches.update": updateBranchSchema,
 		"branches.franchise": assignFranchiseSchema,

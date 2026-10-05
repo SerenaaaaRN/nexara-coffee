@@ -1,8 +1,8 @@
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
 import {
 	createCustomerBody,
-	customerIdParams,
 	findOrCreateBody,
 	loyaltyBody,
 	updateCustomerBody,
@@ -19,7 +19,7 @@ import {
 export const customers = new Elysia({ prefix: "/customers" })
 	.use(authPlugin)
 	.model({
-		"customers.params": customerIdParams,
+		"customers.params": idParams,
 		"customers.create": createCustomerBody,
 		"customers.update": updateCustomerBody,
 		"customers.findOrCreate": findOrCreateBody,

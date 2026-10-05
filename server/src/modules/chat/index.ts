@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
+import { idParams } from "../../lib/schema.js";
 import {
-	channelIdParams,
 	createDirectChannelBody,
 	sendMessageBody,
 } from "./model.js";
@@ -16,7 +16,7 @@ import {
 export const chat = new Elysia({ prefix: "/chat" })
 	.use(authPlugin)
 	.model({
-		"chat.channelParams": channelIdParams,
+		"chat.channelParams": idParams,
 		"chat.send": sendMessageBody,
 		"chat.direct": createDirectChannelBody,
 		"chat.messagesQuery": t.Object({

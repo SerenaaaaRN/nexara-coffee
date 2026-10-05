@@ -1,6 +1,5 @@
 import { t } from "elysia";
 
-export const customerIdParams = t.Object({ id: t.String({ minLength: 1 }) });
 
 export const createCustomerBody = t.Object({
 	fullName: t.String({ minLength: 2, maxLength: 100 }),

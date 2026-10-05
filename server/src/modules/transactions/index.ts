@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { authPlugin } from "../../plugins/auth.js";
-import { recordTransactionBody, transactionIdParams } from "./model.js";
+import { idParams } from "../../lib/schema.js";
+import { recordTransactionBody } from "./model.js";
 import {
 	getTransactionDetail,
 	getTransactions,
@@ -11,7 +12,7 @@ import {
 export const transactions = new Elysia({ prefix: "/transactions" })
 	.use(authPlugin)
 	.model({
-		"transactions.params": transactionIdParams,
+		"transactions.params": idParams,
 		"transactions.record": recordTransactionBody,
 	})
 	.get("/", async ({ user }) => getTransactions(user), {

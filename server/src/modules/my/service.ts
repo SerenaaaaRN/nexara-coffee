@@ -3,9 +3,9 @@ import { db } from "../../db/index.js";
 import { branches } from "../../db/schema/branches.js";
 import { customers, reviews } from "../../db/schema/customers.js";
 import { orders } from "../../db/schema/orders.js";
-import type { CurrentUser } from "../../lib/auth-user.js";
-import { fail, ok } from "../../lib/response.js";
-import { resolveMyScope } from "../../utils/scope.js";
+import type { CurrentUser } from "../../access/index.js";
+import { fail, ok } from "../../lib/http.js";
+import { resolveMyScope } from "../../access/index.js";
 
 /** Own-scope portal /my — tanpa can() global, filter by session.user.id (visitor allowed). */
 
