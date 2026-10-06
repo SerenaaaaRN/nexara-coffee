@@ -8,6 +8,7 @@
 	},
 	"scripts": {
 		"dev": "bun run --watch src/index.ts",
+		"start": "bun run --env-file=.env.local src/index.ts",
 		"typecheck": "tsc --noEmit",
 		"test": "bun test",
 		"db:generate": "drizzle-kit generate",
