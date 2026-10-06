@@ -10,3 +10,7 @@ export const createMyReviewBody = t.Object({
 	rating: t.Number({ minimum: 1, maximum: 5 }),
 	comment: t.Optional(t.String({ maxLength: 500 })),
 });
+
+export const updateMyPhoneBody = t.Object({
+	phone: t.String({ minLength: 1, maxLength: 15 }),
+});

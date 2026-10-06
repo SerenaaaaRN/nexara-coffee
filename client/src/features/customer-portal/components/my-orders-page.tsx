@@ -37,12 +37,10 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import {
-    createMyReviewSchema,
-    useCreateMyReview,
-} from "@/features/customer-portal/hooks/useCustomerPortalMutations";
+import { useCreateMyReview } from "@/features/customer-portal/hooks/useCustomerPortalMutations";
 import { useMyOrders } from "@/features/customer-portal/hooks/useCustomerPortalQueries";
 import type { MyOrder } from "@/features/customer-portal/types";
+import { createMyReviewSchema } from "@/features/customer-portal/types";
 import { cn } from "@/utils/cn";
 import { formatCurrency, formatDateTime } from "@/utils/format";
 import { getBadgeVariant, getStatusLabel } from "@/utils/status";

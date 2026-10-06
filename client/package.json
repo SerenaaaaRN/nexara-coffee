@@ -9,7 +9,7 @@
     "dev": "vite dev",
     "gr": "tsr generate",
     "build": "vite build",
-    "start": "vite preview --port 5173",
+    "start": "vite preview --port 5173 --host",
     "format": "biome format --write",
     "lint": "biome lint",
     "check": "biome check",

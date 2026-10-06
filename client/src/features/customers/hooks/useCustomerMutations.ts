@@ -4,23 +4,6 @@ import { customerKeys } from "@/features/query-keys";
 import { api, type Envelope, toEnvelope } from "@/lib/eden";
 
 /**
- * Mencari customer berdasarkan HP (kalau diisi) lalu nama, atau membuat baru.
- *
- * Match berlapis di server: phone yang dinormalisasi dulu (identitas stabil
- * untuk member), fallback ke nama persis. Baris baru ikut menyimpan phone
- * supaya tidak menumpuk baris tanpa identitas.
- */
-export const findOrCreateCustomer = async (input: {
-    fullName: string;
-    phone?: string;
-}): Promise<Envelope<Customer>> => {
-    const { data, error } = await api.customers["find-or-create"].post({
-        ...input,
-    });
-    return toEnvelope(data, error);
-};
-
-/**
  * Memperbarui data customer. Partial update.
  */
 export const updateCustomer = async ({
@@ -62,17 +45,6 @@ export const updateLoyaltyPoints = async (input: {
         .customers({ id: input.customerId })
         .loyalty.patch({ points: input.points });
     return toEnvelope(data, error);
-};
-
-/** @see {@link findOrCreateCustomer} */
-export const useFindOrCreateCustomer = () => {
-    const qc = useQueryClient();
-    return useMutation({
-        mutationFn: (input: { fullName: string; phone?: string }) =>
-            findOrCreateCustomer(input),
-        onSuccess: () =>
-            qc.invalidateQueries({ queryKey: customerKeys.lists() }),
-    });
 };
 
 /** @see {@link updateCustomer} */

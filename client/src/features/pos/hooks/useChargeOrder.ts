@@ -1,6 +1,6 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { useFindOrCreateCustomer } from "@/features/customers/hooks/useCustomerMutations";
+import { lookupCustomerByPhone } from "@/features/customers/hooks/useCustomerQueries";
 import { useCreateOrder } from "@/features/orders/hooks/useOrderMutations";
 import type { POSCartItem } from "@/features/pos/types";
 import { useRecordTransaction } from "@/features/transactions/hooks/useTransactionMutations";
@@ -28,7 +28,6 @@ export const useChargeOrder = ({
         useState<(typeof PAYMENT_METHODS)[number]>("cash");
     const [customerPhone, setCustomerPhone] = useState("");
 
-    const findOrCreateCustomer = useFindOrCreateCustomer();
     const createOrder = useCreateOrder();
     const recordTransaction = useRecordTransaction();
 
@@ -42,21 +41,17 @@ export const useChargeOrder = ({
 
             try {
                 if (customerPhone.trim() !== "") {
-                    const custRes = await findOrCreateCustomer.mutateAsync({
-                        fullName: customerPhone.trim(),
-                        phone: customerPhone.trim(),
-                    });
-                    if (custRes.success) {
+                    const custRes = await lookupCustomerByPhone(
+                        customerPhone.trim(),
+                    ).catch(() => null);
+                    if (custRes?.success && custRes.data) {
                         customerId = custRes.data.id;
-                    } else {
-                        console.error(
-                            "Customer creation failed:",
-                            custRes.error,
-                        );
+                    } else if (custRes && !custRes.success) {
+                        console.error("Customer lookup failed:", custRes.error);
                     }
                 }
             } catch (e) {
-                console.error("Error creating customer:", e);
+                console.error("Error looking up customer:", e);
             }
 
             const orderItems = cart.map((item) => ({

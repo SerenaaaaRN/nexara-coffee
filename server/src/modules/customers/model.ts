@@ -19,6 +19,10 @@ export const findOrCreateBody = t.Object({
 	phone: t.Optional(t.String()),
 });
 
+export const lookupCustomerBody = t.Object({
+	phone: t.String({ minLength: 1, maxLength: 20 }),
+});
+
 export const loyaltyBody = t.Object({
 	points: t.Number({ minimum: 0 }),
 });

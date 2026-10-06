@@ -24,6 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { useChargeOrder } from "@/features/pos/hooks/useChargeOrder";
 import { usePosCart } from "@/features/pos/hooks/usePosCart";
 import { usePosCatalog } from "@/features/pos/hooks/usePosCatalog";
+import { MemberCheckStatus } from "@/features/pos/components/member-check-status";
 import type { POSClientProps } from "@/features/pos/types";
 import { PAYMENT_METHODS } from "@/features/transactions/types";
 import { formatCurrency } from "@/utils/format";
@@ -279,6 +280,7 @@ export const POSClient = ({ branchId, categories, items }: POSClientProps) => {
                                     setCustomerPhone(e.target.value)
                                 }
                             />
+                            <MemberCheckStatus phone={customerPhone} />
                         </div>
                         <div className="space-y-2">
                             <Label className="text-sm font-medium">

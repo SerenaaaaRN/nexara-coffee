@@ -18,6 +18,7 @@ export const customerKeys = {
             : customerKeys.lists(),
     details: () => [...customerKeys.all, "detail"] as const,
     detail: (id: string) => [...customerKeys.details(), id] as const,
+    lookup: (phone: string) => [...customerKeys.all, "lookup", phone] as const,
 };
 
 export const employeeKeys = {

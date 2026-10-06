@@ -1,15 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { z } from "zod";
+import type {
+    CreateMyReviewInput,
+    UpdateMyPhoneInput,
+} from "@/features/customer-portal/types";
 import { myPortalKeys } from "@/features/query-keys";
 import { api, toEnvelope } from "@/lib/eden";
-
-export const createMyReviewSchema = z.object({
-    orderId: z.string().min(1),
-    rating: z.coerce.number().int().min(1).max(5),
-    comment: z.string().max(500).optional().or(z.literal("")),
-});
-
-export type CreateMyReviewInput = z.infer<typeof createMyReviewSchema>;
 
 /**
  * Membuat review milik customer yang sedang login untuk satu order completed.
@@ -27,6 +22,26 @@ export function useCreateMyReview() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (data: CreateMyReviewInput) => createMyReview(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: myPortalKeys.all });
+        },
+    });
+}
+
+/**
+ * Mengubah nomor HP profil customer milik user yang sedang login.
+ */
+export const updateMyPhone = async (input: UpdateMyPhoneInput) => {
+    const { data, error } = await api.my.phone.patch({
+        phone: input.phone,
+    });
+    return toEnvelope(data, error);
+};
+
+export const useUpdateMyPhone = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: UpdateMyPhoneInput) => updateMyPhone(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: myPortalKeys.all });
         },

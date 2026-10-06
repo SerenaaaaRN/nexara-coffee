@@ -49,8 +49,34 @@ export const createCustomer = async (
 	return ok(customer);
 };
 
-export const findOrCreateCustomer = async (
+/**
+ * Mencari customer berdasarkan nomor HP (read-only, tanpa create).
+ * Untuk verifikasi "atas nama siapa" sebelum charge di POS.
+ */
+export const lookupCustomerByPhone = async (
 	user: CurrentUser,
+	phone: string,
+) => {
+	const limited = checkRate(`customers:lookup:${user.id}`, 30, 60_000);
+	if (limited) return limited;
+
+	const digits = normalizePhone(phone);
+	if (digits === "") return ok(null);
+
+	const [customer] = await db
+		.select({
+			id: customers.id,
+			fullName: customers.fullName,
+			loyaltyTier: customers.loyaltyTier,
+			loyaltyPoints: customers.loyaltyPoints,
+		})
+		.from(customers)
+		.where(eq(customers.phone, digits))
+		.limit(1);
+	return ok(customer ?? null);
+};
+
+export const findOrCreateCustomer = async (	user: CurrentUser,
 	fullName: string,
 	phone?: string,
 ) => {

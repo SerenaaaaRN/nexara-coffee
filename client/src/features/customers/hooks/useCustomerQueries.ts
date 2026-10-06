@@ -1,5 +1,12 @@
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import type { CustomerRow } from "@/features/customers/types";
+import {
+    queryOptions,
+    useQuery,
+    useSuspenseQuery,
+} from "@tanstack/react-query";
+import type {
+    CustomerLookupResult,
+    CustomerRow,
+} from "@/features/customers/types";
 import { customerKeys } from "@/features/query-keys";
 import { STALE } from "@/features/stale-time";
 import { api, type Envelope, toEnvelope } from "@/lib/eden";
@@ -29,3 +36,32 @@ export const customersOptions = () =>
 
 /** @see {@link getCustomers} */
 export const useCustomers = () => useSuspenseQuery(customersOptions());
+
+/**
+ * Mencari customer berdasarkan nomor HP (read-only, tanpa create).
+ * Untuk verifikasi "atas nama siapa" sebelum charge di POS.
+ */
+export const lookupCustomerByPhone = async (
+    phone: string,
+): Promise<Envelope<CustomerLookupResult>> => {
+    const { data, error } = await api.customers.lookup.post({ phone });
+    return toEnvelope(data, error);
+};
+
+export const customerLookupOptions = (phoneDigits: string) =>
+    queryOptions({
+        queryKey: customerKeys.lookup(phoneDigits),
+        queryFn: () => lookupCustomerByPhone(phoneDigits),
+        staleTime: 0,
+    });
+
+/**
+ * Lookup member reaktif terhadap input kasir. Hanya jalan saat digit
+ * HP sudah sepanjang nomor valid (minimal 9 digit).
+ */
+export const useLookupCustomerByPhone = (phoneDigits: string) =>
+    useQuery({
+        ...customerLookupOptions(phoneDigits),
+        enabled: phoneDigits.length >= 9,
+        gcTime: 60_000,
+    });

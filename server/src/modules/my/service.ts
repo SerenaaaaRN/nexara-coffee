@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
 import type { CurrentUser } from "../../access/index.js";
 import { resolveMyScope } from "../../access/index.js";
 import { db } from "../../db/index.js";
@@ -6,6 +6,8 @@ import { branches } from "../../db/schema/branches.js";
 import { customers, reviews } from "../../db/schema/customers.js";
 import { orders } from "../../db/schema/orders.js";
 import { fail, ok } from "../../lib/http.js";
+import { checkRate, logAudit } from "../../utils/effects.js";
+import { normalizePhone } from "../../utils/loyalty.js";
 
 /** Own-scope portal /my — tanpa can() global, filter by session.user.id (visitor allowed). */
 
@@ -97,11 +99,76 @@ export const getMyLoyalty = async (user: CurrentUser) => {
 	return ok({
 		id: customer.id,
 		fullName: customer.fullName,
+		phone: customer.phone,
 		segment: customer.segment,
 		loyaltyPoints: customer.loyaltyPoints,
 		loyaltyTier: customer.loyaltyTier,
 		orderCount: countRow?.cnt ?? 0,
 	});
+};
+
+export const updateMyPhone = async (
+	user: CurrentUser,
+	input: { phone: string },
+) => {
+	const uid = user.id;
+	const limited = checkRate(`my:phone:${uid}`, 5, 60_000);
+	if (limited) return limited;
+
+	const digits = normalizePhone(input.phone);
+	if (digits.length < 9 || digits.length > 15) {
+		return fail(400, "Nomor HP harus terdiri dari 9-15 digit");
+	}
+
+	const [taken] = await db
+		.select({ id: customers.id })
+		.from(customers)
+		.where(and(eq(customers.phone, digits), ne(customers.userId, uid)))
+		.limit(1);
+	if (taken) return fail(400, "Nomor HP sudah digunakan");
+
+	const [existing] = await db
+		.select({ id: customers.id })
+		.from(customers)
+		.where(eq(customers.userId, uid))
+		.limit(1);
+
+	if (!existing) {
+		const [created] = await db
+			.insert(customers)
+			.values({
+				fullName: user.name ?? "Customer",
+				email: user.email ?? null,
+				phone: digits,
+				segment: "regular",
+				loyaltyPoints: 0,
+				loyaltyTier: "bronze",
+				userId: uid,
+			} as never)
+			.returning({ id: customers.id });
+		if (!created) return fail(500, "Gagal menyimpan nomor HP");
+		void logAudit({
+			actorId: uid,
+			action: "update",
+			targetTable: "customers",
+			targetId: created.id,
+			metadata: { field: "phone" },
+		});
+		return ok({ phone: digits });
+	}
+
+	await db
+		.update(customers)
+		.set({ phone: digits })
+		.where(eq(customers.id, existing.id));
+	void logAudit({
+		actorId: uid,
+		action: "update",
+		targetTable: "customers",
+		targetId: existing.id,
+		metadata: { field: "phone" },
+	});
+	return ok({ phone: digits });
 };
 
 export const createMyReview = async (

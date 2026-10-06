@@ -44,6 +44,14 @@ export type Customer = GetData<
 
 export type CustomerRow = GetData<typeof api.customers.get>[number];
 
+/**
+ * Hasil lookup member via HP (read-only, tanpa create) —
+ * sumber kebenaran dari backend (Eden treaty).
+ */
+export type CustomerLookupResult = GetData<
+    (typeof api.customers)["lookup"]["post"]
+>;
+
 export const createCustomerSchema = z.object({
     fullName: z.string().min(1, "Name is required"),
     email: z.string().email("Invalid email").optional().or(z.literal("")),

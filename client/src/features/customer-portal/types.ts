@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Customer } from "@/features/customers/types";
 import type { OrderRow } from "@/features/orders/types";
 
@@ -25,7 +26,24 @@ export type MyOrdersPage = {
 /** Profil loyalty milik customer yang sedang login. */
 export type MyLoyalty = Pick<
     Customer,
-    "id" | "fullName" | "segment" | "loyaltyPoints" | "loyaltyTier"
+    "id" | "fullName" | "phone" | "segment" | "loyaltyPoints" | "loyaltyTier"
 > & {
     orderCount: number;
 };
+
+export const createMyReviewSchema = z.object({
+    orderId: z.string().min(1),
+    rating: z.coerce.number().int().min(1).max(5),
+    comment: z.string().max(500).optional().or(z.literal("")),
+});
+
+export type CreateMyReviewInput = z.infer<typeof createMyReviewSchema>;
+
+export const updateMyPhoneSchema = z.object({
+    phone: z
+        .string()
+        .min(5, "Masukkan Nomor yang valid")
+        .max(15, "Nomor maximal 15 char"),
+});
+
+export type UpdateMyPhoneInput = z.infer<typeof updateMyPhoneSchema>;
