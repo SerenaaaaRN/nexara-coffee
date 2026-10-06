@@ -91,10 +91,9 @@ export function MyAccountPage() {
         image: session.user.image ?? null,
     };
 
-    const currentPhone =
-        loyaltyQuery.data?.success
-            ? (loyaltyQuery.data.data.phone ?? "")
-            : "";
+    const currentPhone = loyaltyQuery.data?.success
+        ? (loyaltyQuery.data.data.phone ?? "")
+        : "";
 
     return (
         <div className="space-y-6">

@@ -46,4 +46,4 @@ export const useUpdateMyPhone = () => {
             queryClient.invalidateQueries({ queryKey: myPortalKeys.all });
         },
     });
-}
+};

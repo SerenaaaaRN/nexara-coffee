@@ -19,6 +19,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
 import {
     Empty,
+    EmptyContent,
     EmptyDescription,
     EmptyMedia,
     EmptyTitle,
@@ -61,6 +62,7 @@ function OrdersContent() {
     });
 
     const orders = response.success ? response.data : [];
+    const loadError = response.success ? null : response.error;
     const [detailTarget, setDetailTarget] = useState<OrderRow | null>(null);
 
     useOrdersRealtime();
@@ -138,7 +140,22 @@ function OrdersContent() {
 
     return (
         <div className="flex flex-col gap-4">
-            {orders.length === 0 ? (
+            {loadError ? (
+                <Empty>
+                    <EmptyMedia variant="icon">
+                        <XCircle />
+                    </EmptyMedia>
+                    <EmptyTitle>Gagal memuat orders</EmptyTitle>
+                    <EmptyDescription>{loadError}</EmptyDescription>
+                    <EmptyContent>
+                        <Button
+                            variant="outline"
+                            onClick={() => window.location.reload()}>
+                            Coba lagi
+                        </Button>
+                    </EmptyContent>
+                </Empty>
+            ) : orders.length === 0 ? (
                 <Empty>
                     <EmptyMedia variant="icon">
                         <Coffee />

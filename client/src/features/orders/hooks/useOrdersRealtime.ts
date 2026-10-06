@@ -52,7 +52,11 @@ export function useOrdersRealtime() {
         return () => {
             clearTimeout(debounceTimer);
             channel.unsubscribe();
-            client.close();
+            try {
+                void Promise.resolve(client.close()).catch(() => {});
+            } catch {
+                // abaikan error cleanup Ably
+            }
             ablyRef.current = null;
         };
     }, [queryClient]);

@@ -10,7 +10,11 @@ export const ORDER_STATUSES = [
 
 export const getOrdersQuery = t.Object({
 	branchId: t.Optional(t.String()),
-	status: t.Optional(t.UnionEnum([...ORDER_STATUSES] as [string, ...string[]])),
+	status: t.Optional(
+		t.UnionEnum([...ORDER_STATUSES] as [string, ...string[]], {
+			default: undefined,
+		}),
+	),
 	dateFrom: t.Optional(t.String()),
 	dateTo: t.Optional(t.String()),
 });
