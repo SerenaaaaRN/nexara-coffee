@@ -1,1 +1,1 @@
-export { DELETE, default, GET, PATCH, POST } from "../server/dist/entry.js";
+export { DELETE, default, GET, PATCH, POST, PUT } from "../server/dist/entry.js";
