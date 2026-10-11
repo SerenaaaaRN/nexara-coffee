@@ -34,7 +34,7 @@ It is primarily an internal tool used by head office admins, branch managers, ca
 
 ### Split Architecture (read this before touching code)
 
-Monorepo with bun workspaces + turbo (`client/`, `server/`). Root scripts: `dev` (turbo, both), `dev:client`, `dev:server`, `build:api` (`bun build server/src/app.ts` → `server/dist/entry.js`, re-exported by `api/index.ts` for Vercel).
+Monorepo with bun workspaces + turbo (`client/`, `server/`). Root scripts: `dev` (turbo, both), `dev:client`, `dev:server`. Deploy via Vercel Services mode (`vercel.json`: service `client` = Vite, service `server` = Elysia via `server/src/app.ts` default export; no manual API bundling).
 
 | Package | Role | Status |
 |---|---|---|
@@ -141,7 +141,7 @@ client/
 ```
 server/src/
 ├── app.ts                         # Elysia root: openapiDocs + betterAuth + routes + errorPlugin.
-│                                  # Export type App (untuk Eden) + fetch handlers (untuk api/index.ts)
+│                                  # Export type App (untuk Eden) + default export (entrypoint service Elysia di Vercel)
 ├── index.ts                       # bun run — listen PORT (default 3000)
 ├── env.ts                         # requireEnv() — throw at startup, no ?? "" on critical vars
 ├── routes/                        # api.ts (agregasi 19 modul, prefix /api), health.ts,
@@ -212,7 +212,7 @@ Module pattern: `model.ts` (TypeBox schemas, single source of truth) → `.model
 
 ### Core
 - React 19 + Vite SPA (client) — TanStack Router file-based; Start fully removed
-- Elysia 1.4.30 on Bun (server) — file `server/src/app.ts`, standalone `bun run src/index.ts`, deploy via `bun build` → `api/index.ts`
+- Elysia 1.4.30 on Bun (server) — file `server/src/app.ts`, standalone `bun run src/index.ts`, deploy via Vercel Services (`framework: elysia`, entrypoint `src/app.ts`)
 - TypeScript (strict mode, `tsc --noEmit` must stay green in both packages)
 
 ### Database & Backend

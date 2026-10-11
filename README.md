@@ -159,7 +159,6 @@ bun run dev:server   # server only (bun --watch src/index.ts)
 
 ```bash
 bun run build      # production client build → client/dist
-bun run build:api  # bundle the API for Vercel → server/dist/entry.js
 bun run typecheck  # tsc --noEmit in both packages
 ```
 
@@ -325,10 +324,10 @@ UPDATE "user" SET role = 'super_admin' WHERE email = 'you@example.com';
 
 ## 🚀 Deployment
 
-Deploy to Vercel (single domain, client + API same-origin):
+Deploy to Vercel (single domain, client + API same-origin, Services mode):
 
-1. `bun run build:api` bundles the Elysia app to `server/dist/entry.js`, re-exported by `api/index.ts` as serverless functions; `bun run build` outputs the client to `client/dist` (see `vercel.json`: `buildCommand`, `outputDirectory`).
-2. `vercel.json` rewrites route `/api/*` and `/openapi/*` to the API and everything else to the SPA (`/index.html`).
+1. `vercel.json` defines two services — `client` (Vite, `client/`) and `server` (Elysia, `server/`, auto-detected via `server/src/app.ts` default export). Each service builds independently with its framework preset; no manual API bundling needed.
+2. Top-level rewrites route `/api/*` and `/openapi/*` to the `server` service and everything else to the `client` SPA.
 3. Fill in all environment variables from `server/.env.example` in the project settings. For production, adjust three auth-related values:
    - `BETTER_AUTH_URL` = the production URL (e.g. `https://xxx.vercel.app`), not localhost
    - add the production URL to `BETTER_AUTH_TRUSTED_ORIGINS`

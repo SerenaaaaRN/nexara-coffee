@@ -25,7 +25,6 @@
     "start": "turbo run start",
     "build": "bun run build:client",
     "build:client": "bun run --cwd client build",
-    "build:api": "bun build server/src/app.ts --target=bun --outfile server/dist/entry.js --minify-syntax --minify-whitespace",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "check": "turbo run check",
