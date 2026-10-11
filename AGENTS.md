@@ -2,6 +2,15 @@
 
 > Primary context file for Agents Code agents working on this Nexara project.
 > Read this file first before making any changes.
+>
+> **Split architecture — read the section matching your task:**
+> - Frontend work (`client/`) → §About, §Client Structure, §Shared Frontend Rules, §Transition (for direction).
+> - Backend work (`server/`) → §Server Structure, §Backend API Conventions, §Transition.
+> - Cross-cutting (auth, RBAC, DB, env) → §Better Auth, §RBAC, §Database, §Environment Variables.
+>
+> **Current status: `client/` (Vite SPA murni) memanggil `server/` (Elysia API)
+> via Eden Treaty, same-origin. TanStack Start sudah dilepas total
+> (server-fns, Nitro/SSR bits, `api/auth/$.ts` — lihat §Transition yang sudah selesai).
 
 ## Available Skills
 
@@ -9,12 +18,13 @@ These skills are installed and can be loaded with `skill` tool when working on r
 
 | Skill | When to use |
 |---|---|
-| [tanstack-start](skill:tanstack-start) | SSR, server functions, deployment, Vite/Nitro config |
-| [tanstack-router](skill:tanstack-router) | File-based routing, route loaders, `beforeLoad`, search params |
-| [tanstack-query-best-practices](skill:tanstack-query-best-practices) | Query keys, staleTime, cache invalidation, mutations |
-| [tanstack-table](skill:tanstack-table) | Headless table logic, sorting, filtering, pagination |
+| [tanstack-start](skill:tanstack-start) | 🗄️ ARSIP — Start sudah dilepas dari repo. Jangan dipakai; hanya referensi historis |
+| [tanstack-router](skill:tanstack-router) | File-based routing, route loaders, `beforeLoad`, search params (stays — router is not removed) |
+| [tanstack-query-best-practices](skill:tanstack-query-best-practices) | Query keys, staleTime, cache invalidation, mutations (client) |
+| [tanstack-table](skill:tanstack-table) | Headless table logic, sorting, filtering, pagination (client) |
 | [better-auth-best-practices](skill:better-auth-best-practices) | Auth setup, session management, OAuth, server/client config |
 | [shadcn](skill:shadcn) | Adding/fixing shadcn components, styling conventions |
+| [elysiajs](skill:elysiajs) | ALL `server/` work — routes, TypeBox validation, macros, guards, plugins, Eden. See `.agents/skills/elysiajs/SKILL.md` |
 
 ## About the Project
 
@@ -22,13 +32,26 @@ These skills are installed and can be loaded with `skill` tool when working on r
 
 It is primarily an internal tool used by head office admins, branch managers, cashiers, baristas, and franchise owners to operate the entire cafe network — plus a public landing page (`/`) and a customer self-service portal (`/my`) for registered members.
 
+### Split Architecture (read this before touching code)
+
+Monorepo with bun workspaces + turbo (`client/`, `server/`). Root scripts: `dev` (turbo, both), `dev:client`, `dev:server`, `build:api` (`bun build server/src/app.ts` → `server/dist/entry.js`, re-exported by `api/index.ts` for Vercel).
+
+| Package | Role | Status |
+|---|---|---|
+| `client/` | Vite SPA dashboard (React 19). Tanpa TanStack Start (`index.html` → `src/main.tsx` → `RouterProvider`), data via Eden Treaty ke `server/` | Terhubung ke `server/`, same-origin |
+| `server/` | Elysia 1.4.30 API (Bun). Drizzle ORM + `postgres.js`, 19 modul, OpenAPI at `/openapi/json` | Live standalone (`bun run src/index.ts`), dikonsumsi `client/` via Eden |
+
+Satu lapis DB (`server/src/db` Drizzle) dan satu setup Better Auth (`server/src/lib/auth.ts`, drizzle adapter).
+
 ### Business Model
 - Head office sets menu standards, base prices, and brand guidelines
 - Each branch can be managed directly by HQ (corporate-owned) or by partners/franchise owners
 - Branches have limited autonomy: they can manage stock, staff schedules, and request restock — but cannot change menu/pricing without HQ approval
 - Franchise branch revenue is shared according to a commission scheme, disbursed via the Payouts feature
 
-**Built:** overview dashboard (3 tabs, 8 charts, 2 tables), auth flow (login/register/forgot-reset password/Google OAuth), customers (card grid + sheet detail + edit/delete — TANPA manual add, akun lahir via self-register; order count via rpc `get_customer_order_counts`), kasir & setoran harian (input + approve/reject + POS reconciliation), orders (queue + status management + Ably realtime), POS (single-file client + hooks `usePosCart`/`usePosCatalog`/`useChargeOrder`, checkout + member lookup via HP saja — field Customer Name dihapus), chat (realtime messaging, DM, branch channels, Ably integration — staff only), maps (MapLibre GL, branch markers, popup, search), menu CRUD (grid, categories, Cloudinary image upload, RHF forms), branches CRUD (table + form + franchise owner assignment), employee CRUD (TanStack Table + shadcn + FilterToolbar), reviews (list + moderate + customer self-review per completed order), transactions (list + filter), payouts (list + approve), notifications (list + mark read), audit log (timeline with search, action/table filter, expandable metadata), customer portal `/my` (order history infinite scroll 20/page incl. offline cashier-recorded orders, loyalty member card, account self-service, per-order review dialog), guided tour (driver.js — 9 tur: `pengenalan` multi-halaman + 7 tur halaman dashboard + `sambutan` satu alur utuh untuk portal `/my`; full spec di `TOUR.md`).
+**Built (client):** overview dashboard (3 tabs, 8 charts, 2 tables), auth flow (login/register/forgot-reset password/Google OAuth), customers (card grid + sheet detail + edit/delete — TANPA manual add, akun lahir via self-register; order count via rpc `get_customer_order_counts`), kasir & setoran harian (input + approve/reject + POS reconciliation), orders (queue + status management + Ably realtime), POS (single-file client + hooks `usePosCart`/`usePosCatalog`/`useChargeOrder`, checkout + member lookup via HP saja — field Customer Name dihapus), chat (realtime messaging, DM, branch channels, Ably integration — staff only), maps (MapLibre GL, branch markers, popup, search), menu CRUD (grid, categories, Cloudinary image upload, RHF forms), branches CRUD (table + form + franchise owner assignment), employee CRUD (TanStack Table + shadcn + FilterToolbar), reviews (list + moderate + customer self-review per completed order), transactions (list + filter), payouts (list + approve), notifications (list + mark read), audit log (timeline with search, action/table filter, expandable metadata), customer portal `/my` (order history infinite scroll 20/page incl. offline cashier-recorded orders, loyalty member card, account self-service, per-order review dialog).
+
+**Built (server):** 19 Elysia modules (overview, kasir, orders, menu, branches, customers, employee, transactions, payouts, reviews, chat, notifications, audit, settings, maps, my-portal, landing, ably + dashboard meta), `requireRole` RBAC macro, `.model()` + string-ref validation (52 named schemas), `ok()/fail()` envelope, token-bucket rate limiting, branch-scope filtering.
 
 **Not yet implemented:** AI Assistant page.
 
@@ -49,8 +72,8 @@ This dashboard is **all-in-one** — all daily operations are input directly thr
 Setoran is a **manual cash declaration** — it is NOT automatically derived from POS transactions. This creates an audit trail of physical cash accountability:
 
 - **POS** → records each sale with `paymentMethod` (cash/qris/debit/credit)
-- **Setoran** → cashier declares physical cash at end of day; manager approves/rejects. One setoran per branch per day (`UNIQUE(branch_id, date)`). `createSetoranFn` uses SELECT-then-INSERT/UPDATE pattern: checks for existing setoran on same branch+date; if found and pending, updates it; if not found, inserts new. Insert race handled via unique-violation (`23505`) retry. Prevents duplicates when unique constraint exists.
-- **Reconciliation**: `getExpectedCashFn` (`kasir/hooks/useKasirQueries.ts`) queries `transactions` table grouped by `paymentMethod`, filtered by `DATE(createdAt)`. The result auto-fills the setoran form's `amount` so the cashier only confirms or adjusts.
+- **Setoran** → cashier declares physical cash at end of day; manager approves/rejects. One setoran per branch per day (`UNIQUE(branch_id, date)`). Server `createSetoran` uses SELECT-then-INSERT/UPDATE pattern: checks for existing setoran on same branch+date; if found and pending, updates it; if not found, inserts new. Insert race handled via unique-violation retry. Prevents duplicates when unique constraint exists.
+- **Reconciliation**: `getExpectedCash` queries `transactions` grouped by `paymentMethod`. The result auto-fills the setoran form's `amount` so the cashier only confirms or adjusts.
 - **Form UX** (`kasir-form-dialog.tsx`): shows a `KasirPosSummary` card with Total/Cash/QRIS/Debit/Credit breakdown + difference indicator. Amount auto-fills to `cashTotal` unless the user manually edits it.
 - **Detail dialog** (`kasir-detail-dialog.tsx`): shows POS Comparison section (Declared vs Expected Cash vs Difference/Surplus/Shortage) to help approvers spot discrepancies.
 
@@ -58,133 +81,122 @@ Setoran is a **manual cash declaration** — it is NOT automatically derived fro
 
 Visitor = customer. Separate layout (`routes/my.tsx` + `my/` children, own shell + tab nav) — never enters `_dashboard`.
 
-- **Identity vs CRM**: `user` (Better Auth login) vs `customers` (business profile: name, phone, segment, points, tier). Linked by nullable `customers.user_id → user.id` (`UNIQUE`, `ON DELETE SET NULL`). POS walk-in rows stay `user_id = NULL` forever — by design, never converted to accounts. Accounts are born only via `/register`.
-- **Attribution**: portal queries match `created_by = uid OR customer_id IN (own profile ids)` — offline cashier-recorded orders appear. POS member lookup by **phone saja** (`findOrCreateCustomerFn` matches normalized phone first, then exact name; field Customer Name di dialog POS dihapus, fallback `fullName = phone`); new POS rows store phone.
-- **Infinite scroll** (`/my/orders`, 20/page via `useSuspenseInfiniteQuery` + sentinel `IntersectionObserver`): `getMyOrdersFn` terima validator `{ page, pageSize }`, pakai `.range()`, return `MyOrdersPage { rows, nextPage, total, completedTotal }`. StatCard pakai `total`/`completedTotal` dari server (bukan `orders.length`). Route loader pakai `prefetchInfiniteQuery`. Wajib infinite (bukan tabel sort) karena halaman ini tabel polos tanpa sorting TanStack Table.
-- **Accrual** (`useOrderMutations.ts`, best-effort, never blocks status update): on transition to `completed` (terminal — no double accrual, cancel of completed rejected) with non-null `customer_id` → `+floor(total / 10_000)` points, tier recomputed. Constants in `customers/types.ts`: `POINTS_PER_RP`, `TIER_THRESHOLDS` (silver 100 / gold 500 / platinum 1000), `tierForPoints()`, `earnedPointsForTotal()`, `normalizePhone()`.
-- **Self-review**: `createMyReviewFn` (own-scope, completed own order only, 1 order = 1 review via `order_id` check, `status: "pending"` for staff moderation). No DB migration needed — `reviews` schema already sufficient. No global `reviews` perm for visitor.
+- **Identity vs CRM**: `user` (Better Auth login) vs `customers` (business profile: name, phone, segment, points, tier). Linked by nullable `customers.user_id → user.id` (`UNIQUE`, `ON DELETE SET NULL` — max 1 profile per login). POS walk-in rows stay `user_id = NULL` forever — by design, never converted to accounts. Accounts are born only via `/register`.
+- **Attribution**: portal queries match `created_by = uid OR customer_id IN (own profile ids)` — offline cashier-recorded orders appear. POS member lookup by **phone saja** (matches normalized phone first, then exact name; fallback `fullName = phone`); new POS rows store phone.
+- **Infinite scroll** (`/my/orders`, 20/page via `useSuspenseInfiniteQuery` + sentinel `IntersectionObserver`): returns `{ rows, nextPage, total, completedTotal }`. StatCard uses server `total`/`completedTotal` (not `orders.length`). Wajib infinite (bukan tabel sort) karena halaman ini tabel polos tanpa sorting TanStack Table.
+- **Accrual** (best-effort, never blocks status update): on transition to `completed` (terminal — no double accrual, cancel of completed rejected) with non-null `customer_id` → `+floor(total / 10_000)` points, tier recomputed. Constants: `POINTS_PER_RP`, `TIER_THRESHOLDS` (silver 100 / gold 500 / platinum 1000), `tierForPoints()`, `earnedPointsForTotal()`, `normalizePhone()`.
+- **Self-review**: own-scope, completed own order only, 1 order = 1 review via `order_id` check, `status: "pending"` for staff moderation. No global `reviews` perm for visitor.
 - New reviews must also invalidate `myPortalKeys.all` (portal cache) alongside `orderKeys`.
 
 ## Project Structure
 
+### `client/` — frontend SPA (Vite murni, TanStack Router)
+
 ```
-database/                         # Database layer (root, bukan src/)
-├── schema/                       # DDL SQL murni per domain (9 file, 22 tabel) — source of truth skema
-├── migrations/                    # Migrasi SQL bernomor — apply via psql "$DIRECT_URL" -f
-├── server.ts                     # supabaseAdmin (service_role, server-only)
-├── client.ts                     # supabase browser (publishable key, realtime)
-└── types.ts                      # Row types + Database (tipe manual, mengikuti SQL)
-src/
-├── routes/                          # TanStack Router file-based routes
-│   ├── __root.tsx                   # Root layout (head, shell, providers)
-│   ├── _auth.tsx                    # Auth layout (centered card, no sidebar)
-│   ├── _auth/                       # Auth pages — no dashboard shell
-│   │   ├── login.tsx
-│   │   ├── register.tsx
-│   │   ├── forgot-password.tsx
-│   │   └── reset-password.tsx
-│   ├── _dashboard.tsx               # Pathless layout file — wraps all dashboard pages
-│   ├── _dashboard/                  # Folder — children inherit _dashboard layout
-│   │   ├── index.tsx                # / (dashboard landing, redirects to overview)
-│   │   ├── overview.tsx             # /overview
-│   │   ├── kasir.tsx                # /kasir
-│   │   ├── orders.tsx               # /orders
-│   │   ├── menu.tsx                 # /menu
-│   │   ├── branches.tsx             # /branches
-│   │   ├── maps.tsx                 # /maps
-│   │   ├── customers.tsx            # /customers
-│   │   ├── reviews.tsx              # /reviews
-│   │   ├── transactions.tsx         # /transactions
-│   │   ├── employee.tsx             # /employee
-│   │   ├── payouts.tsx              # /payouts
-│   │   ├── chat.tsx                 # /chat
-│   │   ├── audit.tsx                # /audit
-│   │   ├── notifications.tsx        # /notifications
-│   │   └── settings.tsx             # /settings
-│   ├── pos.tsx                      # /pos (separate layout, no sidebar, staff roles only)
-│   ├── my.tsx                       # /my customer portal layout (visitor only, own shell + tab nav)
-│   ├── my/                          # Folder — children inherit my layout
-│   │   ├── index.tsx                # /my → redirects to /my/orders
-│   │   ├── orders.tsx               # /my/orders (own order history + review dialog)
-│   │   ├── member.tsx               # /my/member (loyalty card)
-│   │   └── account.tsx              # /my/account (profile + password self-service)
-│   └── api/
-│       └── auth/$.ts                # Better Auth handler (catch-all)
-├── components/
-│   ├── ui/                          # shadcn/ui (styling only)
-│   ├── layout/                      # AppSidebar, NavMain, NavUser, TeamSwitcher
-│   ├── shared/                      # BranchSwitcher, ConfirmDialog, CurrencyInput, DynamicBreadcrumb,
-│   │                                # FilterToolbar, Kanban, SectionHeader, StatCard, TableSkeleton,
-│   │                                # ThemeProvider, ThemeSheet, Timeline
-│   └── fallbacks/                   # Auth, Dashboard, POS, error-page (skeletons + shared error/404)
-├── features/{domain}/               # All domain logic — self-contained
-│   ├── hooks/
-│   │   ├── use{Domain}Queries.ts    # Server fns + TanStack Query hooks (GET)
-│   │   ├── use{Domain}Mutations.ts  # Mutation hooks (POST/PUT/DELETE)
-│   │   └── ...                      # Domain-specific hooks (table, realtime, etc.)
-│   ├── components/                  # TSX — max 250 lines per file
-│   │   ├── {domain}-table.tsx       # TanStack Table + shadcn styling
-│   │   └── ...                      # Dialogs, forms, cards
-│   ├── types.ts                     # Types + Zod schemas
-│   ├── utils.ts                     # Domain helpers (optional)
-│   ├── data.ts                      # Static data/constants (optional)
-├── features/query-keys.ts           # Centralized TanStack Query key definitions
-├── features/stale-time.ts           # staleTime constants: FREQUENT(30s), NORMAL(60s), SLOW(5min), STATIC(∞)
-├── features/tour/                   # Guided tour driver.js (types, data, registry, storage, launcher — spec di TOUR.md)
-├── features/customer-portal/        # Portal /my (visitor): orders, loyalty member, account
-├── lib/
-│   ├── auth.ts                      # Better Auth instance
-│   ├── auth-client.ts               # Client-side auth client
-│   ├── auth-utils.ts                # getSessionFn, loadDashboardFn (server functions)
-│   ├── rbac.ts                      # can() helper + permission matrix
-│   ├── with-auth.server.ts          # requireAuth(), requireAccess(), requireAccessAction(), requireAccessRSC()
-│   ├── rate-limit.ts                # Rate limiter (LRUCache)
-│   ├── resend.ts                    # Resend singleton
-│   ├── ably.server.ts               # Ably REST singleton (server-side)
-│   ├── audit-log.ts                 # logAudit() helper
-│   ├── cloudinary.ts                # Image upload/delete helpers
-│   └── realtime.ts                  # Ably Realtime client (browser-side)
-├── stores/                          # Zustand
-│   ├── branch.ts                    # activeBranch context
-│   └── sidebar.ts                   # sidebar isOpen (persisted)
-├── hooks/                           # Shared hooks (used by 2+ domains)
-│   ├── useConfirmAction.ts          # Generic confirmation dialog
-│   ├── useFormDialog.ts             # RHF + Zod form dialog
-│   ├── useImageUpload.ts            # Image upload with preview & validation
-│   ├── useMobile.ts                 # Responsive/mobile detection
-│   ├── useTableState.ts             # TanStack Table state (sort, filter, pagination)
-│   ├── useTheme.ts                  # Theme shortcut (D key toggle)
-│   └── useAblyToken.ts              # Ably token server function
-├── integrations/
-│   └── tanstack-query/              # Query client setup, provider, devtools
-├── utils/
-│   ├── cn.ts                        # clsx + tailwind-merge
-│   ├── convert-types.ts             # SnakeToCamel / ToCamelCase type helpers
-│   ├── format.ts                    # Date, currency, label formatting (id-ID)
-│   ├── branch-scope.ts              # getAccessibleBranchIds() per-request memo + branchFilter()
-│   ├── group-by.ts                  # groupByStatus() + groupByDate()
-│   └── status.ts                    # Status badge variants & labels
-├── styles.css                       # Tailwind v4 + shadcn CSS
-├── router.tsx                       # Router creation + SSR query integration
-└── routeTree.gen.ts                 # Auto-generated by TanStack Router
+client/
+├── index.html / src/main.tsx        # Entry: StrictMode → providers → RouterProvider
+├── src/
+│   ├── routes/                    # TanStack Router file-based routes
+│   │   ├── __root.tsx / _auth.tsx / _dashboard.tsx / pos.tsx / my.tsx
+│   │   ├── _dashboard/            # overview, kasir, orders, menu, branches, maps, customers,
+│   │   │                          # reviews, transactions, employee, payouts, chat, audit,
+│   │   │                          # notifications, settings (+ index → overview)
+│   │   └── my/                    # orders.tsx, member.tsx, account.tsx (+ index → orders)
+│   ├── components/
+│   │   ├── ui/                    # shadcn/ui (styling only)
+│   │   ├── layout/                # AppSidebar, NavMain, NavUser, TeamSwitcher
+│   │   ├── shared/                # BranchSwitcher, ConfirmDialog, CurrencyInput, DynamicBreadcrumb,
+│   │   │                          # FilterToolbar, Kanban, SectionHeader, StatCard, TableSkeleton,
+│   │   │                          # ThemeProvider, ThemeSheet, Timeline
+│   │   └── fallbacks/             # Auth, Dashboard, POS, error-page (skeletons + shared error/404)
+│   ├── features/{domain}/         # Domain logic — self-contained
+│   │   ├── hooks/
+│   │   │   ├── use{Domain}Queries.ts    # Eden Treaty queryFn + TanStack Query hooks
+│   │   │   ├── use{Domain}Mutations.ts  # Eden Treaty mutationFn
+│   │   │   └── ...                      # Domain-specific hooks (table, realtime, etc.)
+│   │   ├── components/            # TSX — max 250 lines per file
+│   │   ├── types.ts / utils.ts / data.ts
+│   ├── features/query-keys.ts     # Centralized TanStack Query keys (STAYS — kunci tidak berubah)
+│   ├── features/stale-time.ts     # staleTime constants (STAYS)
+│   ├── features/customer-portal/  # Portal /my (visitor)
+│   ├── lib/
+│   │   ├── eden.ts                # Eden Treaty client (`treaty<App>`, same-origin) + `Envelope`/`toEnvelope`/`GetData`
+│   │   ├── session.ts             # `getSession()` + `loadDashboard()` via server (guards/loaders)
+│   │   ├── auth-client.ts         # `createAuthClient()` same-origin, `inferAdditionalFields` dari tipe auth server
+│   │   ├── rbac.ts                # Matriks permission — cermin dari server/src/access/rbac.ts
+│   │   └── realtime.ts            # Ably Realtime client (browser-side, STAYS)
+│   ├── stores/                    # Zustand: branch.ts, sidebar.ts (STAYS)
+│   ├── hooks/                     # Shared hooks (STAYS): useConfirmAction, useFormDialog, useImageUpload,
+│   │                              # useMobile, useTableState, useTheme, useAblyToken
+│   ├── integrations/tanstack-query/ # Query client setup, provider, devtools (STAYS)
+│   ├── utils/                     # cn, convert-types, format, group-by, status
+│   │                              # (branch-scope dilepas — scope dihitung di server)
+│   ├── styles.css / router.tsx / routeTree.gen.ts / main.tsx
+├── vite.config.ts                 # Vite murni + TanStackRouterVite + proxy /api/* → :3000 (dev)
+└── RULES.md                       # Client-side rule detail
 ```
 
+### `server/` — backend API (Elysia, source of truth untuk API)
+
+```
+server/src/
+├── app.ts                         # Elysia root: openapiDocs + betterAuth + routes + errorPlugin.
+│                                  # Export type App (untuk Eden) + fetch handlers (untuk api/index.ts)
+├── index.ts                       # bun run — listen PORT (default 3000)
+├── env.ts                         # requireEnv() — throw at startup, no ?? "" on critical vars
+├── routes/                        # api.ts (agregasi 19 modul, prefix /api), health.ts,
+│                                  # sessions.ts, openapi.ts (/openapi/json — 62 paths / 52 schemas)
+├── plugins/
+│   ├── auth.ts                    # betterAuth instance + macro auth / requireRole([resource, action])
+│   └── error.ts                   # onError: VALIDATION→400, NOT_FOUND→404, else 500 (envelope fail)
+├── access/                        # ★ Otorisasi satu pintu — import dari access/index.js saja
+│   ├── index.ts                   # Barrel: export * (rbac, scope, user)
+│   ├── rbac.ts                    # ROLES/Role/Resource/Action/PERMISSIONS/RESOURCES/ACTIONS/
+│   │                              # NAV_GUARDS/can() (pure, tanpa DB)
+│   ├── scope.ts                   # branchFilter() + getAccessibleBranchIds() (1 query/request,
+│   │                              # null = super_admin) + emptyScope/assertBranchAccess/resolveMyScope
+│   └── user.ts                    # CurrentUser { id, role, name?, email?, image? }
+├── lib/                           # Inti app murni (tanpa I/O)
+│   ├── http.ts                    # ok(data) / fail(code, msg) — satu-satunya envelope
+│   ├── schema.ts                  # idParams + paginationQuery/pageResult (shared validators)
+│   └── auth.ts                    # Better Auth instance (drizzle adapter)
+├── infra/                         # Klien SDK pihak ketiga saja
+│   ├── ably.ts / email.ts (resend) / images.ts (cloudinary)
+├── utils/
+│   ├── effects.ts                 # publishAbly (fire-and-forget) + checkRate + token-bucket
+│   │                              # rate limiter O(1) + logAudit (fire-and-forget)
+│   └── loyalty.ts                 # POINTS_PER_RP, TIER_THRESHOLDS, tierForPoints(),
+│                                  # earnedPointsForTotal(), normalizePhone()
+├── db/                            # Drizzle ORM (postgres-js). schema/ per domain + index.ts.
+│                                  # Semua id text + $defaultFn(crypto.randomUUID()). SQL via drizzle-kit
+└── modules/{domain}/              # 19 modul: index.ts (controller) + service.ts + model.ts
+    # overview, kasir, orders, menu, branches, customers, employee, transactions,
+    # payouts, reviews, chat, notifications, audit, settings, maps, my, landing, ably
+```
+
+Module pattern: `model.ts` (TypeBox schemas, single source of truth) → `.model()` + string-ref di `index.ts` → `service.ts` (plain async function, terima `CurrentUser`, return `ok()/fail()`, tanpa Elysia `Context`, return-jangan-throw). Contoh: `.model({ "menu.createItem": createMenuItemBody })` + `body: "menu.createItem"` + `{ requireRole: ["menu","create"] }`.
+
 ### Architecture Rules
+
+**Client:**
 - **Routes are thin** — only routing config: `validateSearch`, `beforeLoad`, `loader`, `head`, `pendingComponent`, `errorComponent`. No inline page components.
 - **Feature page components are self-contained** — each route's component lives in `features/{domain}/components/{domain}-page.tsx`, uses `getRouteApi()` + `useSession()` internally.
 - **No Shell/Client intermediary layers** — absorb into the page component or split into focused sub-components.
-- SQL is source of truth: `database/schema/*.sql` dulu, `database/types.ts` mengikuti (manual, tanpa generate)
-- Each feature is built **vertically**: types → server functions → hooks → components → route
-- **TSX files: 250 is the split floor** — below 250 lines do not split into new files; compose same-flow components in 1 file (composite). Split only above ~350 lines or when logic separates cleanly
-- **Non-TSX files** (types, utils) have no line limit.
+- Each feature is built **vertically**: types → hooks → components → route. Finish each feature 100% (buildable) before moving on; refactor only after complete.
+- **TSX files: 250 is the split floor** — below 250 lines do not split; compose same-flow components in 1 file. Split only above ~350 lines or when logic separates cleanly. **Non-TSX files** have no line limit.
 - **Global layout components** stay in `src/components/layout/`, not in features.
-- **Feature hooks**: All server functions + query hooks + mutation hooks live in `src/features/{domain}/hooks/`. Hooks are **split** into `use{Domain}Queries.ts` (queries) and `use{Domain}Mutations.ts` (mutations). Additional UI hooks (table state, realtime) use separate files like `use{Domain}Table.tsx`.
-- **Data fetching**: TanStack Query hooks (`useSuspenseQuery`) call `createServerFn` directly. No data fetching in route loaders (route loaders optional for SSR prefetch only).
-- **Sorting/filtering/pagination**: TanStack Table handles all of these. No custom `useSearch`, `useFilters`, `useSort` hooks.
-- **shadcn Table** provides styling markup only. TanStack Table provides the headless logic.
-- **Arrow functions only** — semua komponen, hook, dan helper ditulis sebagai arrow function (`export const Xxx = (...) => { ... };`), bukan `function` declaration.
+- **Feature hooks**: split `use{Domain}Queries.ts` / `use{Domain}Mutations.ts`. No custom `useSearch`/`useFilters`/`useSort` — TanStack Table handles it.
+- **Arrow functions only** — semua komponen, hook, dan helper sebagai arrow function, bukan `function` declaration.
 
-### UI Consistency Rule (CRITICAL)
+**Server:**
+- Routes (`index.ts`) hanya routing + validasi + delegasi 1 baris ke service. Jangan pass seluruh Elysia `Context` ke service — destructure yang dibutuhkan saja.
+- Service = plain async function (bukan class), decoupled dari Elysia agar testable. Tipe input diturunkan dari model (`typeof schema.static`), jangan deklarasi ulang.
+- Semua return adalah `ok(data)` / `fail(code, msg)`. Pesan 404 standar: `"{Entity} not found"`.
+- Validasi: `t.Number` untuk body JSON, `t.Numeric` hanya untuk query/params (coercion string→number). No `as never` / `user as` di controller.
+- Otorisasi hanya lewat macro (`auth` / `requireRole`) + helper `access/` (`can`, `branchFilter`, `assertBranchAccess`, `resolveMyScope`). `/my` portal = own-scope via `session.user.id`, tanpa `can()` global.
+- Rate limit via `checkRate()` (token bucket). Tidak ada plugin rate-limit.
+
+### UI Consistency Rule (CRITICAL, client)
 - **No unilateral redesign** — no layout changes, no styling differences without explicit approval
 - New components must follow the existing design language (spacing, typography, colors, icons, shadcn variants)
 - When in doubt between "cleaner" and "consistent with existing UI", choose **consistent**
@@ -192,112 +204,141 @@ src/
 - **Forbidden:** changing padding, margin, colors, fonts, spacing, icons, grid layout, or element order in existing components
 
 ### Per-Feature Execution Order
-Every feature must be completed in this exact order. **Do not skip steps. Finish each step before moving to the next.**
-
-```
-1. features/{domain}/types.ts + features/{domain}/hooks/ ← types, server fns, query hooks, mutation hooks
-2. features/{domain}/components/                        ← build UI, consistent with existing design
-3. route file + features/{domain}/components/{domain}-page.tsx ← thin route imports page component
-```
-
-Additional rules:
-- Before writing server functions, read the feature types and related components first to ensure return types match component expectations
-- Do NOT build hooks for all features first before touching UI — this causes type/data mismatches
-- Each feature must be **100% complete** (buildable) before moving to the next feature
-- If you find a repeating pattern, refactor only after the feature is complete (no refactoring mid-feature)
+- **Client:** `features/{domain}/types.ts + hooks/` → `components/` → route + `{domain}-page.tsx` (existing features stay; new data needs go to server first).
+- **Server:** `modules/{domain}/model.ts` → `service.ts` → `index.ts` + `.model()` registration. Types/hooks/components must match before building UI.
+- Before writing server functions, read the feature types and related components first to ensure return types match component expectations.
 
 ## Tech Stack
 
 ### Core
-- TanStack Start (Vite + Nitro)
-- React 19
-- TypeScript (strict mode)
+- React 19 + Vite SPA (client) — TanStack Router file-based; Start fully removed
+- Elysia 1.4.30 on Bun (server) — file `server/src/app.ts`, standalone `bun run src/index.ts`, deploy via `bun build` → `api/index.ts`
+- TypeScript (strict mode, `tsc --noEmit` must stay green in both packages)
 
 ### Database & Backend
-- **Better Auth** — authentication, session, OAuth (Google). Uses `tanstackStartCookies()` plugin. Client uses `createAuthClient()` from `better-auth/react`. Session di-cache via cookie (JWT) — lihat konvensi Better Auth. Adapter: `kyselyAdapter` (`@better-auth/kysely-adapter` + `kysely` + `pg`, via pooler `DATABASE_URL`).
-- **Resend** — email delivery for password reset emails.
-- **Supabase Postgres (prod)** — semua DML server function via `supabase-js` (`supabaseAdmin`, service_role, server-only, import dinamis di dalam handler). `DATABASE_URL` = pooler `6543?pgbouncer=true` (dipakai adapter auth), `DIRECT_URL` = direct `5432` (apply migrasi SQL).
-- **Ably** — real-time WebSocket untuk chat, live orders, activity feed.
-- **DDL SQL murni** — `database/schema/*.sql` per domain adalah source of truth skema. Perubahan baru masuk `database/migrations/` bernomor. `database/types.ts` ditulis manual mengikuti SQL.
+- **Better Auth** — single setup (`server/src/lib/auth.ts`, drizzle adapter). Google OAuth, default role `visitor`, cookie-cache JWT session (`maxAge: 300`, nol query DB per `getSession`).
+- **Resend** — password reset emails (`server/src/infra/email.ts`).
+- **Postgres (prod)** — single Drizzle ORM + `postgres.js` layer (`server/src/db`).
+Skema per domain dengan `$defaultFn(crypto.randomUUID())`, migrasi via `drizzle-kit` (`db:generate/migrate/push/pull`).
+- **Ably** — chat, live orders, activity feed (`server/src/infra/ably.ts` + `publishAbly()` fire-and-forget).
+- **Eden Treaty** — konektor resmi client→server. OpenAPI JSON di `/openapi/json` (62 paths / 52 schemas, terverifikasi).
+- **Agregat berat** — server-era via query builder + `Promise.all` (contoh overview: 13 agregat paralel). Expected-cash kasir (volume kecil) di-sum dari baris harian.
+- **RBAC code-level, RLS off**.
 
-### UI & Styling
+### UI & Styling (client, unchanged)
 - Tailwind CSS v4
-- shadcn/ui — primary UI components (base-vega style, neutral base)
-- Base UI (`@base-ui/react`) — accessible primitives
-- Lucide React (icons)
-- `next-themes` — dark/light mode
-- `tw-animate-css` — animation utilities
-- `class-variance-authority` — component variants
+- shadcn/ui (base-vega, neutral) + Base UI primitives + Lucide + `next-themes` + `tw-animate-css` + `class-variance-authority`
+- `@dnd-kit/*` — kanban orders
 
-### Drag & Drop
-- `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities` — kanban board (orders)
+### Data Fetching & State (client)
+- Zustand (active branch, sidebar) + TanStack Query (server state).
+- TanStack Query hooks call Eden Treaty client (`treaty(app)`). Query keys, staleTime, invalidasi TIDAK berubah.
+- TanStack Router search params — URL state (replaces `nuqs`); route `.loader()` optional prefetch only.
 
-### Data Fetching & State
-- Zustand — global client state (active branch context, sidebar state)
-- TanStack Query — server state, caching, mutations, cache invalidation
-- **Server functions** (`createServerFn`) — data fetching + mutations, called from TanStack Query hooks
-- TanStack Router search params — URL state for filter & search (replaces `nuqs`)
-- Route `.loader()` — optional, for SSR prefetch only (not primary data source)
+### Form & Validation (client)
+- `react-hook-form` + `@hookform/resolvers` + `zod` (client forms; server pakai TypeBox — dua validator hidup berdampingan, jangan dicampur)
 
-### Form & Validation
-- `react-hook-form` — performant form library with `register`/`Controller`/`useFieldArray`
-- `@hookform/resolvers` — Zod resolver (`zodResolver`)
-- `zod` — shared schema validation
-
-### Data Visualization
-- Recharts — chart analytics (overview page)
-- MapLibre GL (via `maplibre-gl`)
-
-### UI Utilities
-- TanStack Table — headless table logic (sorting, filtering, pagination). Styled with shadcn Table
-- Sonner — toast notifications
-- Command palette — `cmdk` (via shadcn/ui Command component)
-- `@tanstack/match-sorter-utils` — fuzzy search filtering in tables
-
-### Quality & Tooling
-- Biome — linting + formatting
-- bun — package manager
-- React Compiler — via `babel-plugin-react-compiler` + `@rolldown/plugin-babel`
+### Data Visualization / Utilities / Quality (client, unchanged)
+- Recharts, MapLibre GL; TanStack Table + shadcn Table; Sonner; `cmdk`; `@tanstack/match-sorter-utils`
+- Biome, bun, React Compiler
 
 ### Technical Decisions
 
 | Decision | Choice | Reason |
 |---|---|---|
-| Framework | TanStack Start (Vite + Nitro) | File-based routing, SSR, server functions, full-stack TypeScript |
-| Auth | Better Auth (not Supabase Auth) | Self-hosted, Kysely adapter, Google OAuth |
-| Data Access | supabase-js (not Prisma/Drizzle) | PostgREST client, service_role server-only, SQL files as schema source |
-| Database | Supabase Postgres (pooler + direct) | DML via PostgREST; pooler `6543` for auth adapter, direct `5432` for SQL migrations |
-| RBAC | Custom (not RLS) | RLS complex for multi-role + multi-scope, code-level logic more controllable |
-| State Management | Zustand + TanStack Query | Zustand for client UI state, TanStack Query for server state & caching |
-| Data Fetching | TanStack Query (`useSuspenseQuery`) | Replaces RSC data-as-props pattern, explicit cache invalidation |
-| Routing | TanStack Router | Type-safe routes/search params, file-based, loader/middleware chain |
-| Realtime | Ably | Chat, live orders, activity feed via WebSocket |
-| Table | TanStack Table + shadcn/ui | Headless logic (sort/filter/pagination) + shadcn styling markup |
-| Transaction Input | Daily setoran (one per branch per day, not POS) | All-in-one dashboard, no POS integration needed |
-| Email | Resend | Simple API, React email templates, free tier sufficient |
-| Storage | Cloudinary (not Uploadthing) | Reliable CDN, transformation API, generous free tier |
-| UI Framework | shadcn/ui + Tailwind v4 | Accessible components, copy-paste (not a dependency) |
-| Form Validation | React Hook Form + Zod | Performant forms, shared schemas client & server |
-| URL State | TanStack Router search params (not nuqs) | First-class validated search params, full type inference from Zod |
+| Frontend | Vite SPA murni (Start dilepas total) | Router file-based + build tetap; tanpa SSR/Nitro/server-fns |
+| API Framework | Elysia 1.4.30 on Bun (not Nitro server-fns) | Type-safe, macro/guard, OpenAPI + Eden dari satu sumber model |
+| ORM (server) | Drizzle + `postgres.js` (not Prisma) | Thin typed SQL layer, `$defaultFn`, drizzle-kit migrations |
+| Data Access (client) | Eden Treaty calls | Semua `queryFn`/`mutationFn` via `treaty` ke Elysia |
+| Client↔Server | Eden Treaty (not plain fetch) | End-to-end type safety dari `App` type; `eden` sudah di devDeps |
+| Auth | Better Auth (not Supabase Auth) | Self-hosted, Google OAuth, single setup di server |
+| RBAC | Custom code-level (not RLS, not CASL/casbin) | Dievaluasi-ditolak: CASL adapter Drizzle masih rc + butuh rewrite relational; RLS tak terkontrol untuk multi-scope |
+| State | Zustand (client UI) + TanStack Query (server state) | Tidak berubah saat transisi |
+| Data Fetching | TanStack Query (keys/stale/invalidasi tidak berubah) | Hanya `queryFn` diganti: `*Fn` → Eden |
+| Routing | TanStack Router (stays) | Type-safe routes/search params; yang dilepas hanya Start |
+| Realtime | Ably | Tidak berubah |
+| Table | TanStack Table + shadcn/ui | Tidak berubah (server pagination ditunda — lihat PLAN Fase 5) |
+| Transaction Input | Daily setoran (one per branch per day, not POS) | Audit trail kas fisik |
+| Email / Storage | Resend / Cloudinary | Via `server/src/infra/` |
+| Rate Limit | Native token-bucket `checkRate` (not plugin) | Per-user-per-aksi butuh user terautentikasi; plugin hanya cocok lapis luar per-IP |
+| Form Validation | React Hook Form + Zod (client) / TypeBox (server) | Masing-masing sisi pakai yang idiomatis |
+
+## Backend API Conventions (`server/`)
+
+Wajib dibaca sebelum menyentuh `server/`. Skill: `elysiajs`.
+
+### Module vertical
+
+```
+modules/{domain}/model.ts   → TypeBox schemas (single source: runtime + TS via typeof .static + OpenAPI)
+modules/{domain}/service.ts → plain async fns (user: CurrentUser, ...) → ok()/fail()
+modules/{domain}/index.ts   → new Elysia({ prefix }) + .use(authPlugin) + .model({ "ns.name": schema })
+                              + route 1-baris + { params|query|body: "ns.name", requireRole: [res, act] }
+```
+
+### Auth macro (`plugins/auth.ts`)
+
+- `auth: true` — login saja (untuk `/my` own-scope, `/ably/token`, `/api/dashboard/meta`).
+- `requireRole: [resource, action]` — login + `can(role, action, resource)`, 401/403 otomatis. Satu-satunya cara otorisasi route staff.
+- `user` terinferensi `CurrentUser` — tidak ada cast di controller.
+
+### Access helpers (`access/index.js` — satu-satunya pintu import otorisasi)
+
+- `can(role, action, resource)` — pure, tanpa DB. `Resource`/`Action` types + `PERMISSIONS` matrix + `NAV_GUARDS`/`RESOURCES`/`ACTIONS` (untuk dashboard meta).
+- `getAccessibleBranchIds(userId, role)` — **tepat 1 query/request** (0 untuk super_admin → `null` = semua cabang). Jangan di-cache lintas request (risiko scope basi = kebocoran data cabang).
+- `branchFilter(col, branchId, ids)` — wajib dipakai di semua query bercabang (`eq`/`inArray`/`sql 1=0` manual dilarang).
+- `emptyScope()` / `assertBranchAccess()` / `resolveMyScope()` — guard + own-scope portal (catatan: `customers.user_id` UNIQUE → 1 profil per login, jadi `IN (...)` selalu ≤1 elemen — jangan di-"optimasi" jadi subquery).
+
+### Envelope, validation, effects
+
+- Sukses `ok(data)`, gagal `fail(code, msg)` (`lib/http.ts`). Bisnis error di-return, bukan throw.
+- `t.Number` = body JSON; `t.Numeric` = query/params saja. Pesan 404 = `"{Entity} not found"`.
+- `publishAbly()` + `logAudit()` = fire-and-forget via `void` (tidak pernah throw ke request).
+- `checkRate(key, max, windowMs)` per-user-per-aksi di service yang sensitif (chat, customers, settings, landing publik).
+- Shared validators `lib/schema.ts` (`idParams`, `paginationQuery`, `pageResult`) — pakai ini, jangan bikin `*IdParams` baru.
+
+### Constraints (server)
+
+- DO NOT pass Elysia `Context` into service. DO NOT use classes for services (plain functions).
+- DO NOT use `as never` / `user as` in controllers — daftarkan model via `.model()`.
+- DO NOT add Prisma, RLS, Pusher, Uploadthing, CASL/casbin, rate-limit plugin, Zod (server), `nuqs`.
+- DO NOT use `?? ""` on critical env vars — throw at startup (`env.ts`).
+- Skema baru = tulis Drizzle schema dulu (`server/src/db/schema/`), migrasi via `drizzle-kit`. Semua FK wajib ada index (`{table}_{column}_idx`).
+
+## Transition: Client → Server (Eden Treaty) — ✅ SELESAI
+
+Status: frontend Vite SPA murni memanggil Elysia; TanStack Start (server-fns, Nitro, SSR bits) dilepas total. TanStack Router, Query keys, staleTime, invalidasi, dan UI **tidak berubah**. Bagian ini dipertahankan sebagai dokumentasi pola koneksi.
+
+### Connection pattern
+
+```ts
+// client/src/lib/eden.ts
+import { treaty } from "@elysiajs/eden";
+import type { App } from "../../../server/src/app";
+export const api = treaty<App>(window.location.origin).api;
+
+// di hook (kunci + invalidasi tetap, queryFn via Eden):
+useSuspenseQuery({ queryKey: menuKeys.lists(), queryFn: () => api.menu.items.get({ query }) })
+useMutation({ mutationFn: (b) => api.menu.items.post(b),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }) })
+```
+
+Same-origin satu domain: tanpa CORS, tanpa `VITE_API_URL`. Dev lewat Vite proxy (`/api`, `/openapi` catch-all) → `:3000`; prod via `vercel.json` rewrites. Auth: cookie Better Auth dikirim otomatis. Ably tetap langsung dari browser (`realtime.ts`).
+
+### Type conventions (Eden boundary)
+
+- Backend = source of truth untuk tipe. Entity client diturunkan via `GetData<typeof api...>` (slim types), bukan duplikat manual.
+- Wrapper `queryFn`/`mutationFn` tanpa anotasi return — inferensi Eden yang mengalir. Anotasi hanya di titik adaptor disengaja (filter/sort client-side, koersi `Number()` agregat).
+- Konsumsi envelope di komponen wajib narrowing: `data && data.success ? data.data : []`.
+- Service boundary return JSON-safe: kolom `timestamp` → ISO string via `.toISOString()` di service (wire format nol berubah, tipe jadi jujur). Skema DB tidak diubah.
 
 ## Better Auth — Conventions
 
-1. **Route handler**: use `auth.handler(request)` in API route `src/routes/api/auth/$.ts` (catch-all)
-2. **Cookie**: `tanstackStartCookies()` plugin from `better-auth/tanstack-start` — sets cookies automatically.
-3. **Server function/RSC**: call `auth.api.getSession({ headers: await getWebRequest()?.headers })`
-4. **Client**: use `createAuthClient()` from `better-auth/react`, all methods
-5. **Google OAuth**: Provider in `socialProviders.google`. Redirect URI: `http://localhost:5173/api/auth/callback/google`.
-7. **Default role visitor**: `role` column defaults to `"visitor"` (= customer). New registrations (email + Google OAuth) automatically get `visitor` role.
-8. **Auth simplification**: No email OTP flow. Standard `signUp.email()` with password directly.
-9. **CSRF**: Better Auth: `csrf: { enabled: true, origin: BETTER_AUTH_URL }`.
-10. **Rate limiting**: sensitive endpoints use `rateLimit(key, max, windowMs)`.
-11. **Uniform error messages**: avoid leaking detail on public endpoints. OTP verify, login, and other public endpoints give generic messages (does not say "OTP wrong" vs "email not found").
-12. **Runtime env validation**: `lib/auth.ts`, `lib/rbac.ts`, and `lib/realtime.ts` throw errors at startup if important env vars are missing. Do NOT use `?? ""` on critical env vars.
-13. **CSRF**: configured as `csrf: { enabled: true, origin: BETTER_AUTH_URL }`. Cross-origin requests rejected automatically.
-14. **Rate limiting**: sensitive endpoints (auth, role change) use `rateLimit(key, max, windowMs)` from `@/lib/rate-limit`. Returns 429 if exceeded.
-15. **Google OAuth redirect URI**: `http://localhost:5173/api/auth/callback/google`. Add `http://<IP>:5173/api/auth/callback/google` to Authorized redirect URIs in Google Cloud Console when developing via IP.
-16. **Visitor**: Default role for all new registrations (email + Google OAuth). Branches & Maps read-only, own profile & password, chat: own DMs (reply only) + global channels. All other pages invisible (sidebar hidden + route guard to landing). No create/update/delete on any business data. — **SUPERSEDED: visitor = customer, lives in `/my` portal, locked out of `_dashboard`/`/pos`/chat (see "Customer Portal" section).**
-17. **Session cookie cache**: `auth.ts` punya `session.cookieCache { enabled, maxAge: 300, strategy: "jwt", refreshCache: true }` → `auth.api.getSession()` diverifikasi dari cookie (HS256), **nol query DB** per pemanggilan. `session.user.role` ikut ter-cache untuk RBAC.
+**Server (`server/src/lib/auth.ts`, drizzle adapter):** handler di-mount via `plugins/auth.ts` (`.mount(auth.handler)`); `macro auth/requireRole` resolve `auth.api.getSession({ headers })`; cookie-cache JWT (`maxAge: 300`, nol query DB, `role` ikut ter-cache).
+
+**Client (`client/src/lib/auth-client.ts`):** `createAuthClient()` same-origin (tanpa `baseURL` → `/api/auth/*`), `inferAdditionalFields` dari tipe auth **server**. Guards/loaders via `lib/session.ts` (`GET /api/auth/session`, `GET /api/dashboard/meta`), bukan via instance lokal.
+
+**Konvensi:** Google OAuth redirect `http://localhost:5173/api/auth/callback/google` (+ IP variant saat dev via IP); default role `visitor`; no email OTP (`signUp.email` langsung); CSRF `csrf: { enabled: true, origin: BETTER_AUTH_URL }`; uniform error messages di endpoint publik; sensitive endpoints pakai `checkRate` (server).
 
 ## RBAC — Permission Matrix
 
@@ -313,7 +354,7 @@ Additional rules:
 
 ### Permissions per Page
 | Page | Super Admin | Branch Manager | Cashier | Barista | Franchise Owner | Visitor |
-|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|
 | Overview & Analytics | F | R | R | R | R | — |
 | Kasir (Setoran) | F | F | C+R | — | R | — |
 | Orders | F | F | F | R+update | R | — |
@@ -333,140 +374,78 @@ Additional rules:
 | AI Assistant (not yet implemented) | F | F | — | — | — | — |
 
 ### RBAC Implementation
-- `can(role, action, resource)` — helper in `src/lib/rbac.ts`
-- `getDefaultRouteForRole(role)` — post-login / guard fallback: staff → `/overview`, visitor → `/my`
-- `requireAccess(action, resource)` — for API routes, throws 403
-- `requireAccessAction(action, resource)` — for server functions, returns discriminated union
-- `requireAccessRSC(action, resource)` — for route loaders, redirects on failure
-- Branch scope via `src/utils/branch-scope.ts` → `getAccessibleBranchIds(userId, role)` (no visitor case — unknown roles get `[]`)
-- Visitor lockout: `_dashboard.tsx` and `my.tsx` `beforeLoad` redirect by role (`_dashboard` rejects visitor → `/my`, `/my` rejects staff → `/overview`, `/pos` allows super_admin/branch_manager/cashier only)
-- Customer portal own-scope pattern: portal server fns use `getSession()` + filter by `session.user.id` (never grant visitor global `orders`/`customers`/`reviews` perms). Visitor matrix keeps only `users: ["read","update"]` (portal account self-service via `updateProfileFn`)
-- RBAC is staff-only by design — no visitor branches in feature code (chat visitor checks removed)
-- Exception: `features/tour/components/tour-launcher.tsx` has an `isVisitor` branch — it only selects which tour to run (dashboard `pengenalan` vs portal `sambutan`), never gates data. Route guards (`_dashboard.tsx`, `my.tsx`) enforce isolation.
+- Server: `can()` + `requireRole` macro di `server/src/access/` + `getAccessibleBranchIds()` (tanpa visitor case — unknown roles → `[]`).
+- Client (mirror): `can()` di `client/src/lib/rbac.ts`; `getDefaultRouteForRole(role)`: staff → `/overview`, visitor → `/my`.
+- Visitor lockout: `_dashboard.tsx` and `my.tsx` `beforeLoad` redirect by role (`_dashboard` rejects visitor → `/my`, `/my` rejects staff → `/overview`, `/pos` allows super_admin/branch_manager/cashier only).
+- Customer portal own-scope: filter by `session.user.id`, never grant visitor global perms. Visitor matrix keeps only `users: ["read","update"]`.
+- RBAC is staff-only by design — no visitor branches in feature code.
 
 ## Data Fetching Pattern
 
-TanStack Query hooks call `createServerFn` directly. Route loaders are NOT the primary data source — they're optional SSR prefetch optimization.
+**Current (client):** TanStack Query hooks call Eden Treaty directly.
 
 ```
 Component
-  └→ useSuspenseQuery({ queryKey, queryFn: () => serverFn({ branch }) })
-       └→ createServerFn({ method: 'GET' }).handler(async ({ data: { branch } }) => ...)
-            └→ handler receives { data } wrapper from createServerFn automatically
-            └→ DB query with branch filter
-
-Mutation flow:
-useMutation({ mutationFn, onSuccess: invalidateQueries })
-  └→ createServerFn({ method: 'POST' }).handler(...)
-       └→ requireAccessAction → Zod → DB mutation → return
-  └→ queryClient.invalidateQueries({ queryKey: [domain] })
+  └→ useSuspenseQuery({ queryKey, queryFn: () => getXxx() })   # getXxx = Eden wrapper di hooks/
+Mutation: useMutation({ mutationFn, onSuccess: invalidateQueries })
 ```
 
-### Caching & staleTime
+### Caching & staleTime (client, unchanged)
 
-Uses centralized constants from `src/features/stale-time.ts`:
-- `STALE.FREQUENT` = 30_000ms (30s)
-- `STALE.NORMAL` = 60_000ms (60s)
-- `STALE.SLOW` = 300_000ms (5min)
-- `STALE.STATIC` = `Infinity`
+`src/features/stale-time.ts`: `FREQUENT` 30s, `NORMAL` 60s, `SLOW` 5min, `STATIC` ∞.
 
-| Feature Type | staleTime | gcTime | Pages |
-|---|---|---|---|
-| Read-only | SLOW (5min) | 10min | overview, maps |
-| CRUD | FREQUENT (30s) | 5min | menu, branches, customers, reviews, transactions, employee, payouts |
-| High-write | 0 | 5min | kasir, orders |
-| Realtime | 0 (initial via query) | 5min | chat, notifications |
-| Settings | FREQUENT (30s) | 5min | settings |
-| Customer portal | FREQUENT (30s) | 5min | my/orders, my/loyalty (`myPortalKeys`) |
+| Feature Type | staleTime | gcTime |
+|---|---|---|
+| Read-only (overview, maps) | SLOW | 10min |
+| CRUD (menu, branches, customers, ...) | FREQUENT | 5min |
+| High-write (kasir, orders) | 0 | 5min |
+| Realtime (chat, notifications) | 0 | 5min |
+| Settings | FREQUENT | 5min |
+| Customer portal | FREQUENT | 5min |
 
-**Key:** TanStack Query replaces all Next.js caching (`"use cache"`, `unstable_cache`, `updateTag`). Invalidation is explicit via `queryClient.invalidateQueries()`. No more `"use server"` directive — `createServerFn` handles it.
+### TanStack Table (client, unchanged)
 
-### TanStack Table (sorting/filtering/pagination)
-
-All tables use TanStack Table for headless logic + shadcn Table for styling:
-- Sorting: `getSortedRowModel()`
-- Column filtering: `getFilteredRowModel()`
-- Global search: `globalFilterFn`
-- Pagination: `getPaginationRowModel()`
-- No custom `useSearch`, `useFilters`, `useSort` hooks needed
-- Column definitions via `createColumnHelper<T>()` (recommended over raw `ColumnDef[]`)
-- `getRowId: (row) => row.id` required for stable row keys
-- `header.isPlaceholder` check required in header render loop
-- FilterToolbar wired to `globalFilter` / `columnFilters` state (not local data filtering)
-- **Pagination display**: read `pageIndex` from `tableState.pagination.pageIndex` (controlled React state), NOT from `table.getState().pagination.pageIndex` which can desync
-- **Infinite vs tabel**: `useInfiniteQuery` HANYA untuk feed tanpa sorting (contoh: `/my/orders`, notifications, chat) — `getSortedRowModel`/filter/StatCard client-side cuma melihat row yang sudah ke-load sehingga hasilnya salah secara semantik untuk full dataset. Tabel bersort (orders staff, transactions, reviews, dsb.) wajib **server pagination** (`manualSorting` + `manualPagination`, validator `page/pageSize/sortBy/sortDir` + count query), bukan infinite. Infinite + `getPaginationRowModel` (paginasi ganda) dilarang.
+Sorting `getSortedRowModel()`, filtering `getFilteredRowModel()`, global search, pagination `getPaginationRowModel()`; `createColumnHelper<T>()`; `getRowId`; `header.isPlaceholder`; FilterToolbar wired to table state; pageIndex from controlled state.
+**Infinite vs tabel**: `useInfiniteQuery` HANYA untuk feed tanpa sorting (`/my/orders`, notifications, chat). Tabel bersort wajib **server pagination** (`manualSorting` + `manualPagination`, validator `page/pageSize/sortBy/sortDir` + count) — bukan infinite. Infinite + `getPaginationRowModel` dilarang. (Server pagination staff tables: ditunda — PLAN Fase 5.)
 
 ## Database
 
-- **Supabase Postgres (prod)** — tabel sudah ada dengan semua data. Semua DML server function memakai `supabaseAdmin` dari `@database/server` (service_role, `auth: { persistSession: false }`, server-only, import **dinamis** di dalam handler). Browser tidak menyentuh DB langsung.
-- **DDL SQL murni** — `database/schema/*.sql` per domain adalah source of truth skema (9 file, 22 tabel). Perubahan baru masuk `database/migrations/` bernomor, apply via `psql "$DIRECT_URL" -f`. Aturan besi: **SQL dulu, `database/types.ts` mengikuti** (manual, tanpa generate).
-- **Agregat berat via `rpc`** — query `SUM/AVG/COUNT/GROUP BY` (overview, customer order counts) dikerjakan di database sebagai SQL function (lihat `database/migrations/`), dipanggil via `.rpc()`. PostgREST tidak bisa group-by dalam 1 request. Expected-cash kasir (volume kecil) di-sum di JS dari baris harian.
-- **Batas PostgREST (pelajaran insiden)** — response default ke-cap **1000 rows diam-diam** (gejala: count kepotong, Total Orders mentok 1000, beberapa customer 0 — diperbaiki via rpc `get_customer_order_counts`, migrasi `0003`). `.in(col, ids)` meledak jadi URL panjang → **400 Bad Request** saat ids > ~100 UUID (gejala: `/my/orders` error saat order 700+ — diperbaiki via pagination 20/page sehingga `.in()` ≤20 ID). Jangan pernah fetch-then-count di JS untuk tabel yang tumbuh unbounded.
-- **RBAC code-level, RLS off** — otorisasi tetap `requireAccessAction()` + `can()` + `getAccessibleBranchIds()`. Service_role dipakai justru agar RLS tidak menghalangi; keamanan di level kode.
-- **Tipe join manual** — select polos terinferensi otomatis; hasil join/embedded diketik manual sebagai `XxxJoined` di `features/{domain}/types.ts` lalu cast `as unknown as XxxJoined[]`. Jangan taruh tipe join inline di hook.
-- Connection: `DATABASE_URL` (pooler, dipakai adapter auth) dan `SUPABASE_SERVICE_ROLE_KEY` (server-only, wajib) dari `.env.local`.
+- **Postgres (prod)** — single cluster, satu lapis akses: Drizzle + `postgres.js` (`server/src/db`). Perubahan skema ditulis di `server/src/db/schema/` + migrasi `drizzle-kit`.
+- **Server layer:** semua id `text` + `$defaultFn(crypto.randomUUID())`; FK wajib index manual (`{table}_{column}_idx`); agregat via query builder + `Promise.all`.
+- **RBAC code-level, RLS off**.
+- Connection: `DATABASE_URL` (pooler `6543`) + `DIRECT_URL` (direct `5432`) dari environment.
 
-## TanStack Query Best Practices (Critical Rules)
+## TanStack Query Best Practices (client — tetap berlaku penuh saat transisi)
 
 ### Query Keys
 - **Always arrays**: `['menu']`, not `'menu'` or `{ entity: 'menu' }`
-- **Include all dependencies**: if query fn uses `branchId`, include in key: `['kasir', branchId]`
-- **Hierarchical structure**: `['entity']` → `['entity', id]` → `['entity', id, 'sub']`
-- **JSON-serializable only**: strings, numbers, booleans, plain objects. No functions, class instances, Symbols, or Date objects (use ISO strings)
-- **Centralized in `src/features/query-keys.ts`**: all query keys are defined as structured objects (e.g., `menuKeys.all`, `menuKeys.lists()`, `menuKeys.detail(id)`)
-- **Pattern for this project**: `['menu']`, `['menu', itemId]`, `['kasir', { branchId, date }]`, `['kasir', 'expected-cash', branchId, date]`, `['chat', channelId, 'messages']`, `['my', 'orders']` / `['my', 'loyalty']` (`myPortalKeys`)
+- **Include all dependencies**: `['kasir', branchId]`, `['kasir', 'expected-cash', branchId, date]`, `['chat', channelId, 'messages']`, `['my', 'orders']`
+- **Centralized in `features/query-keys.ts`** — kunci TIDAK berubah saat pindah ke Eden
+- **JSON-serializable only**
 
-### staleTime & gcTime
-
-Centralized constants at `src/features/stale-time.ts`:
-- `STALE.FREQUENT` = 30s, `STALE.NORMAL` = 60s, `STALE.SLOW` = 5min, `STALE.STATIC` = Infinity
-
-| Data Type | staleTime | gcTime |
-|---|---|---|
-| Read-only (overview, maps) | SLOW (5min) | 10min |
-| CRUD (menu, branches, customers) | FREQUENT (30s) | 5min |
-| High-write (kasir, orders) | 0 | 5min |
-| Low-write (settings) | FREQUENT (30s) | 5min |
-| Realtime (chat, notifications) | 0 | 5min |
-| Customer portal (my/orders, my/loyalty) | FREQUENT (30s) | 5min |
-
-- `staleTime: 0` = always refetch on mount
-- `staleTime: Infinity` = never refetch (manual invalidation only)
-- Stale data is still returned instantly — refetch happens in background
+### staleTime & gcTime — see table above. `staleTime: 0` = refetch on mount; `Infinity` = manual invalidation only.
 
 ### Invalidation
-- **Always invalidate after mutations**: `onSuccess: () => queryClient.invalidateQueries({ queryKey: ['menu'] })`
-- **Be specific**: `['menu']` (all menu) vs `['menu', itemId]` (single item)
-- **Cross-entity**: if an action affects multiple entities, invalidate all relevant keys
-- **Prefix matching**: `invalidateQueries({ queryKey: ['menu'] })` matches `['menu']`, `['menu', 1]`, `['menu', { cat: 'drink' }]`
+- **Always invalidate after mutations**; be specific (`['menu']` vs `['menu', itemId]`); cross-entity invalidate all affected; prefix matching applies.
 
 ### Mutations
-- `useMutation` + `invalidateQueries` is the standard flow (no more `router.refresh()`)
-- For optimistic updates: `onMutate` → cancel queries → snapshot → setQueryData → rollback in `onError`
-- All server functions called from mutations must return `{ success, data } | { success, error }`
+- `useMutation` + `invalidateQueries` standard. Optimistic: `onMutate` → cancel → snapshot → `setQueryData` → rollback `onError`.
+- Server envelope `ok()/fail()` maps 1:1 ke `{ success, data } | { success, error }` yang dipakai hooks.
 
 ### Error & NotFound Handling
-- All `useSuspenseQuery` calls are wrapped by route `errorComponent` — no inline error boundaries needed
-- Gunakan `ErrorPage` dari `@/components/fallbacks/error-page` untuk error component di route — konsisten di seluruh app
-- `ErrorPage` punya slot `children` buat tombol tambahan (contoh: `_dashboard.tsx` nambah tombol Home, `pos.tsx` nambah Go back)
-- `NotFoundPage` dari file yang sama untuk 404 — prop `to` untuk arahkan link (default `"/"`)
-- Inline error handling untuk data non-kritis (gunakan state lokal, jangan route errorComponent)
+- `useSuspenseQuery` dibungkus route `errorComponent`; `ErrorPage`/`NotFoundPage` dari `@/components/fallbacks/error-page` (slot `children`, prop `to`).
+- Inline handling hanya untuk data non-kritis.
 
 ### Important Constraints
-- **DO NOT use Supabase Auth** — auth is fully handled by Better Auth. Supabase hanya sebagai hosting Postgres (+ rencana Realtime `broadcast`), bukan Auth/RLS/Storage.
-- **DO NOT use RLS** — RBAC is code-level only
-- **DO NOT use Pusher** — realtime is via Ably
-- **DO NOT use Uploadthing** — storage is via Cloudinary
-- **DO NOT use Prisma** — supabase-js only, no ORM
-- **DO NOT use `nuqs`** — TanStack Router search params replace it
+- **DO NOT use Supabase Auth / RLS / Pusher / Uploadthing / Prisma / `nuqs`** (client) — dan no CASL/casbin/rate-limit-plugin/Zod di `server/`
 
 ## Database Schema (ERD)
 
 All IDs use text with `crypto.randomUUID()`. All FKs must be indexed manually.
 
-See `database/schema/` for full schemas. Key entities:
+Key entities (sama di kedua lapis):
 - `user` (Better Auth), `account`, `session`, `verification`
-- `customers.user_id → user.id` (nullable, UNIQUE, `ON DELETE SET NULL`) — links login identity to CRM profile
+- `customers.user_id → user.id` (nullable, UNIQUE, `ON DELETE SET NULL`)
 - `branches`, `franchise_branches` (junction)
 - `menu_categories`, `menu_items`
 - `orders`, `order_items`, `daily_setorans`, `transactions`
@@ -477,120 +456,49 @@ See `database/schema/` for full schemas. Key entities:
 - `audit_logs`, `notifications`
 
 ## Environment Variables
-```bash
-BETTER_AUTH_SECRET=
-BETTER_AUTH_URL=http://localhost:5173
-BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:5173,http://localhost:4173,http://172.21.216.124:3000
-DATABASE_URL=
-DIRECT_URL=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-RESEND_API_KEY=
-EMAIL_FROM=nama@domainkamu.com
-ABLY_API_KEY=
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-VITE_SUPABASE_URL=
-VITE_SUPABASE_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-```
+
+| Variable | Client | Server |
+|---|---|---|
+| `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` / `BETTER_AUTH_TRUSTED_ORIGINS` | ✅ | ✅ |
+| `DATABASE_URL` (pooler 6543) / `DIRECT_URL` (direct 5432) | ✅ | ✅ |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | ✅ | ✅ |
+| `RESEND_API_KEY` / `EMAIL_FROM` | ✅ | ✅ |
+| `ABLY_API_KEY` | ✅ | ✅ |
+| `CLOUDINARY_*` / `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | ✅ | ✅ |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | — (dilepas) | — |
+| `PORT` (default 3000) | — | ✅ |
 
 ## Common Mistakes to Avoid
 
-### Feature Hooks (`features/{domain}/hooks/`)
-- ❌ Do NOT use `requireAccess()` in server functions — it throws. Use `requireAccessAction()` instead.
-- ✅ All server functions must return `{ success: true, data: T } | { success: false, error: string }`.
-- ✅ Hooks are **split** into separate files: `use{Domain}Queries.ts` (server fns + TanStack Query hooks) and `use{Domain}Mutations.ts` (mutation hooks). Additional UI hooks (table, realtime) go in separate files.
-- ✅ Setiap `createServerFn` (`getXxxFn`) wajib dikasih JSDoc bahasa Indonesia: jelaskan apa yang dilakukan, parameter, return value.
-  Hook wrapper (`useXxx`) cukup `/** @see {@link getXxxFn} */` — ga usah deskripsi ulang.
-
-- ✅ When using `.validator()`: you **MUST** wrap the arguments in a `data` property: call `fn({ data: { branch } })`.
-- ❌ Do NOT call `fn({ branch })` directly without the `data` wrapper if there is a validator. This will cause a TypeScript error because the TanStack Start client requires the `{ data }` object.
-
-### Data Fetching
-- ✅ Use `useQuery` (not `useSuspenseQuery`) when data depends on user input (form fields, dropdown selections) that can change dynamically — prevents blocking UI while refetching.
-- ✅ Use `useSuspenseQuery` for data that loads on page mount and doesn't change based on user interaction (route-level data).
+### Feature Hooks (client)
+- ✅ Return shape `{ success: true, data } | { success: false, error }` — cocok dengan envelope server.
+- ✅ Split `use{Domain}Queries.ts` / `use{Domain}Mutations.ts`. JSDoc Indonesia untuk wrapper query/mutasi, `@see {@link}` untuk hook wrapper.
+- ✅ `useQuery` untuk data reaktif terhadap input user; `useSuspenseQuery` untuk data route-level.
 
 ### RBAC
-- ❌ Do NOT forget to add new resources to the `Resource` type in `lib/rbac.ts`.
+- ❌ Do NOT forget new resources in `Resource` type (server `access/rbac.ts`; mirror client).
 - ❌ Branch Manager should NOT have access to Payouts.
 - ❌ Cashier SHOULD have `finance: ["create", "read"]`.
 
-### Supabase (`database/` + feature hooks)
-- ✅ Semua DML server function memakai `supabaseAdmin` dari `@database/server` — import **dinamis** di dalam handler, tidak pernah di top-level / komponen browser.
-- ✅ Select polos terinferensi otomatis; hasil join/embedded diketik manual sebagai `XxxJoined` di `features/{domain}/types.ts`, lalu cast `as unknown as XxxJoined[]`. Jangan taruh tipe join inline di hook.
-- ✅ Objek `updates` diketik `Database["public"]["Tables"]["t"]["Update"]` — jangan `Record<string, unknown>`.
-- ✅ Insert selalu sertakan `id: crypto.randomUUID()`.
-- ✅ `update().select().single()` dengan 0 row cocok = `data: null` tanpa error — selalu cek `if (error || !data)`. `maybeSingle()` untuk select 0/1 baris.
-- ✅ Agregat (`SUM/AVG/COUNT/GROUP BY`) via SQL function + `.rpc()`, bukan N query + sum di JS (kecuali volume kecil seperti expected-cash kasir).
-- ❌ Semua FK harus ada index-nya. Name pattern: `{table}_{column}_idx`.
-- ❌ Perubahan skema = tulis SQL di `database/schema/` + `database/migrations/` dulu, `database/types.ts` mengikuti manual.
+### Server (`server/`)
+- ❌ Do NOT pass Elysia `Context` to service; no service classes; no `as never`/`user as` in controllers.
+- ❌ Do NOT throw business errors — return `fail()`. Do NOT `t.Numeric` in JSON bodies.
+- ❌ No new `*IdParams` — use shared `idParams`. No new rate-limit store — use `checkRate`.
+- ✅ `.model()` + string-ref untuk semua schema; pesan 404 = `"{Entity} not found"`.
 
-### Env & Config
-- ❌ Do NOT use `?? ""` on critical env vars — throw at startup.
+### Drizzle
+- Server: Drizzle schema-first, `$defaultFn` untuk id, migrasi via `drizzle-kit`.
 
-### TanStack Router
-- ❌ Do NOT forget to register the router type (`declare module '@tanstack/react-router'`).
-- ❌ Do NOT use `useEffect` for data fetching — use route loaders + TanStack Query.
-- ❌ Do NOT forget `loaderDeps` when loader depends on search params.
-- ❌ Do NOT put auth checks in components instead of `beforeLoad` — causes flash of protected content.
+### Env & Config / Router (unchanged)
+- ❌ Do NOT use `?? ""` on critical env vars.
+- ❌ Router: register type, no `useEffect` fetching, `loaderDeps` untuk search-param deps, auth di `beforeLoad` bukan komponen.
 
-## Loading & Skeleton Strategy
+## Loading & Skeleton Strategy (client, unchanged)
 
-Single-layer approach — all loading states handled by router `pendingComponent`:
+Single-layer: `pendingMs: 0` + `pendingComponent: XxxSkeleton` per route; `defaultPendingMs: 0` safety net; skeletons di `src/components/fallbacks/dashboard.tsx` (Overview/Menu/Branches/Maps/Customers/Employee/Chat/Audit/Notifications/Settings/Kasir/Orders/Reviews/Transactions/Payouts/MyPortal); `ErrorPage`/`NotFoundPage` dari `error-page.tsx`.
 
-| Mekanisme | File | Aktif pas |
-|---|---|---|
-| `pendingMs: 0` + `pendingComponent: XxxSkeleton` | Setiap route file | Navigasi antar route & search param change via loaderDeps |
+## Performance & Latency
 
-No `<Suspense>` boundaries in page components. Route loader (`ensureQueryData`) pre-populates TanStack Query cache before component renders, so `useSuspenseQuery` never suspends.
+**Historis (era client, dipertahankan sebagai pelajaran):** `/overview` ±8000ms → ±300ms via: driver DB pooler, session cookie-cache JWT, branch-scope memo per-request, merger 4 hook → 1 rpc `get_overview_dashboard`. Rules: gabung server-fn berbagi scope/auth; `Promise.all` untuk paralel; `useSuspenseQuery` + `ensureQueryData` untuk SSR penuh.
 
-### Rules
-- **Semua route** wajib punya `pendingMs: 0` + `pendingComponent: SomeSkeleton`
-- `defaultPendingMs: 0` di router config sebagai safety net
-- Skeleton untuk route didaftarkan di `src/components/fallbacks/dashboard.tsx`
-
-### Skeleton Components
-
-| Skeleton | Lokasi | Dipake route |
-|---|---|---|
-| `OverviewSkeleton` | `dashboard.tsx` | overview |
-| `MenuSkeleton` | `dashboard.tsx` | menu |
-| `BranchesSkeleton` | `dashboard.tsx` | branches |
-| `MapsSkeleton` | `dashboard.tsx` | maps |
-| `CustomersSkeleton` | `dashboard.tsx` | customers |
-| `EmployeeSkeleton` | `dashboard.tsx` | employee |
-| `ChatSkeleton` | `dashboard.tsx` | chat |
-| `AuditSkeleton` | `dashboard.tsx` | audit |
-| `NotificationsSkeleton` | `dashboard.tsx` | notifications |
-| `SettingsSkeleton` | `dashboard.tsx` | settings |
-| `KasirSkeleton` | `dashboard.tsx` | kasir |
-| `OrdersSkeleton` | `dashboard.tsx` | orders |
-| `ReviewsSkeleton` | `dashboard.tsx` | reviews |
-| `TransactionsSkeleton` | `dashboard.tsx` | transactions |
-| `PayoutsSkeleton` | `dashboard.tsx` | payouts |
-| `MyPortalSkeleton` | `dashboard.tsx` | my (layout + orders/member/account) |
-
-### Error & NotFound Components
-
-Semua route pake `ErrorPage` dan `NotFoundPage` dari `src/components/fallbacks/error-page.tsx`:
-
-| Komponen | Lokasi | Dipake di |
-|---|---|---|
-| `ErrorPage` | `error-page.tsx` | Semua route (`errorComponent`) — punya slot `children` buat tombol tambahan |
-| `NotFoundPage` | `error-page.tsx` | `__root.tsx`, `_dashboard.tsx` — prop `to` atur arah link |
-
-## Performance & Latency (Dashboard)
-
-Latensi `/overview` turun dari **±8000ms → ±300ms** (SSR, 5 hit test) lewat 4 refactor:
-
-1. **Driver DB** (`@database/server`) — `supabase-js` (PostgREST, HTTP) ke Supabase pooler `6543`. Tanpa prepared-statement clash vs direct TCP+TLS handshake.
-2. **Session cookie cache** (`src/lib/auth.ts`) — `strategy: "jwt"` → `getSession()` tidak query DB; RBAC dibaca dari cookie.
-3. **Branch-scope memo** (`src/utils/branch-scope.ts`) — `getAccessibleBranchIds()` di-memoize per-HTTP-request (`WeakMap<Request>` via `getRequest()` di luar try) → 1 query scope per request-lifecycle, bukan 3–4.
-4. **Merger server-fn overview** — 4 hook terpisah (`useOverviewStats/Revenue/Orders/Analytics`) digabung jadi **satu** `getOverviewDashboardFn` di `src/features/overview/hooks/useOverviewDashboard.ts` → 1x auth + 1x scope + **1x `.rpc("get_overview_dashboard")`** (13 agregat dikerjakan di DB), return `OverviewData`. Query key: `overviewKeys.dashboard(branch)`.
-
-Rules tambahan dari refactor ini:
-- Server function yang berbagi scope/auth boleh digabung (1x `resolveOverviewScope`), jangan dibiarkan masing-masing memanggil `getSession` + `getAccessibleBranchIds` sendiri-sendiri.
-- Tetap `Promise.all` untuk query paralel di dalam satu server fn.
-- Hook murni data-dashboard bisa pakai `useSuspenseQuery` + route loader `ensureQueryData` (semua dataset ter-render penuh di SSR).
+**Server:** pola setara — 1x auth macro + 1x scope resolve + agregat paralel dalam satu service (contoh `getOverviewDashboard`: 13 agregat via query builder). Tidak ada N+1: `getAccessibleBranchIds` = tepat 1 query/request; `resolveMyScope` aman karena `customers.user_id` UNIQUE (≤1 id di `IN`).

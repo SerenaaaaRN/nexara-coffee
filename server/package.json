@@ -1,0 +1,42 @@
+{
+	"name": "nex-server",
+	"version": "1.0.50",
+	"type": "module",
+	"private": true,
+	"exports": {
+		"./app": "./src/app.js"
+	},
+	"scripts": {
+		"dev": "bun run --watch src/index.ts",
+		"start": "bun run --env-file=.env.local src/index.ts",
+		"typecheck": "tsc --noEmit",
+		"test": "bun test",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:push": "drizzle-kit push",
+		"db:studio": "drizzle-kit studio",
+		"db:pull": "drizzle-kit pull"
+	},
+	"dependencies": {
+		"@elysiajs/openapi": "1.4.16",
+		"@sinclair/typebox": "0.34.52",
+		"ably": "^2.28.0",
+		"better-auth": "catalog:",
+		"cloudinary": "^2.11.0",
+		"drizzle-orm": "^0.45.2",
+		"drizzle-typebox": "^0.3.3",
+		"elysia": "catalog:",
+		"postgres": "^3.4.9",
+		"resend": "^6.25.0"
+	},
+	"devDependencies": {
+		"@elysiajs/eden": "1.4.9",
+		"@types/node": "catalog:",
+		"@types/pg": "^8.23.1",
+		"bun-types": "latest",
+		"dotenv": "^17.4.2",
+		"drizzle-kit": "^0.31.10",
+		"pg": "^8.23.1",
+		"typescript": "catalog:"
+	}
+}

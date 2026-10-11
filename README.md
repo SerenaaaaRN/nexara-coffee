@@ -1,7 +1,7 @@
 # Nexara Coffee — GDGoC UNSRI Final Project (Frontend Division)
 
 This repository contains the final project of GDGoC UNSRI (Batch 2025/2026).
-The project is an operational dashboard for a multi-branch cafe network, built with React + TypeScript and backed by Supabase.
+The project is an operational dashboard for a multi-branch cafe network: a React + TypeScript Vite SPA backed by an Elysia (Bun) API with Drizzle ORM + Postgres, connected end-to-end via Eden Treaty.
 
 ---
 
@@ -18,28 +18,41 @@ The project is an operational dashboard for a multi-branch cafe network, built w
 - 💎 **Customer Portal & Loyalty**: order history, loyalty points/tiers, self-service account, and per-order reviews
 - 📊 **HQ Analytics**: revenue/order charts, branch & franchise management, payouts, employee & payroll, audit log
 
+### Architecture
+
+Monorepo (bun workspaces + turbo) with two packages:
+
+| Package | Role |
+|---|---|
+| `client/` | Vite SPA dashboard (React 19, TanStack Router file-based). All data via Eden Treaty to `server/`, same-origin |
+| `server/` | Elysia 1.4.30 API on Bun (19 modules), Drizzle ORM + `postgres.js`, OpenAPI at `/openapi/json` |
+
+Single Postgres database, single Better Auth setup (server). See `AGENTS.md` for the full contributor context.
+
 ---
 
 ## 🚀 Tech Stack
 
-### Frontend
+### Frontend (`client/`)
 
-- **React 19 + TypeScript** - UI library (runs fully client-side, SPA mode)
+- **React 19 + TypeScript** - UI library (fully client-side Vite SPA)
 - **TanStack Router** - file-based routing, route guards, search params
-- **Vite** - build tool
-- **Tailwind CSS v4** - styling
-- **shadcn/ui** - component library
+- **Vite** - build tool + dev server (proxies `/api`, `/openapi` → `:3000` in dev)
+- **Eden Treaty** - type-safe client for the Elysia API (`treaty<App>`, same-origin)
 - **TanStack Query** - data fetching, caching, invalidation
 - **TanStack Table** - headless tables (sorting, filtering, pagination)
 - **Zustand** - client state (active branch, sidebar)
 - **React Hook Form + Zod** - form handling and validation
+- **Tailwind CSS v4 + shadcn/ui** - styling and components
 - **Recharts** - analytics charts
 - **MapLibre GL** - interactive branch maps
 
-### Backend (Supabase as the main backend)
+### Backend (`server/`)
 
-- **Supabase Postgres** - every application table lives in Supabase; all queries go through `supabase-js`
-- **Better Auth** - login sessions (email/password, Google OAuth, reset-password emails); its `user` / `session` / `account` / `verification` tables live in the same Supabase database
+- **Elysia 1.4.30 on Bun** - type-safe API (19 modules: `model.ts` TypeBox schemas → `service.ts` plain functions → `index.ts` routes)
+- **Drizzle ORM + `postgres.js`** - typed SQL layer, migrations via `drizzle-kit`
+- **Better Auth** - login sessions (email/password, Google OAuth, reset-password emails); `user` / `session` / `account` / `verification` tables live in the same Postgres database
+- **OpenAPI + Eden Treaty** - docs at `/openapi/json`, end-to-end types shared with the client
 
 ### Supporting Services
 
@@ -57,11 +70,10 @@ Before you begin, ensure you have the following installed on your system:
 
 - **Bun** (or Node.js 20+) - [Download](https://bun.sh)
 - **Git** - [Download](https://git-scm.com/downloads)
-- **PostgreSQL client (`psql`)** - for applying the SQL schema and migrations
 
 ### Required Accounts / Services:
 
-- **Supabase** project (provides `DATABASE_URL`, `DIRECT_URL`, API URL + keys)
+- **Postgres** database (provides `DATABASE_URL` pooler + `DIRECT_URL` direct)
 - **Google Cloud** OAuth client (for Google login)
 - **Resend**, **Ably**, **Cloudinary** accounts (for email, realtime, and image upload)
 
@@ -80,33 +92,16 @@ cd nexara-coffee
 
 ### 2. Database Setup
 
-The database is pure SQL — `database/schema/` is the source of truth (9 files, 22 tables) and `database/migrations/` holds numbered migrations.
-
-#### Step 1: Apply the base schema (auth first, then the rest)
+The schema is defined in `server/src/db/schema/` (Drizzle) and applied with `drizzle-kit` migrations in `server/migrations/`.
 
 ```bash
-psql "$DIRECT_URL" -f database/schema/auth.sql
-psql "$DIRECT_URL" -f database/schema/branches.sql
-psql "$DIRECT_URL" -f database/schema/menu.sql
-psql "$DIRECT_URL" -f database/schema/orders.sql
-psql "$DIRECT_URL" -f database/schema/finance.sql
-psql "$DIRECT_URL" -f database/schema/customers.sql
-psql "$DIRECT_URL" -f database/schema/employee.sql
-psql "$DIRECT_URL" -f database/schema/collaboration.sql
-psql "$DIRECT_URL" -f database/schema/system.sql
+cd server
+bun run db:migrate   # apply migrations (uses DIRECT_URL)
 ```
 
-> On Windows PowerShell, set `$env:DIRECT_URL = "..."` first, then use `$env:DIRECT_URL` in the commands above.
+> `DIRECT_URL` must be a **direct** connection (port 5432). Poolers in transaction mode can fail DDL — use the session-mode pooler if a direct host is unreachable.
 
-#### Step 2: Apply the migrations in order
-
-```bash
-psql "$DIRECT_URL" -f database/migrations/0001_overview_dashboard.sql
-psql "$DIRECT_URL" -f database/migrations/0002_customer_user_link.sql
-psql "$DIRECT_URL" -f database/migrations/0003_customer_order_counts.sql
-```
-
-#### Step 3: Verify
+#### Verify
 
 You should see tables such as `"user"`, `branches`, `menu_items`, `orders`, `order_items`, `daily_setorans`, `transactions`, `customers`, `reviews`, `employee_details`, `payouts`, `chat_channels`, `audit_logs`, and `notifications` — with foreign keys linking them (e.g. `customers.user_id → user.id`, `orders.customer_id → customers.id`, `order_items.order_id → orders.id`).
 
@@ -115,35 +110,33 @@ You should see tables such as `"user"`, `branches`, `menu_items`, `orders`, `ord
 ### 3. Configure Environment Variables
 
 ```bash
-cp .env.example .env.local
+cp server/.env.example server/.env
 ```
 
-Fill in `.env.local` (see `.env.example` for the full reference):
+Fill in `server/.env` (see `server/.env.example` for the full reference):
 
 ```env
-BETTER_AUTH_SECRET=
-BETTER_AUTH_URL=http://localhost:5173
+DATABASE_URL=      # Postgres pooler (port 6543) — used by the app at runtime
+DIRECT_URL=        # Postgres direct  (port 5432) — used by drizzle-kit migrate/studio
 
-DATABASE_URL=      # Supabase pooler (port 6543)
-DIRECT_URL=        # Supabase direct  (port 5432)
+BETTER_AUTH_SECRET=
+BETTER_AUTH_URL=http://localhost:3000
 
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 
 RESEND_API_KEY=
+EMAIL_FROM=
 ABLY_API_KEY=
 
+CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
-
-VITE_SUPABASE_URL=
-VITE_SUPABASE_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 **Important**:
-- Credentials stay in `.env.local` and are never committed — only `.env.example` is committed.
+- Credentials stay in `server/.env` (git-ignored); only `*.env.example` files are committed.
+- The client needs no env file — it talks to the API same-origin (`window.location.origin`); dev traffic is proxied by Vite.
 - For Google OAuth, add `<BETTER_AUTH_URL>/api/auth/callback/google` as an authorized redirect URI in Google Cloud Console.
 
 ---
@@ -159,15 +152,15 @@ bun install
 ### 5. Run the App
 
 ```bash
-bun run dev
+bun run dev          # both client (:5173) and server (:3000) via turbo
+bun run dev:client   # client only
+bun run dev:server   # server only (bun --watch src/index.ts)
 ```
 
-The application will be available at `http://localhost:5173` (or whatever `BETTER_AUTH_URL` is set to).
-
 ```bash
-bun run build    # production build
-bun run preview  # preview the production build
-bun run check    # lint + format (Biome)
+bun run build      # production client build → client/dist
+bun run build:api  # bundle the API for Vercel → server/dist/entry.js
+bun run typecheck  # tsc --noEmit in both packages
 ```
 
 ---
@@ -229,7 +222,7 @@ UPDATE "user" SET role = 'super_admin' WHERE email = 'you@example.com';
 
 #### 📊 Overview (`/overview`)
 
-- **Description**: HQ analytics — 3 tabs, 8 charts, 2 tables, aggregated in the database via a single SQL function
+- **Description**: HQ analytics — 3 tabs, 8 charts, 2 tables, aggregated server-side by a single Elysia service call
 - **Features**: revenue trends, order stats, branch filter
 - **How to Use**: switch tabs and branch scope to analyze performance
 
@@ -317,12 +310,6 @@ UPDATE "user" SET role = 'super_admin' WHERE email = 'you@example.com';
 - **Features**: update profile, change password
 - **How to Use**: same self-service pattern as the customer account page
 
-#### 🧭 Guided Tour
-
-- **Description**: interactive onboarding built with driver.js
-- **Features**: 9 tours — a multi-page introduction, per-page dashboard tours, and one full walkthrough for the `/my` portal
-- **How to Use**: click the tour icon in the header on any page
-
 ---
 
 ## 🔒 Security Notes
@@ -331,21 +318,22 @@ UPDATE "user" SET role = 'super_admin' WHERE email = 'you@example.com';
 - Sessions use signed HTTP-only cookies with CSRF protection and trusted-origin checks
 - Sensitive endpoints are rate-limited
 - Role-based guards run on every page and every data mutation; branch scoping restricts non-HQ roles to their own branch
-- The Supabase service key lives server-side only and is never shipped to the browser
-- Credentials are kept in `.env.local` (git-ignored); only `.env.example` is committed
+- Auth and DB credentials live server-side only and are never shipped to the browser
+- Credentials are kept in `server/.env` (git-ignored); only `*.env.example` files are committed
 
 ---
 
 ## 🚀 Deployment
 
-Deploy to Netlify (or another Node hosting provider such as Vercel):
+Deploy to Vercel (single domain, client + API same-origin):
 
-1. Connect the repository to Netlify. The `@netlify/vite-plugin-tanstack-start` adapter (already wired in `vite.config.ts`, production builds only) turns server functions into Netlify Functions — build command `bun run build`, publish directory `dist/client` (see `netlify.toml`).
-2. Fill in all environment variables from `.env.example` in the site settings. For production, adjust three auth-related values:
-   - `BETTER_AUTH_URL` = the production URL (e.g. `https://xxx.netlify.app`), not localhost
+1. `bun run build:api` bundles the Elysia app to `server/dist/entry.js`, re-exported by `api/index.ts` as serverless functions; `bun run build` outputs the client to `client/dist` (see `vercel.json`: `buildCommand`, `outputDirectory`).
+2. `vercel.json` rewrites route `/api/*` and `/openapi/*` to the API and everything else to the SPA (`/index.html`).
+3. Fill in all environment variables from `server/.env.example` in the project settings. For production, adjust three auth-related values:
+   - `BETTER_AUTH_URL` = the production URL (e.g. `https://xxx.vercel.app`), not localhost
    - add the production URL to `BETTER_AUTH_TRUSTED_ORIGINS`
    - register `<production-URL>/api/auth/callback/google` as an authorized redirect URI in Google Cloud Console (otherwise Google login fails in production)
-3. Deploy, then smoke-test on the production URL: landing → register → login → one page per role → logout. Server functions run on the server — this is not a static export.
+4. Deploy, then smoke-test on the production URL: landing → register → login → one page per role → logout.
 
 ---
 
@@ -359,6 +347,6 @@ This project is developed as a final project for GDGoC UNSRI (Frontend Division,
 
 If you encounter any issues:
 
-1. Make sure `.env.local` is complete and the database schema + migrations are applied
-2. Check that the dev server URL matches `BETTER_AUTH_URL`
+1. Make sure `server/.env` is complete and migrations are applied (`bun run db:migrate` from `server/`)
+2. Check that the dev server URLs match (`:5173` client → `:3000` API via Vite proxy)
 3. Open an issue in this repository with the error message and steps to reproduce
