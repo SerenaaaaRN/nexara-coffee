@@ -24,7 +24,6 @@
 		"better-auth": "catalog:",
 		"cloudinary": "^2.11.0",
 		"drizzle-orm": "^0.45.2",
-		"drizzle-typebox": "^0.3.3",
 		"elysia": "catalog:",
 		"postgres": "^3.4.9",
 		"resend": "^6.25.0"

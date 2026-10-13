@@ -17,8 +17,8 @@ export const chat = new Elysia({ prefix: "/chat" })
 		"chat.send": sendMessageBody,
 		"chat.direct": createDirectChannelBody,
 		"chat.messagesQuery": t.Object({
-			before: t.Optional(t.String()),
-			limit: t.Optional(t.Numeric()),
+			before: t.Optional(t.String({ format: "date-time" })),
+			limit: t.Optional(t.Numeric({ minimum: 1, maximum: 50 })),
 		}),
 	})
 	.get("/channels", async ({ user }) => getUserChannels(user), {
