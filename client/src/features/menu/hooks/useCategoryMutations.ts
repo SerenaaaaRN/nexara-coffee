@@ -63,7 +63,7 @@ export const updateCategoryOrder = async ({
     return toEnvelope(data, error);
 };
 
-export function useCreateCategory() {
+export const useCreateCategory = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (data: CreateCategoryInput) => createCategory(data),
@@ -72,9 +72,9 @@ export function useCreateCategory() {
             qc.invalidateQueries({ queryKey: menuKeys.all });
         },
     });
-}
+};
 
-export function useUpdateCategory() {
+export const useUpdateCategory = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (data: UpdateCategoryInput & { id: string }) =>
@@ -83,9 +83,9 @@ export function useUpdateCategory() {
             qc.invalidateQueries({ queryKey: menuKeys.categories() });
         },
     });
-}
+};
 
-export function useDeleteCategory() {
+export const useDeleteCategory = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (id: string) => deleteCategory(id),
@@ -94,9 +94,9 @@ export function useDeleteCategory() {
             qc.invalidateQueries({ queryKey: menuKeys.all });
         },
     });
-}
+};
 
-export function useUpdateCategoryOrder() {
+export const useUpdateCategoryOrder = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: ({
@@ -110,4 +110,4 @@ export function useUpdateCategoryOrder() {
             qc.invalidateQueries({ queryKey: menuKeys.categories() });
         },
     });
-}
+};

@@ -1,7 +1,8 @@
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { CircleDollarSign, Plus } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { KasirSkeleton } from "@/components/fallbacks/dashboard";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
@@ -20,10 +21,12 @@ import {
     useDeleteSetoran,
     useRejectSetoran,
 } from "@/features/kasir/hooks/useKasirMutations";
-import { useSetorans } from "@/features/kasir/hooks/useKasirQueries";
+import type { SetoranFilters } from "@/features/kasir/hooks/useKasirQueries";
+import { useSetoransTableQuery } from "@/features/kasir/hooks/useKasirQueries";
 import { useKasirTable } from "@/features/kasir/hooks/useKasirTable";
 import type { SetoranRow } from "@/features/kasir/types";
 import { useConfirmAction } from "@/hooks/useConfirmAction";
+import { useTableState } from "@/hooks/useTableState";
 import { useSession } from "@/lib/auth-client";
 import { can, type Role } from "@/lib/rbac";
 
@@ -33,9 +36,56 @@ const KasirContent = () => {
     const { branch, view } = routeApi.useSearch();
     const navigate = useNavigate();
     const { data: session } = useSession();
-    const { data: response } = useSetorans(branch);
+    const tableState = useTableState();
+    const isBoard = (view ?? "table") === "board";
 
-    const setorans = response.success ? response.data : [];
+    const status = tableState.getFilterValue("status");
+
+    const queryParams = useMemo(() => {
+        const params: SetoranFilters = {
+            branch: branch ?? undefined,
+            status,
+            pageSize: isBoard ? 50 : tableState.pagination.pageSize,
+        };
+        const q = tableState.debouncedSearch.trim();
+        if (q) params.q = q;
+        if (!isBoard && tableState.pagination.pageIndex > 0) {
+            params.page = tableState.pagination.pageIndex;
+        }
+        if (tableState.sortBy) {
+            params.sortBy = tableState.sortBy;
+            params.sortDir = tableState.sortDir ?? "desc";
+        }
+        return params;
+    }, [
+        branch,
+        status,
+        isBoard,
+        tableState.debouncedSearch,
+        tableState.pagination.pageIndex,
+        tableState.pagination.pageSize,
+        tableState.sortBy,
+        tableState.sortDir,
+    ]);
+
+    const { data: response, isPending } = useSetoransTableQuery(queryParams);
+
+    const payload = response?.success ? response.data : null;
+    const rows = payload?.rows ?? [];
+    const total = payload?.total ?? 0;
+    const summary = payload?.summary ?? {
+        total: 0,
+        totalAmount: "0",
+        approved: 0,
+        pending: 0,
+    };
+    const loadError = response && !response.success ? response.error : null;
+
+    const hasActiveFilter =
+        tableState.debouncedSearch.trim() !== "" ||
+        status !== undefined ||
+        branch !== undefined;
+
     const [detailTarget, setDetailTarget] = useState<SetoranRow | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
     const approve = useConfirmAction<{
@@ -67,7 +117,7 @@ const KasirContent = () => {
         [navigate],
     );
 
-    async function handleApproveReject() {
+    const handleApproveReject = async () => {
         if (!approve.target) return;
         const mutation =
             approve.target.action === "approve"
@@ -86,9 +136,9 @@ const KasirContent = () => {
             toast.error(res?.error ?? "Failed to update setoran");
         }
         approve.clearTarget();
-    }
+    };
 
-    async function handleDelete() {
+    const handleDelete = async () => {
         if (!deleteAction.target) return;
         const id = deleteAction.target;
         deleteAction.clearTarget();
@@ -98,7 +148,7 @@ const KasirContent = () => {
         } else {
             toast.error(res?.error ?? "Failed to delete");
         }
-    }
+    };
 
     const handleApproveRejectCb = useCallback(
         (id: string, action: "approve" | "reject") =>
@@ -110,20 +160,38 @@ const KasirContent = () => {
         [deleteAction],
     );
 
-    const { table, tableState, filterConfigs, searchPlaceholder } =
-        useKasirTable(setorans, {
+    const effectivePageSize = isBoard ? 50 : tableState.pagination.pageSize;
+    const pageCount = Math.max(1, Math.ceil(total / effectivePageSize));
+
+    const { table, filterConfigs, searchPlaceholder } = useKasirTable(rows, {
+        tableState,
+        pageCount,
+        callbacks: {
             canApprove,
             currentUserId,
             onApproveReject: handleApproveRejectCb,
             onDelete: handleDeleteCb,
-        });
+        },
+    });
 
     const canRecord =
         !!effectiveBranchId && (role ? can(role, "create", "setoran") : false);
 
+    if (isPending && !payload && !loadError) {
+        return <KasirSkeleton />;
+    }
+
     return (
         <div className="flex flex-col gap-4">
-            {setorans.length === 0 ? (
+            {loadError ? (
+                <Empty>
+                    <EmptyMedia variant="icon">
+                        <CircleDollarSign />
+                    </EmptyMedia>
+                    <EmptyTitle>Failed to load setorans</EmptyTitle>
+                    <EmptyDescription>{loadError}</EmptyDescription>
+                </Empty>
+            ) : total === 0 && !hasActiveFilter ? (
                 <>
                     <div className="flex justify-end">
                         <Button
@@ -154,7 +222,8 @@ const KasirContent = () => {
                     canRecord={canRecord}
                     onRowClick={setDetailTarget}
                     canApprove={canApprove}
-                    allSetorans={setorans}
+                    total={total}
+                    summary={summary}
                 />
             )}
 
@@ -167,14 +236,14 @@ const KasirContent = () => {
                 canApprove={canApprove}
             />
 
-            {effectiveBranchId && (
+            {effectiveBranchId ? (
                 <KasirFormDialog
                     open={createOpen}
                     onOpenChange={setCreateOpen}
                     branchId={effectiveBranchId}
                     onSuccess={() => setCreateOpen(false)}
                 />
-            )}
+            ) : null}
 
             <ConfirmDialog
                 {...approve.dialogProps}

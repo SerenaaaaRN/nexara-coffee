@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_dashboard/transactions")({
     loaderDeps: ({ search: { branch } }) => ({ branch }),
     loader: ({ context: { queryClient }, deps }) =>
         queryClient.ensureQueryData(
-            transactionsOptions({ branchId: deps.branch }),
+            transactionsOptions({ branchId: deps.branch, pageSize: 20 }),
         ),
     head: () => ({
         meta: [

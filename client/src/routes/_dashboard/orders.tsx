@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_dashboard/orders")({
         dateTo,
     }),
     loader: ({ context: { queryClient }, deps }) =>
-        queryClient.ensureQueryData(ordersOptions(deps)),
+        queryClient.ensureQueryData(ordersOptions({ ...deps, pageSize: 20 })),
     head: () => ({
         meta: [
             { title: "Orders" },

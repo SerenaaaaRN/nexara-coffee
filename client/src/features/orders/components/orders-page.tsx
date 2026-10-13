@@ -10,9 +10,9 @@ import {
     ListOrdered,
     XCircle,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { SectionHeader } from "#/components/shared/section-header";
+import { SectionHeader } from "@/components/shared/section-header";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { StatCard } from "@/components/shared/stat-card";
@@ -33,16 +33,22 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OrdersSkeleton } from "@/components/fallbacks/dashboard";
 import { OrdersBoard } from "@/features/orders/components/orders-board";
 import { OrdersDetailDialog } from "@/features/orders/components/orders-detail-dialog";
 import {
     useCancelOrder,
     useUpdateOrderStatus,
 } from "@/features/orders/hooks/useOrderMutations";
-import { useOrders } from "@/features/orders/hooks/useOrderQueries";
+import type {
+    OrdersFilters,
+    OrdersTableParams,
+} from "@/features/orders/hooks/useOrderQueries";
+import { useOrdersTableQuery } from "@/features/orders/hooks/useOrderQueries";
 import { useOrdersRealtime } from "@/features/orders/hooks/useOrdersRealtime";
 import type { OrderRow, OrderStatus } from "@/features/orders/types";
 import { useConfirmAction } from "@/hooks/useConfirmAction";
+import { useTableState } from "@/hooks/useTableState";
 import { useSession } from "@/lib/auth-client";
 import { can, type Role } from "@/lib/rbac";
 import { getStatusLabel } from "@/utils/status";
@@ -50,19 +56,68 @@ import { useOrdersTable } from "../hooks/useOrdersTable";
 
 const routeApi = getRouteApi("/_dashboard/orders");
 
-function OrdersContent() {
+const OrdersContent = () => {
     const search = routeApi.useSearch();
     const navigate = useNavigate();
     const { data: session } = useSession();
-    const { data: response } = useOrders({
-        branchId: search.branchId,
-        status: search.status,
-        dateFrom: search.dateFrom,
-        dateTo: search.dateTo,
-    });
 
-    const orders = response.success ? response.data : [];
-    const loadError = response.success ? null : response.error;
+    const isBoard = (search.view ?? "table") === "board";
+    const tableState = useTableState();
+    const toolbarStatus = tableState.getFilterValue("status") as
+        | OrderStatus
+        | undefined;
+    const status = search.status ?? toolbarStatus;
+
+    const queryParams = useMemo(() => {
+        const params: OrdersFilters & OrdersTableParams = {
+            branchId: search.branchId,
+            status,
+            dateFrom: search.dateFrom,
+            dateTo: search.dateTo,
+            pageSize: isBoard ? 50 : tableState.pagination.pageSize,
+        };
+        const q = tableState.debouncedSearch.trim();
+        if (q) params.q = q;
+        if (!isBoard && tableState.pagination.pageIndex > 0) {
+            params.page = tableState.pagination.pageIndex;
+        }
+        if (tableState.sortBy) {
+            params.sortBy = tableState.sortBy;
+            params.sortDir = tableState.sortDir ?? "desc";
+        }
+        return params;
+    }, [
+        search.branchId,
+        status,
+        search.dateFrom,
+        search.dateTo,
+        isBoard,
+        tableState.debouncedSearch,
+        tableState.pagination.pageIndex,
+        tableState.pagination.pageSize,
+        tableState.sortBy,
+        tableState.sortDir,
+    ]);
+
+    const hasActiveFilter =
+        tableState.debouncedSearch.trim() !== "" ||
+        status !== undefined ||
+        search.branchId !== undefined ||
+        search.dateFrom !== undefined ||
+        search.dateTo !== undefined;
+
+    const { data: response, isPending } = useOrdersTableQuery(queryParams);
+
+    const payload = response?.success ? response.data : null;
+    const rows = payload?.rows ?? [];
+    const total = payload?.total ?? 0;
+    const summary = payload?.summary ?? {
+        total: 0,
+        pending: 0,
+        completed: 0,
+        cancelled: 0,
+    };
+    const loadError = response && !response.success ? response.error : null;
     const [detailTarget, setDetailTarget] = useState<OrderRow | null>(null);
 
     useOrdersRealtime();
@@ -79,9 +134,9 @@ function OrdersContent() {
     const role = session?.user?.role as Role | undefined;
     const canUpdate = role ? can(role, "update", "orders") : false;
 
-    function onViewChange(v: "table" | "board") {
+    const onViewChange = (v: "table" | "board") => {
         navigate({ to: ".", search: { ...search, view: v }, replace: true });
-    }
+    };
 
     const handleStatusUpdate = useCallback(
         async (orderId: string, newStatus: OrderStatus) => {
@@ -97,7 +152,7 @@ function OrdersContent() {
         [updateStatusMutation],
     );
 
-    async function handleCancel() {
+    const handleCancel = async () => {
         if (!cancelTarget) return;
         const res = await cancelOrderMutation
             .mutateAsync({ orderId: cancelTarget })
@@ -112,30 +167,27 @@ function OrdersContent() {
             );
         }
         setCancelTarget(null);
-    }
+    };
 
-    const { table, tableState, filterConfigs, searchPlaceholder } =
-        useOrdersTable(orders, {
+    const effectivePageSize = isBoard ? 50 : tableState.pagination.pageSize;
+    const pageCount = Math.max(1, Math.ceil(total / effectivePageSize));
+
+    const { table, filterConfigs, searchPlaceholder } = useOrdersTable(rows, {
+        tableState,
+        pageCount,
+        callbacks: {
             canUpdate,
             onStatusChange: handleStatusUpdate,
             onCancel: setCancelTarget,
-        });
+        },
+    });
 
-    const rows = table.getRowModel().rows;
-    const filteredRows = table
-        .getFilteredRowModel()
-        .rows.map((r) => r.original);
-    const filteredCount = filteredRows.length;
+    const tableRows = table.getRowModel().rows;
+    const boardRows = tableRows.map((r) => r.original);
     const pageIndex = tableState.pagination.pageIndex;
-    const pageCount = table.getPageCount();
 
-    let pendingCount = 0;
-    let completedCount = 0;
-    let cancelledCount = 0;
-    for (const o of filteredRows) {
-        if (o.status === "pending") pendingCount += 1;
-        else if (o.status === "completed") completedCount += 1;
-        else if (o.status === "cancelled") cancelledCount += 1;
+    if (isPending && !payload) {
+        return <OrdersSkeleton />;
     }
 
     return (
@@ -155,37 +207,27 @@ function OrdersContent() {
                         </Button>
                     </EmptyContent>
                 </Empty>
-            ) : orders.length === 0 ? (
-                <Empty>
-                    <EmptyMedia variant="icon">
-                        <Coffee />
-                    </EmptyMedia>
-                    <EmptyTitle>No orders yet</EmptyTitle>
-                    <EmptyDescription>
-                        Orders will appear here once customers place them.
-                    </EmptyDescription>
-                </Empty>
             ) : (
                 <>
                     <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
                         <StatCard
                             label="Total Orders"
-                            value={filteredRows.length}
+                            value={summary.total}
                             icon={ListOrdered}
                         />
                         <StatCard
                             label="Pending"
-                            value={pendingCount}
+                            value={summary.pending}
                             icon={Coffee}
                         />
                         <StatCard
                             label="Completed"
-                            value={completedCount}
+                            value={summary.completed}
                             icon={Coffee}
                         />
                         <StatCard
                             label="Cancelled"
-                            value={cancelledCount}
+                            value={summary.cancelled}
                             icon={XCircle}
                         />
                     </div>
@@ -195,8 +237,8 @@ function OrdersContent() {
                             tableState={tableState}
                             searchPlaceholder={searchPlaceholder}
                             filters={filterConfigs}
-                            total={orders.length}
-                            filtered={filteredRows.length}>
+                            total={total}
+                            filtered={rows.length}>
                             <Tabs
                                 value={search.view ?? "table"}
                                 onValueChange={(v) =>
@@ -214,7 +256,23 @@ function OrdersContent() {
                         </FilterToolbar>
                     </div>
 
-                    {(search.view ?? "table") === "table" ? (
+                    {rows.length === 0 ? (
+                        <Empty>
+                            <EmptyMedia variant="icon">
+                                <Coffee />
+                            </EmptyMedia>
+                            <EmptyTitle>
+                                {hasActiveFilter
+                                    ? "No matching orders"
+                                    : "No orders yet"}
+                            </EmptyTitle>
+                            <EmptyDescription>
+                                {hasActiveFilter
+                                    ? "Try adjusting your search or filters."
+                                    : "Orders will appear here once customers place them."}
+                            </EmptyDescription>
+                        </Empty>
+                    ) : (search.view ?? "table") === "table" ? (
                         <div className="flex flex-col gap-4">
                             <Table>
                                 <TableHeader>
@@ -242,8 +300,8 @@ function OrdersContent() {
                                                                       .header,
                                                                   h.getContext(),
                                                               )}
-                                                        {h.column.getCanSort() &&
-                                                            (h.column.getIsSorted() ===
+                                                        {h.column.getCanSort() ? (
+                                                            h.column.getIsSorted() ===
                                                             "asc" ? (
                                                                 <ArrowUp className="size-3" />
                                                             ) : h.column.getIsSorted() ===
@@ -251,7 +309,8 @@ function OrdersContent() {
                                                                 <ArrowDown className="size-3" />
                                                             ) : (
                                                                 <ChevronsUpDown className="size-3 text-muted-foreground opacity-50" />
-                                                            ))}
+                                                            )
+                                                        ) : null}
                                                     </div>
                                                 </TableHead>
                                             ))}
@@ -259,7 +318,7 @@ function OrdersContent() {
                                     ))}
                                 </TableHeader>
                                 <TableBody>
-                                    {rows.map((row) => (
+                                    {tableRows.map((row) => (
                                         <TableRow
                                             key={row.id}
                                             className="cursor-pointer"
@@ -283,8 +342,8 @@ function OrdersContent() {
                             </Table>
                             <div className="flex items-center justify-between mt-2">
                                 <p className="text-sm text-muted-foreground">
-                                    Showing {filteredCount} order
-                                    {filteredCount !== 1 ? "s" : ""}
+                                    Showing {rows.length} of {total} order
+                                    {total !== 1 ? "s" : ""}
                                 </p>
                                 <div className="flex items-center gap-2">
                                     <Button
@@ -309,7 +368,7 @@ function OrdersContent() {
                         </div>
                     ) : (
                         <OrdersBoard
-                            orders={filteredRows}
+                            orders={boardRows}
                             canUpdate={canUpdate}
                             onSelectOrder={setDetailTarget}
                         />
@@ -336,9 +395,9 @@ function OrdersContent() {
             />
         </div>
     );
-}
+};
 
-export function OrdersPage() {
+export const OrdersPage = () => {
     return (
         <div className="space-y-6">
             <SectionHeader
@@ -348,4 +407,4 @@ export function OrdersPage() {
             <OrdersContent />
         </div>
     );
-}
+};

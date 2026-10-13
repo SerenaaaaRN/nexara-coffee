@@ -4,6 +4,7 @@ import { authPlugin } from "../../plugins/auth.js";
 import {
 	assignFranchiseSchema,
 	createBranchSchema,
+	getBranchesQuery,
 	updateBranchSchema,
 } from "./model.js";
 import {
@@ -17,12 +18,14 @@ import {
 export const branches = new Elysia({ prefix: "/branches" })
 	.use(authPlugin)
 	.model({
+		"branches.query": getBranchesQuery,
 		"branches.params": idParams,
 		"branches.create": createBranchSchema,
 		"branches.update": updateBranchSchema,
 		"branches.franchise": assignFranchiseSchema,
 	})
-	.get("/", async ({ user }) => getBranches(user), {
+	.get("/", async ({ query, user }) => getBranches(user, query), {
+		query: "branches.query",
 		requireRole: ["branches", "read"],
 		detail: { tags: ["branches"] },
 	})

@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
     CreateMenuItemInput,
-    MenuItemRow,
     UpdateMenuItemInput,
 } from "@/features/menu/types";
 import { menuKeys } from "@/features/query-keys";
@@ -55,16 +54,16 @@ export const toggleMenuAvailability = async ({
     return toEnvelope(data, error);
 };
 
-export function useCreateMenuItem() {
+export const useCreateMenuItem = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (data: CreateMenuItemInput & { imageBase64?: string }) =>
             createMenuItem(data),
         onSuccess: () => qc.invalidateQueries({ queryKey: menuKeys.all }),
     });
-}
+};
 
-export function useUpdateMenuItem() {
+export const useUpdateMenuItem = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (
@@ -72,41 +71,19 @@ export function useUpdateMenuItem() {
         ) => updateMenuItem(data),
         onSuccess: () => qc.invalidateQueries({ queryKey: menuKeys.all }),
     });
-}
+};
 
-export function useDeleteMenuItem() {
+export const useDeleteMenuItem = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (id: string) => deleteMenuItem(id),
-        onMutate: async (id) => {
-            await qc.cancelQueries({ queryKey: menuKeys.items() });
-            const previousItems = qc.getQueryData(menuKeys.items());
-            if (previousItems) {
-                qc.setQueryData(
-                    menuKeys.items(),
-                    (old: { data: MenuItemRow[] } | undefined) => {
-                        if (!old) return old;
-                        return {
-                            ...old,
-                            data: old.data.filter((item) => item.id !== id),
-                        };
-                    },
-                );
-            }
-            return { previousItems };
-        },
-        onError: (_err, _id, context) => {
-            if (context?.previousItems) {
-                qc.setQueryData(menuKeys.items(), context.previousItems);
-            }
-        },
         onSettled: () => {
             qc.invalidateQueries({ queryKey: menuKeys.all });
         },
     });
-}
+};
 
-export function useToggleAvailability() {
+export const useToggleAvailability = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: ({
@@ -116,34 +93,8 @@ export function useToggleAvailability() {
             id: string;
             isAvailable: boolean;
         }) => toggleMenuAvailability({ id, isAvailable }),
-        onMutate: async ({ id, isAvailable }) => {
-            await qc.cancelQueries({ queryKey: menuKeys.items() });
-            const previousItems = qc.getQueryData(menuKeys.items());
-            if (previousItems) {
-                qc.setQueryData(
-                    menuKeys.items(),
-                    (old: { data: MenuItemRow[] } | undefined) => {
-                        if (!old) return old;
-                        return {
-                            ...old,
-                            data: old.data.map((item) =>
-                                item.id === id
-                                    ? { ...item, isAvailable }
-                                    : item,
-                            ),
-                        };
-                    },
-                );
-            }
-            return { previousItems };
-        },
-        onError: (_err, _vars, context) => {
-            if (context?.previousItems) {
-                qc.setQueryData(menuKeys.items(), context.previousItems);
-            }
-        },
         onSettled: () => {
             qc.invalidateQueries({ queryKey: menuKeys.all });
         },
     });
-}
+};

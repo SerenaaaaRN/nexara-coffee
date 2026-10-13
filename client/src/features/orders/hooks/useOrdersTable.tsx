@@ -1,9 +1,6 @@
 import {
     createColumnHelper,
     getCoreRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
 import { Ban } from "lucide-react";
@@ -20,28 +17,32 @@ import {
 } from "@/components/ui/select";
 import { ORDER_STATUSES } from "@/features/orders/data";
 import type { OrderRow, OrderStatus } from "@/features/orders/types";
-import { useTableState } from "@/hooks/useTableState";
+import type { TableState } from "@/hooks/useTableState";
 import { formatCurrency, formatDateTime } from "@/utils/format";
 import { getBadgeVariant, getStatusLabel } from "@/utils/status";
 
 const columnHelper = createColumnHelper<OrderRow>();
 
 /**
- * Mempersiapkan column definitions, filter configs, useTableState, dan instance useReactTable
- * untuk tabel orders. canUpdate / onStatusChange / onCancel diteruskan ke kolom aksi
- * (status select dropdown + cancel button).
+ * Tabel orders mode server-driven: search/sort/filter/page di-resolve di
+ * server. `tableState` dibuat di page via `useTableState` agar nilai
+ * debounce-nya bisa dipakai sebagai query params sebelum tabel dibangun.
  */
-export function useOrdersTable(
+export const useOrdersTable = (
     orders: OrderRow[],
-    callbacks: {
-        canUpdate: boolean;
-        onStatusChange: (orderId: string, newStatus: OrderStatus) => void;
-        onCancel: (orderId: string) => void;
+    options: {
+        tableState: TableState;
+        pageCount: number;
+        callbacks: {
+            canUpdate: boolean;
+            onStatusChange: (orderId: string, newStatus: OrderStatus) => void;
+            onCancel: (orderId: string) => void;
+        };
     },
-) {
-    const tableState = useTableState();
+) => {
+    const { tableState, pageCount, callbacks } = options;
 
-    /** Filter berdasarkan status order (pending/processing/completed/cancelled). */
+    /** Filter berdasarkan status order — nilainya dikirim sebagai param server. */
     const filterConfigs = useMemo(
         () => [
             {
@@ -59,6 +60,8 @@ export function useOrdersTable(
     /**
      * Kolom: orderNumber, branchId, customerId, totalAmount, status, createdAt,
      * actions (status select dropdown + cancel button).
+     * Sort server hanya untuk orderNumber/totalAmount/status/createdAt
+     * (whitelist `ORDER_SORT_COLUMNS` di server).
      */
     const columns = useMemo(
         () => [
@@ -74,11 +77,13 @@ export function useOrdersTable(
             columnHelper.accessor("branchId", {
                 id: "branchId",
                 header: "Branch",
+                enableSorting: false,
                 cell: ({ row }) => row.original.branchName ?? "—",
             }),
             columnHelper.accessor("customerId", {
                 id: "customerId",
                 header: "Customer",
+                enableSorting: false,
                 cell: ({ row }) => row.original.customerName ?? "—",
             }),
             columnHelper.accessor("totalAmount", {
@@ -98,10 +103,6 @@ export function useOrdersTable(
                         {getStatusLabel(getValue())}
                     </Badge>
                 ),
-                filterFn: (row, _columnId, filterValue) => {
-                    if (!filterValue) return true;
-                    return row.original.status === filterValue;
-                },
             }),
             columnHelper.accessor("createdAt", {
                 id: "createdAt",
@@ -115,6 +116,7 @@ export function useOrdersTable(
             columnHelper.display({
                 id: "actions",
                 header: "Actions",
+                enableSorting: false,
                 cell: ({ row }) => {
                     const order = row.original;
                     if (!callbacks.canUpdate) return null;
@@ -168,16 +170,16 @@ export function useOrdersTable(
                                 </SelectContent>
                             </Select>
                             {order.status !== "completed" &&
-                                order.status !== "cancelled" && (
-                                    <Button
-                                        variant="destructive"
-                                        size="icon"
-                                        onClick={() =>
-                                            callbacks.onCancel(order.id)
-                                        }>
-                                        <Ban />
-                                    </Button>
-                                )}
+                            order.status !== "cancelled" ? (
+                                <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    onClick={() =>
+                                        callbacks.onCancel(order.id)
+                                    }>
+                                    <Ban />
+                                </Button>
+                            ) : null}
                         </div>
                     );
                 },
@@ -187,13 +189,17 @@ export function useOrdersTable(
     );
 
     /**
-     * Instance useReactTable.
-     * globalFilterFn mencari berdasarkan orderNumber, customerName, branchName.
+     * Instance useReactTable server-driven: tanpa row model client
+     * (tanpa getFiltered/Sorted/PaginationRowModel).
      */
     const table = useReactTable({
         data: orders,
         columns,
         getRowId: (row) => row.id,
+        manualSorting: true,
+        manualFiltering: true,
+        manualPagination: true,
+        pageCount,
         state: {
             sorting: tableState.sorting,
             globalFilter: tableState.globalFilter,
@@ -204,19 +210,7 @@ export function useOrdersTable(
         onGlobalFilterChange: tableState.setGlobalFilter,
         onColumnFiltersChange: tableState.setColumnFilters,
         onPaginationChange: tableState.setPagination,
-        globalFilterFn: (row, _columnId, filterValue) => {
-            const q = String(filterValue).toLowerCase();
-            const s = row.original;
-            return (
-                s.orderNumber.toLowerCase().includes(q) ||
-                (s.customerName ?? "").toLowerCase().includes(q) ||
-                (s.branchName ?? "").toLowerCase().includes(q)
-            );
-        },
         getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
     });
 
     return {
@@ -225,4 +219,4 @@ export function useOrdersTable(
         filterConfigs,
         searchPlaceholder: "Search by order, customer, branch...",
     };
-}
+};

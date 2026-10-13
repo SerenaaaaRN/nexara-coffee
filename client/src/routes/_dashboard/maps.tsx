@@ -11,8 +11,9 @@ const mapsSearchSchema = z.object({
 
 export const Route = createFileRoute("/_dashboard/maps")({
     validateSearch: mapsSearchSchema,
-    loader: async ({ context: { queryClient } }) => {
-        await queryClient.ensureQueryData(mapBranchesOptions());
+    loaderDeps: ({ search: { q } }) => ({ q }),
+    loader: async ({ context: { queryClient }, deps }) => {
+        await queryClient.ensureQueryData(mapBranchesOptions(deps.q));
     },
     component: MapsPage,
     errorComponent: ({ error }) => <ErrorPage error={error} />,

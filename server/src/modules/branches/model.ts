@@ -1,5 +1,9 @@
 import { t } from "elysia";
 
+export const getBranchesQuery = t.Object({
+	q: t.Optional(t.String({ maxLength: 100 })),
+});
+
 export const createBranchSchema = t.Object({
 	name: t.String({ minLength: 2, maxLength: 100 }),
 	address: t.String({ minLength: 5, maxLength: 500 }),

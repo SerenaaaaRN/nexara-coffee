@@ -47,8 +47,8 @@ import { cn } from "@/utils/cn";
 
 interface KanbanContextProps<T> {
     columns: Record<string, T[]>;
-    setColumns: (columns: Record<string, T[]>) => void;
-    getItemId: (item: T) => string;
+    setColumns(columns: Record<string, T[]>): void;
+    getItemId(item: T): string;
     columnIds: string[];
     activeId: UniqueIdentifier | null;
     setActiveId: (id: UniqueIdentifier | null) => void;

@@ -6,7 +6,10 @@ import type { api, GetData } from "@/lib/eden";
  * Join user/cabang berbentuk FLAT (`userName`, `userEmail`, `userRole`,
  * `branchName`), bukan nested object.
  */
-export type EmployeeRow = GetData<typeof api.employees.get>[number];
+export type EmployeeRow = GetData<typeof api.employees.get>["rows"][number];
+
+/** Ringkasan agregat employees — from eden treaty. */
+export type EmployeeSummary = GetData<typeof api.employees.get>["summary"];
 
 export type Employee = Omit<
     EmployeeRow,

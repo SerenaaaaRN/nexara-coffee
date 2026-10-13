@@ -1,7 +1,7 @@
-import { SectionHeader } from "#/components/shared/section-header";
+import { SectionHeader } from "@/components/shared/section-header";
 import { ReviewsTable } from "@/features/reviews/components/reviews-table";
 
-export function ReviewsPage() {
+export const ReviewsPage = () => {
     return (
         <div className="space-y-6">
             <SectionHeader
@@ -11,4 +11,4 @@ export function ReviewsPage() {
             <ReviewsTable />
         </div>
     );
-}
+};

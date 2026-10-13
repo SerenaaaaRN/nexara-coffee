@@ -1,4 +1,4 @@
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import type { ORDER_STATUSES } from "@/features/orders/data";
 import { orderKeys } from "@/features/query-keys";
 import { api, toEnvelope } from "@/lib/eden";
@@ -10,33 +10,39 @@ export type OrdersFilters = {
     dateTo?: string;
 };
 
+export type OrdersTableParams = {
+    q?: string;
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+};
+
 /**
- * Mengambil daftar order dengan filter branch, status, dan rentang tanggal.
+ * Mengambil daftar order dari server (search/sort/page di-resolve di server).
+ * Param `undefined` tidak dikirim agar key cocok dengan prefetch loader.
  */
-export const getOrders = async (params: OrdersFilters) => {
+export const getOrders = async (params: OrdersFilters & OrdersTableParams) => {
     const { data, error } = await api.orders.get({
         query: {
             branchId: params.branchId,
             status: params.status,
             dateFrom: params.dateFrom,
             dateTo: params.dateTo,
+            q: params.q,
+            page: params.page,
+            pageSize: params.pageSize,
+            sortBy: params.sortBy,
+            sortDir: params.sortDir,
         },
     });
     return toEnvelope(data, error);
 };
 
 /**
- * Mengambil detail order beserta daftar item-nya.
+ * Query options provider untuk list orders (dipakai route loader).
  */
-export const getOrderDetail = async (id: string) => {
-    const { data, error } = await api.orders({ id }).get();
-    return toEnvelope(data, error);
-};
-
-/**
- * Query options provider untuk list orders.
- */
-export const ordersOptions = (params: OrdersFilters) =>
+export const ordersOptions = (params: OrdersFilters & OrdersTableParams) =>
     queryOptions({
         queryKey: orderKeys.list(params),
         queryFn: () => getOrders(params),
@@ -44,25 +50,22 @@ export const ordersOptions = (params: OrdersFilters) =>
     });
 
 /**
- * Query options provider untuk detail order.
+ * Query options untuk tabel server-driven: `placeholderData` menahan halaman
+ * lama saat `q/page/sort` berubah agar tidak kedip.
  */
-export const orderDetailOptions = (id: string) =>
+export const ordersTableOptions = (params: OrdersFilters & OrdersTableParams) =>
     queryOptions({
-        queryKey: orderKeys.detail(id),
-        queryFn: () => getOrderDetail(id),
+        queryKey: orderKeys.list(params),
+        queryFn: () => getOrders(params),
         staleTime: 0,
+        placeholderData: (previousData) => previousData,
     });
 
 /**
- * Custom hook untuk mengambil data list order dengan suspense.
+ * Query tabel orders (non-suspense, untuk paging/search reaktif).
  */
-export function useOrders(params: OrdersFilters) {
-    return useSuspenseQuery(ordersOptions(params));
-}
-
-/**
- * Custom hook untuk mengambil detail order dengan suspense.
- */
-export function useOrderDetail(id: string) {
-    return useSuspenseQuery(orderDetailOptions(id));
-}
+export const useOrdersTableQuery = (
+    params: OrdersFilters & OrdersTableParams,
+) => {
+    return useQuery(ordersTableOptions(params));
+};

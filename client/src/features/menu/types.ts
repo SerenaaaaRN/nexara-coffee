@@ -8,7 +8,10 @@ export type MenuCategory = GetData<typeof api.menu.categories.get>[number];
  * Item menu — from eden treaty. Server selalu menyertakan `variants`
  * dan join `category` sebagai nested object.
  */
-export type MenuItem = GetData<typeof api.menu.items.get>[number];
+export type MenuItem = GetData<typeof api.menu.items.get>["rows"][number];
+
+/** Ringkasan agregat menu — from eden treaty. */
+export type MenuSummary = GetData<typeof api.menu.items.get>["summary"];
 
 export interface MenuItemVariant {
     name: string;
@@ -56,4 +59,9 @@ export const updateCategorySchema = createCategorySchema.partial();
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
 export type UpdateMenuItemInput = z.infer<typeof updateMenuItemSchema>;
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
+
+/** Payload submit dialog item: nilai form + hasil upload image. */
+export type MenuItemSubmitData = CreateMenuItemInput & {
+    imageBase64?: string;
+};
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;

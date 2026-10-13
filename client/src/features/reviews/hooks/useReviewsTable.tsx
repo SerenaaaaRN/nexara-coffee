@@ -1,9 +1,6 @@
 import {
     createColumnHelper,
     getCoreRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
 import { Check, Reply, Star, X } from "lucide-react";
@@ -11,13 +8,13 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ReviewRow } from "@/features/reviews/types";
-import { useTableState } from "@/hooks/useTableState";
+import type { TableState } from "@/hooks/useTableState";
 import { capitalize, formatDate } from "@/utils/format";
 import { getBadgeVariant } from "@/utils/status";
 
 const columnHelper = createColumnHelper<ReviewRow>();
 
-function StarRating({ rating }: { rating: number }) {
+const StarRating = ({ rating }: { rating: number }) => {
     return (
         <div className="flex items-center gap-0.5">
             {Array.from({ length: 5 }, (_, i) => (
@@ -32,25 +29,29 @@ function StarRating({ rating }: { rating: number }) {
             ))}
         </div>
     );
-}
+};
 
 /**
- * Mempersiapkan column definitions, filter configs, useTableState, dan instance useReactTable
- * untuk tabel reviews. Callback onReply dan onModerate diteruskan ke kolom aksi.
+ * Tabel reviews mode server-driven: search/sort/filter/page di-resolve di
+ * server. `tableState` dibuat di komponen via `useTableState`.
  */
-export function useReviewsTable(
+export const useReviewsTable = (
     reviews: ReviewRow[],
-    callbacks: {
-        onReply: (review: ReviewRow) => void;
-        onModerate: (
-            review: ReviewRow,
-            status: "approved" | "rejected",
-        ) => void;
+    options: {
+        tableState: TableState;
+        pageCount: number;
+        callbacks: {
+            onReply: (review: ReviewRow) => void;
+            onModerate: (
+                review: ReviewRow,
+                status: "approved" | "rejected",
+            ) => void;
+        };
     },
-) {
-    const tableState = useTableState();
+) => {
+    const { tableState, pageCount, callbacks } = options;
 
-    /** Filter berdasarkan status (pending/approved/rejected) dan rating (1–5). */
+    /** Filter status + rating — nilainya dikirim sebagai param server. */
     const filterConfigs = useMemo(
         () => [
             {
@@ -73,7 +74,11 @@ export function useReviewsTable(
         [],
     );
 
-    /** Kolom: createdAt, customerName, branchName, rating, comment, status, actions. */
+    /**
+     * Kolom: createdAt, customerName, branchName, rating, comment, status,
+     * actions. Sort server hanya untuk createdAt/rating/status (whitelist
+     * `REVIEW_SORT_COLUMNS` di server).
+     */
     const columns = useMemo(
         () => [
             columnHelper.accessor("createdAt", {
@@ -86,6 +91,7 @@ export function useReviewsTable(
             }),
             columnHelper.accessor("customerName", {
                 header: "Customer",
+                enableSorting: false,
                 cell: (info) => (
                     <span className="font-medium">
                         {info.row.original.customerName ?? "Anonymous"}
@@ -94,6 +100,7 @@ export function useReviewsTable(
             }),
             columnHelper.accessor("branchName", {
                 header: "Branch",
+                enableSorting: false,
                 cell: (info) => info.row.original.branchName ?? "—",
             }),
             columnHelper.accessor("rating", {
@@ -101,13 +108,10 @@ export function useReviewsTable(
                 cell: (info) => (
                     <StarRating rating={info.row.original.rating} />
                 ),
-                filterFn: (row, _columnId, filterValue) => {
-                    if (!filterValue) return true;
-                    return row.original.rating === Number(filterValue);
-                },
             }),
             columnHelper.accessor("comment", {
                 header: "Comment",
+                enableSorting: false,
                 cell: (info) => (
                     <div className="max-w-xs truncate">
                         {info.row.original.comment ?? "—"}
@@ -121,14 +125,11 @@ export function useReviewsTable(
                         {capitalize(info.row.original.status)}
                     </Badge>
                 ),
-                filterFn: (row, _columnId, filterValue) => {
-                    if (!filterValue) return true;
-                    return row.original.status === filterValue;
-                },
             }),
             columnHelper.display({
                 id: "actions",
                 header: "Actions",
+                enableSorting: false,
                 cell: ({ row }) => (
                     <div className="flex gap-1">
                         {row.original.status === "pending" ? (
@@ -173,13 +174,17 @@ export function useReviewsTable(
     );
 
     /**
-     * Instance useReactTable.
-     * globalFilterFn mencari berdasarkan customerName, branchName, comment.
+     * Instance useReactTable server-driven: tanpa row model client
+     * (tanpa getFiltered/Sorted/PaginationRowModel).
      */
     const table = useReactTable({
         data: reviews,
         columns,
         getRowId: (row) => row.id,
+        manualSorting: true,
+        manualFiltering: true,
+        manualPagination: true,
+        pageCount,
         state: {
             sorting: tableState.sorting,
             globalFilter: tableState.globalFilter,
@@ -190,19 +195,7 @@ export function useReviewsTable(
         onGlobalFilterChange: tableState.setGlobalFilter,
         onColumnFiltersChange: tableState.setColumnFilters,
         onPaginationChange: tableState.setPagination,
-        globalFilterFn: (row, _columnId, filterValue) => {
-            const q = String(filterValue).toLowerCase();
-            const r = row.original;
-            return (
-                (r.customerName?.toLowerCase() ?? "").includes(q) ||
-                (r.branchName?.toLowerCase() ?? "").includes(q) ||
-                (r.comment?.toLowerCase() ?? "").includes(q)
-            );
-        },
         getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
     });
 
     return {
@@ -211,4 +204,4 @@ export function useReviewsTable(
         filterConfigs,
         searchPlaceholder: "Search by customer, branch...",
     };
-}
+};

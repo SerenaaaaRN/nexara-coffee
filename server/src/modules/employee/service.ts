@@ -1,38 +1,141 @@
-import { eq, inArray, notInArray, sql } from "drizzle-orm";
+import { and, asc, count, countDistinct, desc, eq, ilike, inArray, notInArray, or, sum } from "drizzle-orm";
 import type { CurrentUser } from "../../access/index.js";
-import { getAccessibleBranchIds } from "../../access/index.js";
+import { emptyScope, getAccessibleBranchIds } from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { user as userTable } from "../../db/schema/auth-schema.js";
 import { branches } from "../../db/schema/branches.js";
 import { employeeDetails } from "../../db/schema/employee.js";
 import { fail, ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
+import { containsPattern } from "../../lib/table.js";
 import { checkRate, logAudit } from "../../utils/effects.js";
+import type { getEmployeesQuery } from "./model.js";
 
-export const getEmployees = async (user: CurrentUser) => {
+/**
+ * Kolom yang boleh di-sort dari client (`sortBy` di luar ini diabaikan).
+ */
+const EMPLOYEE_SORT_COLUMNS = {
+	createdAt: employeeDetails.createdAt,
+	hireDate: employeeDetails.hireDate,
+	baseSalary: employeeDetails.baseSalary,
+	"user.name": userTable.name,
+	"user.email": userTable.email,
+	"user.role": userTable.role,
+	branchId: branches.name,
+} as const;
+
+export const getEmployees = async (
+	user: CurrentUser,
+	params: typeof getEmployeesQuery.static,
+) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
-	const condition = ids
-		? ids.length > 0
-			? inArray(employeeDetails.branchId, ids)
-			: sql`1=0`
-		: undefined;
-	const rows = await db
-		.select({
-			id: employeeDetails.id,
-			userId: employeeDetails.userId,
-			branchId: employeeDetails.branchId,
-			baseSalary: employeeDetails.baseSalary,
-			hireDate: employeeDetails.hireDate,
-			createdAt: employeeDetails.createdAt,
-			userName: userTable.name,
-			userEmail: userTable.email,
-			userRole: userTable.role,
-			branchName: branches.name,
-		})
-		.from(employeeDetails)
-		.leftJoin(userTable, eq(employeeDetails.userId, userTable.id))
-		.leftJoin(branches, eq(employeeDetails.branchId, branches.id))
-		.where(condition);
-	return ok(rows);
+	const { page, pageSize, sortDir } = resolveTableParams(params);
+	const emptyPage = {
+		...pageResult([], 0, page, pageSize),
+		summary: { total: 0, branchCount: 0, totalSalary: "0" },
+	};
+
+	if (emptyScope(ids)) {
+		return ok(emptyPage);
+	}
+
+	const conditions = [];
+	if (params.branchId) {
+		if (ids !== null && !ids.includes(params.branchId)) {
+			return ok(emptyPage);
+		}
+		conditions.push(eq(employeeDetails.branchId, params.branchId));
+	} else if (ids !== null && ids.length > 0) {
+		conditions.push(inArray(employeeDetails.branchId, ids));
+	}
+	if (params.role) {
+		conditions.push(eq(userTable.role, params.role));
+	}
+
+	const q = params.q?.trim();
+	if (q) {
+		const pattern = containsPattern(q);
+		conditions.push(
+			or(
+				ilike(userTable.name, pattern),
+				ilike(userTable.email, pattern),
+				ilike(userTable.role, pattern),
+				ilike(branches.name, pattern),
+			),
+		);
+	}
+
+	const where = conditions.length > 0 ? and(...conditions) : undefined;
+	const orderBy =
+		params.sortBy && params.sortBy in EMPLOYEE_SORT_COLUMNS
+			? sortDir === "asc"
+				? asc(
+						EMPLOYEE_SORT_COLUMNS[
+							params.sortBy as keyof typeof EMPLOYEE_SORT_COLUMNS
+						],
+					)
+				: desc(
+						EMPLOYEE_SORT_COLUMNS[
+							params.sortBy as keyof typeof EMPLOYEE_SORT_COLUMNS
+						],
+					)
+			: asc(employeeDetails.hireDate);
+
+	const columns = {
+		id: employeeDetails.id,
+		userId: employeeDetails.userId,
+		branchId: employeeDetails.branchId,
+		baseSalary: employeeDetails.baseSalary,
+		hireDate: employeeDetails.hireDate,
+		createdAt: employeeDetails.createdAt,
+		userName: userTable.name,
+		userEmail: userTable.email,
+		userRole: userTable.role,
+		branchName: branches.name,
+	};
+
+	const [rows, [{ value: total }], [{ value: salaryTotal }], [{ value: branchesTotal }]] =
+		await Promise.all([
+			db
+				.select(columns)
+				.from(employeeDetails)
+				.leftJoin(userTable, eq(employeeDetails.userId, userTable.id))
+				.leftJoin(branches, eq(employeeDetails.branchId, branches.id))
+				.where(where)
+				.orderBy(orderBy)
+				.limit(pageSize)
+				.offset(page * pageSize),
+			db
+				.select({ value: count() })
+				.from(employeeDetails)
+				.leftJoin(userTable, eq(employeeDetails.userId, userTable.id))
+				.leftJoin(branches, eq(employeeDetails.branchId, branches.id))
+				.where(where),
+			db
+				.select({ value: sum(employeeDetails.baseSalary) })
+				.from(employeeDetails)
+				.leftJoin(userTable, eq(employeeDetails.userId, userTable.id))
+				.where(where),
+			db
+				.select({ value: countDistinct(employeeDetails.branchId) })
+				.from(employeeDetails)
+				.leftJoin(userTable, eq(employeeDetails.userId, userTable.id))
+				.where(where),
+		]);
+
+	return ok({
+		...pageResult(
+			rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+			total,
+			page,
+			pageSize,
+		),
+		summary: {
+			total,
+			branchCount: branchesTotal,
+			totalSalary: String(salaryTotal ?? 0),
+		},
+	});
 };
 
 export const getAvailableUsers = async () => {

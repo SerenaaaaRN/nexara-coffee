@@ -31,6 +31,10 @@ export const transactions = pgTable(
   (table) => [
     index("transactions_order_id_idx").on(table.orderId),
     index("transactions_branch_id_idx").on(table.branchId),
+    index("transactions_payment_method_idx").on(table.paymentMethod),
+    index("transactions_status_idx").on(table.status),
+    index("transactions_created_at_idx").on(table.createdAt),
+    index("transactions_branch_created_idx").on(table.branchId, table.createdAt),
   ],
 );
 
@@ -59,6 +63,8 @@ export const payouts = pgTable(
     index("payouts_franchise_owner_id_idx").on(table.franchiseOwnerId),
     index("payouts_branch_id_idx").on(table.branchId),
     index("payouts_approved_by_idx").on(table.approvedBy),
+    index("payouts_status_idx").on(table.status),
+    index("payouts_created_at_idx").on(table.createdAt),
   ],
 );
 

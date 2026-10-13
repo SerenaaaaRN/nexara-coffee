@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 import { idParams } from "../../lib/schema.js";
 import { authPlugin } from "../../plugins/auth.js";
-import { createEmployeeBody, updateEmployeeBody } from "./model.js";
+import { createEmployeeBody, getEmployeesQuery, updateEmployeeBody } from "./model.js";
 import {
 	createEmployee,
 	deleteEmployee,
@@ -14,11 +14,13 @@ import {
 export const employee = new Elysia({ prefix: "/employees" })
 	.use(authPlugin)
 	.model({
+		"employee.query": getEmployeesQuery,
 		"employee.params": idParams,
 		"employee.create": createEmployeeBody,
 		"employee.update": updateEmployeeBody,
 	})
-	.get("/", async ({ user }) => getEmployees(user), {
+	.get("/", async ({ query, user }) => getEmployees(user, query), {
+		query: "employee.query",
 		requireRole: ["employee", "read"],
 		detail: { tags: ["employees"] },
 	})

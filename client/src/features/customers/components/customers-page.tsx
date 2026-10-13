@@ -1,5 +1,5 @@
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { StatCard } from "#/components/shared/stat-card";
+import { StatCard } from "@/components/shared/stat-card";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,39 +11,60 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { CustomersSkeleton } from "@/components/fallbacks/dashboard";
 import { CustomerGrid } from "@/features/customers/components/customer-grid";
 import { CustomerSheet } from "@/features/customers/components/customer-sheet";
 import { useCustomerFilters } from "@/features/customers/hooks/useCustomerFilters";
-import { useCustomers } from "@/features/customers/hooks/useCustomerQueries";
+import {
+    useCustomerDetail,
+    useCustomersInfinite,
+} from "@/features/customers/hooks/useCustomerQueries";
 import { CUSTOMER_SEGMENTS, LOYALTY_TIERS } from "@/features/customers/types";
 import { formatLabel, pluralize } from "@/utils/format";
+import { useEffect, useRef } from "react";
 
 const routeApi = getRouteApi("/_dashboard/customers");
 
 export const CustomersPage = () => {
     const { customer } = routeApi.useSearch();
     const navigate = useNavigate();
-    const { data } = useCustomers();
+    const filters = useCustomerFilters();
 
-    if (!data.success) throw new Error(data.error);
-    const customers = data.data;
-    const {
-        search,
-        setSearch,
-        segmentFilter,
-        setSegmentFilter,
-        tierFilter,
-        setTierFilter,
-        filtered,
-        hasFilters,
-        totalOrders,
-        totalPoints,
-        clearFilters,
-    } = useCustomerFilters(customers);
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } =
+        useCustomersInfinite(filters.params);
 
-    const selectedCustomer = customer
-        ? (customers.find((c) => c.id === customer) ?? null)
+    const pages = data?.pages ?? [];
+    const firstPage = pages[0];
+    const loadError = firstPage && !firstPage.success ? firstPage.error : null;
+    const rows = pages.flatMap((p) => (p.success ? p.data.rows : []));
+    const summary = firstPage?.success
+        ? firstPage.data.summary
+        : { total: 0, totalOrders: 0, totalPoints: 0 };
+
+    const loadedSelected = customer
+        ? (rows.find((c) => c.id === customer) ?? null)
         : null;
+    const { data: detailData } = useCustomerDetail(
+        customer ?? "",
+        !!customer && !loadedSelected,
+    );
+    const selectedCustomer =
+        loadedSelected ?? (detailData?.success ? detailData.data : null);
+
+    const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const el = loadMoreRef.current;
+        if (!el || !hasNextPage || isFetchingNextPage) return;
+        const io = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) fetchNextPage();
+            },
+            { rootMargin: "400px" },
+        );
+        io.observe(el);
+        return () => io.disconnect();
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage, rows.length]);
 
     const onSelect = (id: string | null) => {
         navigate({
@@ -59,6 +80,12 @@ export const CustomersPage = () => {
             onSelect(null);
         };
 
+    if (isPending && rows.length === 0 && !loadError) {
+        return <CustomersSkeleton />;
+    }
+
+    if (loadError) throw new Error(loadError);
+
     return (
         <div className="space-y-6">
             <SectionHeader
@@ -67,16 +94,19 @@ export const CustomersPage = () => {
             />
 
             <div className="flex flex-col gap-4">
-                {customers.length > 0 ? (
+                {summary.total > 0 ? (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                         <StatCard
                             label="Total Customers"
-                            value={filtered.length}
+                            value={summary.total}
                         />
-                        <StatCard label="Total Orders" value={totalOrders} />
+                        <StatCard
+                            label="Total Orders"
+                            value={summary.totalOrders}
+                        />
                         <StatCard
                             label="Loyalty Points"
-                            value={totalPoints.toLocaleString("id-ID")}
+                            value={summary.totalPoints.toLocaleString("id-ID")}
                         />
                     </div>
                 ) : null}
@@ -84,15 +114,15 @@ export const CustomersPage = () => {
                 <div className="flex flex-wrap items-center gap-3">
                     <Input
                         placeholder="Search customers..."
-                        value={search}
+                        value={filters.search}
                         onChange={(e) =>
-                            onFilterChange(setSearch)(e.target.value)
+                            onFilterChange(filters.setSearch)(e.target.value)
                         }
                         className="w-full max-w-xs"
                     />
                     <Select
-                        value={segmentFilter}
-                        onValueChange={onFilterChange(setSegmentFilter)}
+                        value={filters.segmentFilter}
+                        onValueChange={onFilterChange(filters.setSegmentFilter)}
                         items={{
                             all: "All Segments",
                             ...Object.fromEntries(
@@ -119,8 +149,8 @@ export const CustomersPage = () => {
                         </SelectContent>
                     </Select>
                     <Select
-                        value={tierFilter}
-                        onValueChange={onFilterChange(setTierFilter)}
+                        value={filters.tierFilter}
+                        onValueChange={onFilterChange(filters.setTierFilter)}
                         items={{
                             all: "All Tiers",
                             ...Object.fromEntries(
@@ -143,27 +173,38 @@ export const CustomersPage = () => {
                     </Select>
                 </div>
 
-                {hasFilters ? (
+                {filters.hasFilters ? (
                     <div className="flex items-center gap-2">
                         <p className="text-sm text-muted-foreground">
-                            {filtered.length} of {customers.length}{" "}
-                            {pluralize(customers.length, "customer")}
+                            {rows.length} of {summary.total}{" "}
+                            {pluralize(summary.total, "customer")}
                         </p>
                         <Button
                             variant="destructive"
                             size="sm"
-                            onClick={clearFilters}>
+                            onClick={filters.clearFilters}>
                             Clear filters
                         </Button>
                     </div>
                 ) : null}
 
                 <CustomerGrid
-                    customers={customers}
-                    filtered={filtered}
+                    rows={rows}
+                    total={summary.total}
+                    hasActiveFilter={filters.hasFilters}
                     selectedId={customer}
                     onSelect={onSelect}
                 />
+
+                {hasNextPage ? (
+                    <div ref={loadMoreRef} className="flex justify-center py-4">
+                        <span className="text-sm text-muted-foreground">
+                            {isFetchingNextPage
+                                ? "Loading more customers..."
+                                : "Scroll to load more"}
+                        </span>
+                    </div>
+                ) : null}
 
                 {selectedCustomer ? (
                     <CustomerSheet

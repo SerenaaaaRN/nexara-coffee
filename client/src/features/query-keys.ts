@@ -36,15 +36,18 @@ export const employeeKeys = {
 
 export const mapKeys = {
     all: ["maps"] as const,
-    branches: () => [...mapKeys.all, "branches"] as const,
+    branches: (q?: string) =>
+        q
+            ? ([...mapKeys.all, "branches", { q }] as const)
+            : ([...mapKeys.all, "branches"] as const),
 };
 
 export const menuKeys = {
     all: ["menu"] as const,
     categories: () => [...menuKeys.all, "categories"] as const,
-    items: (categoryId?: string | null) =>
-        categoryId
-            ? ([...menuKeys.all, "items", categoryId] as const)
+    items: (filters?: { categoryId?: string | null; q?: string }) =>
+        filters && (filters.categoryId != null || filters.q != null)
+            ? ([...menuKeys.all, "items", filters] as const)
             : ([...menuKeys.all, "items"] as const),
 };
 
@@ -120,6 +123,10 @@ export const chatKeys = {
 export const notificationKeys = {
     all: ["notifications"] as const,
     lists: () => [...notificationKeys.all, "list"] as const,
+    list: (filters?: Record<string, unknown>) =>
+        filters
+            ? ([...notificationKeys.lists(), filters] as const)
+            : notificationKeys.lists(),
 };
 
 export const auditKeys = {

@@ -1,9 +1,10 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, lt, or, sql, sum } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { CurrentUser } from "../../access/index.js";
 import {
 	assertBranchAccess,
 	branchFilter,
+	emptyScope,
 	getAccessibleBranchIds,
 } from "../../access/index.js";
 import { db } from "../../db/index.js";
@@ -12,7 +13,10 @@ import { branches } from "../../db/schema/branches.js";
 import { transactions } from "../../db/schema/finance.js";
 import { dailySetorans } from "../../db/schema/orders.js";
 import { fail, ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
+import { containsPattern } from "../../lib/table.js";
 import { logAudit } from "../../utils/effects.js";
+import type { setoransQuery } from "./model.js";
 
 export const getExpectedCash = async (
 	user: CurrentUser,
@@ -58,45 +62,127 @@ export const getExpectedCash = async (
 	});
 };
 
+/**
+ * Kolom yang boleh di-sort dari client (`sortBy` di luar ini diabaikan).
+ */
+const SETORAN_SORT_COLUMNS = {
+	createdAt: dailySetorans.createdAt,
+	date: dailySetorans.date,
+	amount: dailySetorans.amount,
+	status: dailySetorans.status,
+} as const;
+
 export const getSetorans = async (
 	user: CurrentUser,
-	branch?: string | null,
-	limit?: number,
-	offset = 0,
+	params: typeof setoransQuery.static,
 ) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
-	const take = limit ?? 300;
+	const { page, pageSize, sortDir } = resolveTableParams(params);
+	const emptyPage = {
+		...pageResult([], 0, page, pageSize),
+		summary: { total: 0, totalAmount: "0", approved: 0, pending: 0 },
+	};
 
-	const conditions = branchFilter(dailySetorans, branch ?? null, ids);
+	if (emptyScope(ids)) {
+		return ok(emptyPage);
+	}
+
+	const conditions = [branchFilter(dailySetorans, params.branch ?? null, ids)];
+
+	if (params.status) {
+		conditions.push(eq(dailySetorans.status, params.status));
+	}
 
 	const cashierUser = alias(userTable, "cashier");
 	const verifierUser = alias(userTable, "verifier");
 
-	const rows = await db
-		.select({
-			id: dailySetorans.id,
-			branchId: dailySetorans.branchId,
-			cashierId: dailySetorans.cashierId,
-			amount: dailySetorans.amount,
-			date: dailySetorans.date,
-			status: dailySetorans.status,
-			verifiedBy: dailySetorans.verifiedBy,
-			notes: dailySetorans.notes,
-			createdAt: dailySetorans.createdAt,
-			branchName: branches.name,
-			cashierName: cashierUser.name,
-			verifiedByName: verifierUser.name,
-		})
-		.from(dailySetorans)
-		.leftJoin(branches, eq(dailySetorans.branchId, branches.id))
-		.leftJoin(cashierUser, eq(dailySetorans.cashierId, cashierUser.id))
-		.leftJoin(verifierUser, eq(dailySetorans.verifiedBy, verifierUser.id))
-		.where(conditions)
-		.orderBy(desc(dailySetorans.createdAt))
-		.limit(take)
-		.offset(offset);
+	const q = params.q?.trim();
+	if (q) {
+		const pattern = containsPattern(q);
+		const search = or(
+			ilike(branches.name, pattern),
+			ilike(cashierUser.name, pattern),
+		);
+		if (search) conditions.push(search);
+	}
 
-	return ok(rows);
+	const where = and(...conditions);
+	const sortCol =
+		params.sortBy && params.sortBy in SETORAN_SORT_COLUMNS
+			? SETORAN_SORT_COLUMNS[
+					params.sortBy as keyof typeof SETORAN_SORT_COLUMNS
+				]
+			: dailySetorans.createdAt;
+	const orderBy = sortDir === "asc" ? asc(sortCol) : desc(sortCol);
+
+	const columns = {
+		id: dailySetorans.id,
+		branchId: dailySetorans.branchId,
+		cashierId: dailySetorans.cashierId,
+		amount: dailySetorans.amount,
+		date: dailySetorans.date,
+		status: dailySetorans.status,
+		verifiedBy: dailySetorans.verifiedBy,
+		notes: dailySetorans.notes,
+		createdAt: dailySetorans.createdAt,
+		branchName: branches.name,
+		cashierName: cashierUser.name,
+		verifiedByName: verifierUser.name,
+	};
+
+	const [rows, [{ value: total }], statusGroups] = await Promise.all([
+		db
+			.select(columns)
+			.from(dailySetorans)
+			.leftJoin(branches, eq(dailySetorans.branchId, branches.id))
+			.leftJoin(cashierUser, eq(dailySetorans.cashierId, cashierUser.id))
+			.leftJoin(verifierUser, eq(dailySetorans.verifiedBy, verifierUser.id))
+			.where(where)
+			.orderBy(orderBy)
+			.limit(pageSize)
+			.offset(page * pageSize),
+		db
+			.select({ value: count() })
+			.from(dailySetorans)
+			.leftJoin(branches, eq(dailySetorans.branchId, branches.id))
+			.leftJoin(cashierUser, eq(dailySetorans.cashierId, cashierUser.id))
+			.where(where),
+		db
+			.select({
+				status: dailySetorans.status,
+				value: count(),
+				amount: sum(dailySetorans.amount),
+			})
+			.from(dailySetorans)
+			.leftJoin(branches, eq(dailySetorans.branchId, branches.id))
+			.leftJoin(cashierUser, eq(dailySetorans.cashierId, cashierUser.id))
+			.where(where)
+			.groupBy(dailySetorans.status),
+	]);
+
+	let totalAmount = 0;
+	let approved = 0;
+	let pending = 0;
+	for (const group of statusGroups) {
+		totalAmount += Number(group.amount ?? 0);
+		if (group.status === "approved") approved = group.value;
+		else if (group.status === "pending") pending = group.value;
+	}
+
+	return ok({
+		...pageResult(
+			rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+			total,
+			page,
+			pageSize,
+		),
+		summary: {
+			total,
+			totalAmount: String(totalAmount),
+			approved,
+			pending,
+		},
+	});
 };
 
 export const createSetoran = async (

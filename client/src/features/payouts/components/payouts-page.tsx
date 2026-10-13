@@ -1,9 +1,9 @@
-import { SectionHeader } from "#/components/shared/section-header";
+import { SectionHeader } from "@/components/shared/section-header";
 import { PayoutsTable } from "@/features/payouts/components/payouts-table";
 import { useSession } from "@/lib/auth-client";
 import { can, type Role } from "@/lib/rbac";
 
-export function PayoutsPage() {
+export const PayoutsPage = () => {
     const { data: session } = useSession();
     const role = session?.user.role as Role | undefined;
     const canApprove = role ? can(role, "approve", "payouts") : false;
@@ -17,4 +17,4 @@ export function PayoutsPage() {
             <PayoutsTable canApprove={canApprove} />
         </div>
     );
-}
+};

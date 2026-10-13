@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AuditSkeleton } from "@/components/fallbacks/dashboard";
 import { AuditPage } from "@/features/audit/components/audit-page";
-import { auditLogsOptions } from "@/features/audit/hooks/useAuditLogs";
+import { auditLogsInfiniteOptions } from "@/features/audit/hooks/useAuditLogs";
 
 export const Route = createFileRoute("/_dashboard/audit")({
     loader: ({ context: { queryClient } }) =>
-        queryClient.ensureQueryData(auditLogsOptions()),
+        queryClient.prefetchInfiniteQuery(auditLogsInfiniteOptions({})),
     head: () => ({
         meta: [
             { title: "Audit Log" },

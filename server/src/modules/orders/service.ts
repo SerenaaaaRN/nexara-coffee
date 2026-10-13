@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { CurrentUser } from "../../access/index.js";
 import {
@@ -13,8 +13,11 @@ import { customers } from "../../db/schema/customers.js";
 import { menuItems } from "../../db/schema/menu.js";
 import { orderItems, orders } from "../../db/schema/orders.js";
 import { fail, ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
+import { containsPattern } from "../../lib/table.js";
 import { publishAbly } from "../../utils/effects.js";
 import { earnedPointsForTotal, tierForPoints } from "../../utils/loyalty.js";
+import type { getOrdersQuery } from "./model.js";
 
 const guardTerminalTransition = (
 	current: string,
@@ -31,19 +34,26 @@ const guardTerminalTransition = (
 	return null;
 };
 
+/** Kolom yang boleh di-sort dari client (`sortBy` di luar ini diabaikan). */
+const ORDER_SORT_COLUMNS = {
+	createdAt: orders.createdAt,
+	orderNumber: orders.orderNumber,
+	totalAmount: orders.totalAmount,
+	status: orders.status,
+} as const;
+
 export const getOrders = async (
 	user: CurrentUser,
-	params: {
-		branchId?: string;
-		status?: string;
-		dateFrom?: string;
-		dateTo?: string;
-	},
+	params: typeof getOrdersQuery.static,
 ) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
+	const { page, pageSize, sortDir } = resolveTableParams(params);
 
 	if (emptyScope(ids)) {
-		return ok([]);
+		return ok({
+			...pageResult([], 0, page, pageSize),
+			summary: { total: 0, pending: 0, completed: 0, cancelled: 0 },
+		});
 	}
 
 	const createdByUser = alias(userTable, "created_by_user");
@@ -51,7 +61,10 @@ export const getOrders = async (
 
 	if (params.branchId) {
 		if (ids !== null && !ids.includes(params.branchId)) {
-			return ok([]);
+			return ok({
+				...pageResult([], 0, page, pageSize),
+				summary: { total: 0, pending: 0, completed: 0, cancelled: 0 },
+			});
 		}
 		conditions.push(eq(orders.branchId, params.branchId));
 	} else if (ids !== null && ids.length > 0) {
@@ -68,28 +81,81 @@ export const getOrders = async (
 		conditions.push(lte(orders.createdAt, new Date(params.dateTo)));
 	}
 
-	const data = await db
-		.select({
-			id: orders.id,
-			branchId: orders.branchId,
-			customerId: orders.customerId,
-			orderNumber: orders.orderNumber,
-			status: orders.status,
-			totalAmount: orders.totalAmount,
-			createdBy: orders.createdBy,
-			createdAt: orders.createdAt,
-			branchName: branches.name,
-			customerName: customers.fullName,
-			createdByName: createdByUser.name,
-		})
-		.from(orders)
-		.leftJoin(branches, eq(orders.branchId, branches.id))
-		.leftJoin(customers, eq(orders.customerId, customers.id))
-		.leftJoin(createdByUser, eq(orders.createdBy, createdByUser.id))
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.orderBy(desc(orders.createdAt));
+	const q = params.q?.trim();
+	if (q) {
+		const pattern = containsPattern(q);
+		conditions.push(
+			or(
+				ilike(orders.orderNumber, pattern),
+				ilike(customers.fullName, pattern),
+				ilike(branches.name, pattern),
+			),
+		);
+	}
 
-	return ok(data);
+	const where = conditions.length > 0 ? and(...conditions) : undefined;
+	const sortCol =
+		params.sortBy && params.sortBy in ORDER_SORT_COLUMNS
+			? ORDER_SORT_COLUMNS[params.sortBy as keyof typeof ORDER_SORT_COLUMNS]
+			: orders.createdAt;
+	const orderBy = sortDir === "asc" ? asc(sortCol) : desc(sortCol);
+
+	const columns = {
+		id: orders.id,
+		branchId: orders.branchId,
+		customerId: orders.customerId,
+		orderNumber: orders.orderNumber,
+		status: orders.status,
+		totalAmount: orders.totalAmount,
+		createdBy: orders.createdBy,
+		createdAt: orders.createdAt,
+		branchName: branches.name,
+		customerName: customers.fullName,
+		createdByName: createdByUser.name,
+	};
+
+	const [rows, [{ value: total }], statusCounts] = await Promise.all([
+		db
+			.select(columns)
+			.from(orders)
+			.leftJoin(branches, eq(orders.branchId, branches.id))
+			.leftJoin(customers, eq(orders.customerId, customers.id))
+			.leftJoin(createdByUser, eq(orders.createdBy, createdByUser.id))
+			.where(where)
+			.orderBy(orderBy)
+			.limit(pageSize)
+			.offset(page * pageSize),
+		db
+			.select({ value: count() })
+			.from(orders)
+			.leftJoin(branches, eq(orders.branchId, branches.id))
+			.leftJoin(customers, eq(orders.customerId, customers.id))
+			.where(where),
+		db
+			.select({ status: orders.status, value: count() })
+			.from(orders)
+			.leftJoin(branches, eq(orders.branchId, branches.id))
+			.leftJoin(customers, eq(orders.customerId, customers.id))
+			.where(where)
+			.groupBy(orders.status),
+	]);
+
+	const summary = { total, pending: 0, completed: 0, cancelled: 0 };
+	for (const row of statusCounts) {
+		if (row.status === "pending") summary.pending = row.value;
+		else if (row.status === "completed") summary.completed = row.value;
+		else if (row.status === "cancelled") summary.cancelled = row.value;
+	}
+
+	return ok({
+		...pageResult(
+			rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+			total,
+			page,
+			pageSize,
+		),
+		summary,
+	});
 };
 
 export const getOrderDetail = async (user: CurrentUser, orderId: string) => {
@@ -161,9 +227,6 @@ export const createOrder = async (
 	const denied = assertBranchAccess(ids, parsed.branchId);
 	if (denied) return denied;
 
-	// orderId manual tetap dibutuhkan: dipakai menurunkan orderNumber +
-	// FK orderItems sebelum insert (skema $defaultFn hanya untuk kolom id
-	// yang tidak diisi — lihat orderItems di bawah yang mengandalkannya).
 	const orderId = crypto.randomUUID();
 	const total = parsed.items.reduce(
 		(sum, i) => sum + Number(i.price) * i.qty,

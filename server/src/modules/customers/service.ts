@@ -1,22 +1,126 @@
-import { count, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, or, sum } from "drizzle-orm";
 import type { CurrentUser } from "../../access/index.js";
 import { db } from "../../db/index.js";
 import { customers } from "../../db/schema/customers.js";
 import { orders } from "../../db/schema/orders.js";
 import { fail, ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
+import { containsPattern } from "../../lib/table.js";
 import { checkRate, logAudit } from "../../utils/effects.js";
 import { normalizePhone, tierForPoints } from "../../utils/loyalty.js";
+import type { getCustomersQuery } from "./model.js";
 
-export const getCustomers = async () => {
-	const [rows, counts] = await Promise.all([
-		db.select().from(customers).orderBy(customers.fullName),
-		db
-			.select({ customerId: orders.customerId, orderCount: count() })
-			.from(orders)
-			.groupBy(orders.customerId),
-	]);
-	const countById = new Map(counts.map((c) => [c.customerId, c.orderCount]));
-	return ok(rows.map((r) => ({ ...r, orderCount: countById.get(r.id) ?? 0 })));
+/**
+ * Kolom yang boleh di-sort dari client (`sortBy` di luar ini diabaikan).
+ */
+const CUSTOMER_SORT_COLUMNS = {
+	createdAt: customers.createdAt,
+	fullName: customers.fullName,
+	loyaltyPoints: customers.loyaltyPoints,
+} as const;
+
+export const getCustomers = async (params: typeof getCustomersQuery.static) => {
+	const { page, pageSize, sortDir } = resolveTableParams(params);
+	const conditions = [];
+
+	if (params.segment) {
+		conditions.push(eq(customers.segment, params.segment));
+	}
+	if (params.tier) {
+		conditions.push(eq(customers.loyaltyTier, params.tier));
+	}
+
+	const q = params.q?.trim();
+	if (q) {
+		const pattern = containsPattern(q);
+		conditions.push(
+			or(
+				ilike(customers.fullName, pattern),
+				ilike(customers.email, pattern),
+				ilike(customers.phone, pattern),
+			),
+		);
+	}
+
+	const where = conditions.length > 0 ? and(...conditions) : undefined;
+	const sortCol =
+		params.sortBy && params.sortBy in CUSTOMER_SORT_COLUMNS
+			? CUSTOMER_SORT_COLUMNS[
+					params.sortBy as keyof typeof CUSTOMER_SORT_COLUMNS
+				]
+			: customers.createdAt;
+	const orderBy = sortDir === "asc" ? asc(sortCol) : desc(sortCol);
+
+	const [rows, [{ value: total }], [{ value: orderTotal }], [{ value: pointsTotal }]] =
+		await Promise.all([
+			db
+				.select({
+					id: customers.id,
+					fullName: customers.fullName,
+					email: customers.email,
+					phone: customers.phone,
+					segment: customers.segment,
+					loyaltyPoints: customers.loyaltyPoints,
+					loyaltyTier: customers.loyaltyTier,
+					userId: customers.userId,
+					createdAt: customers.createdAt,
+					orderCount: count(orders.id),
+				})
+				.from(customers)
+				.leftJoin(orders, eq(orders.customerId, customers.id))
+				.where(where)
+				.groupBy(customers.id)
+				.orderBy(orderBy)
+				.limit(pageSize)
+				.offset(page * pageSize),
+			db.select({ value: count() }).from(customers).where(where),
+			db
+				.select({ value: count(orders.id) })
+				.from(customers)
+				.leftJoin(orders, eq(orders.customerId, customers.id))
+				.where(where),
+			db
+				.select({ value: sum(customers.loyaltyPoints) })
+				.from(customers)
+				.where(where),
+		]);
+
+	return ok({
+		...pageResult(
+			rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+			total,
+			page,
+			pageSize,
+		),
+		summary: {
+			total,
+			totalOrders: orderTotal,
+			totalPoints: Number(pointsTotal ?? 0),
+		},
+	});
+};
+
+export const getCustomerDetail = async (id: string) => {
+	const [row] = await db
+		.select({
+			id: customers.id,
+			fullName: customers.fullName,
+			email: customers.email,
+			phone: customers.phone,
+			segment: customers.segment,
+			loyaltyPoints: customers.loyaltyPoints,
+			loyaltyTier: customers.loyaltyTier,
+			userId: customers.userId,
+			createdAt: customers.createdAt,
+			orderCount: count(orders.id),
+		})
+		.from(customers)
+		.leftJoin(orders, eq(orders.customerId, customers.id))
+		.where(eq(customers.id, id))
+		.groupBy(customers.id)
+		.limit(1);
+	if (!row) return fail(404, "Customer not found");
+	return ok({ ...row, createdAt: row.createdAt.toISOString() });
 };
 
 export const createCustomer = async (

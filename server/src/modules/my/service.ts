@@ -6,6 +6,7 @@ import { branches } from "../../db/schema/branches.js";
 import { customers, reviews } from "../../db/schema/customers.js";
 import { orders } from "../../db/schema/orders.js";
 import { fail, ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
 import { checkRate, logAudit } from "../../utils/effects.js";
 import { normalizePhone } from "../../utils/loyalty.js";
 
@@ -16,8 +17,7 @@ export const getMyOrders = async (
 	params: { page?: number; pageSize?: number },
 ) => {
 	const uid = user.id;
-	const page = params.page ?? 0;
-	const pageSize = params.pageSize ?? 20;
+	const { page, pageSize } = resolveTableParams(params);
 	const { scope } = await resolveMyScope(uid);
 
 	const completedScope = and(scope, eq(orders.status, "completed"));
@@ -58,9 +58,16 @@ export const getMyOrders = async (
 	}
 
 	return ok({
-		rows: rows.map((r) => ({ ...r, hasReview: reviewed.has(r.id) })),
-		nextPage: rows.length === pageSize ? page + 1 : null,
-		total: totalRows[0]?.cnt ?? 0,
+		...pageResult(
+			rows.map((r) => ({
+				...r,
+				createdAt: r.createdAt.toISOString(),
+				hasReview: reviewed.has(r.id),
+			})),
+			totalRows[0]?.cnt ?? 0,
+			page,
+			pageSize,
+		),
 		completedTotal: completedRows[0]?.cnt ?? 0,
 	});
 };

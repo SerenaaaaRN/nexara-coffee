@@ -5,7 +5,7 @@ import { reviewsOptions } from "@/features/reviews/hooks/useReviewQueries";
 
 export const Route = createFileRoute("/_dashboard/reviews")({
     loader: ({ context: { queryClient } }) =>
-        queryClient.ensureQueryData(reviewsOptions()),
+        queryClient.ensureQueryData(reviewsOptions({ pageSize: 20 })),
     head: () => ({
         meta: [
             { title: "Reviews" },

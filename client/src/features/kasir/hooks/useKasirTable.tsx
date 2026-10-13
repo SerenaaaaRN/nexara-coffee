@@ -1,9 +1,6 @@
 import {
     createColumnHelper,
     getCoreRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
 import { Ban, Check, Trash2 } from "lucide-react";
@@ -12,29 +9,32 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { KASIR_STATUSES } from "@/features/kasir/data";
 import type { SetoranRow } from "@/features/kasir/types";
-import { useTableState } from "@/hooks/useTableState";
+import type { TableState } from "@/hooks/useTableState";
 import { capitalize, formatCurrency, formatDate } from "@/utils/format";
 import { getBadgeVariant } from "@/utils/status";
 
 const columnHelper = createColumnHelper<SetoranRow>();
 
 /**
- * Mempersiapkan column definitions, filter configs, useTableState, dan instance useReactTable
- * untuk tabel setoran harian (kasir). canApprove / currentUserId / onApproveReject / onDelete
- * diteruskan ke kolom aksi.
+ * Tabel setoran harian (kasir) mode server-driven: search/sort/filter/page
+ * di-resolve di server. `tableState` dibuat di page via `useTableState`.
  */
 export const useKasirTable = (
     setorans: SetoranRow[],
-    callbacks: {
-        canApprove: boolean;
-        currentUserId: string;
-        onApproveReject: (id: string, action: "approve" | "reject") => void;
-        onDelete: (id: string) => void;
+    options: {
+        tableState: TableState;
+        pageCount: number;
+        callbacks: {
+            canApprove: boolean;
+            currentUserId: string;
+            onApproveReject: (id: string, action: "approve" | "reject") => void;
+            onDelete: (id: string) => void;
+        };
     },
 ) => {
-    const tableState = useTableState();
+    const { tableState, pageCount, callbacks } = options;
 
-    /** Filter berdasarkan status setoran. */
+    /** Filter berdasarkan status setoran — nilainya dikirim sebagai param server. */
     const filterConfigs = useMemo(
         () => [
             {
@@ -49,7 +49,11 @@ export const useKasirTable = (
         [],
     );
 
-    /** Kolom: date, branchId, cashierName, amount, status, actions (approve/reject/delete). */
+    /**
+     * Kolom: date, branchId, cashierName, amount, status, actions.
+     * Sort server hanya untuk date/amount/status (whitelist
+     * `SETORAN_SORT_COLUMNS` di server).
+     */
     const columns = useMemo(
         () => [
             columnHelper.accessor("date", {
@@ -60,19 +64,17 @@ export const useKasirTable = (
             columnHelper.accessor("branchId", {
                 id: "branchId",
                 header: "Branch",
+                enableSorting: false,
                 cell: ({ row }) => (
                     <span className="font-medium">
                         {row.original.branchName ?? "—"}
                     </span>
                 ),
-                filterFn: (row, _columnId, filterValue) => {
-                    if (!filterValue) return true;
-                    return row.original.branchId === filterValue;
-                },
             }),
             columnHelper.accessor("cashierName", {
                 id: "cashierName",
                 header: "Cashier",
+                enableSorting: false,
                 cell: ({ getValue }) => getValue() ?? "—",
             }),
             columnHelper.accessor("amount", {
@@ -83,9 +85,6 @@ export const useKasirTable = (
                         {formatCurrency(getValue())}
                     </span>
                 ),
-                sortingFn: (rowA, rowB, columnId) =>
-                    Number(rowA.getValue(columnId)) -
-                    Number(rowB.getValue(columnId)),
             }),
             columnHelper.accessor("status", {
                 id: "status",
@@ -95,20 +94,18 @@ export const useKasirTable = (
                         {capitalize(getValue())}
                     </Badge>
                 ),
-                filterFn: (row, _columnId, filterValue) => {
-                    if (!filterValue) return true;
-                    return row.original.status === filterValue;
-                },
             }),
             columnHelper.display({
+                id: "actions",
                 header: "Actions",
+                enableSorting: false,
                 cell: ({ row }) => {
                     const s = row.original;
                     const isOwner = callbacks.currentUserId === s.cashierId;
 
                     return (
                         <div className="flex items-center gap-1">
-                            {callbacks.canApprove && s.status === "pending" && (
+                            {callbacks.canApprove && s.status === "pending" ? (
                                 <>
                                     <Button
                                         variant="outline"
@@ -135,8 +132,8 @@ export const useKasirTable = (
                                         <Ban />
                                     </Button>
                                 </>
-                            )}
-                            {isOwner && s.status === "pending" && (
+                            ) : null}
+                            {isOwner && s.status === "pending" ? (
                                 <Button
                                     variant="ghost"
                                     size="icon"
@@ -147,7 +144,7 @@ export const useKasirTable = (
                                     }}>
                                     <Trash2 />
                                 </Button>
-                            )}
+                            ) : null}
                         </div>
                     );
                 },
@@ -162,13 +159,17 @@ export const useKasirTable = (
     );
 
     /**
-     * Instance useReactTable.
-     * globalFilterFn mencari berdasarkan branchName dan cashierName.
+     * Instance useReactTable server-driven: tanpa row model client
+     * (tanpa getFiltered/Sorted/PaginationRowModel).
      */
     const table = useReactTable({
         data: setorans,
         columns,
         getRowId: (row) => row.id,
+        manualSorting: true,
+        manualFiltering: true,
+        manualPagination: true,
+        pageCount,
         state: {
             sorting: tableState.sorting,
             globalFilter: tableState.globalFilter,
@@ -179,24 +180,13 @@ export const useKasirTable = (
         onGlobalFilterChange: tableState.setGlobalFilter,
         onColumnFiltersChange: tableState.setColumnFilters,
         onPaginationChange: tableState.setPagination,
-        globalFilterFn: (row, _columnId, filterValue) => {
-            const q = String(filterValue).toLowerCase();
-            const s = row.original;
-            return (
-                (s.branchName ?? "").toLowerCase().includes(q) ||
-                (s.cashierName ?? "").toLowerCase().includes(q)
-            );
-        },
         getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
     });
 
     return {
         table,
         tableState,
         filterConfigs,
-        searchPlaceholder: "Search by branch or cashier...",
+        searchPlaceholder: "Search by branch, cashier...",
     };
 };

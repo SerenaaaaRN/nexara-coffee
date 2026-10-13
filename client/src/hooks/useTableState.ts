@@ -4,19 +4,23 @@ import type {
     SortingState,
 } from "@tanstack/react-table";
 import { useCallback, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface UseTableStateOptions {
     initialPageSize?: number;
     initialSorting?: SortingState;
     initialColumnFilters?: ColumnFiltersState;
     initialGlobalFilter?: string;
+    debounceMs?: number;
 }
 
 /**
- * State management untuk TanStack Table (sorting + global filter + column filters + pagination).
+ * State tabel server-driven untuk TanStack Table (sorting + global filter +
+ * column filters + pagination) beserta turunan siap kirim sebagai query
+ * params (`debouncedSearch`, `sortBy`, `sortDir`, `page`, `pageSize`).
  * Dipakai bersama FilterToolbar. Tidak ada JSX — pure state hook.
  */
-export function useTableState(options?: UseTableStateOptions) {
+export const useTableState = (options?: UseTableStateOptions) => {
     const [sorting, setSorting] = useState<SortingState>(
         options?.initialSorting ?? [],
     );
@@ -31,7 +35,7 @@ export function useTableState(options?: UseTableStateOptions) {
 
     const [pagination, setPagination] = useState<PaginationState>({
         pageIndex: 0,
-        pageSize: options?.initialPageSize ?? 10,
+        pageSize: options?.initialPageSize ?? 20,
     });
 
     /** Ambil value filter column tertentu. */
@@ -72,6 +76,18 @@ export function useTableState(options?: UseTableStateOptions) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
     }, []);
 
+    const debouncedSearch = useDebounce(
+        globalFilter,
+        options?.debounceMs ?? 300,
+    );
+
+    const activeSort = sorting[0];
+    const sortDir: "asc" | "desc" | undefined = activeSort
+        ? activeSort.desc
+            ? "desc"
+            : "asc"
+        : undefined;
+
     return {
         sorting,
         setSorting,
@@ -84,5 +100,12 @@ export function useTableState(options?: UseTableStateOptions) {
         getFilterValue,
         setFilterValue,
         clearAll,
+        debouncedSearch,
+        sortBy: activeSort?.id,
+        sortDir,
+        page: pagination.pageIndex,
+        pageSize: pagination.pageSize,
     };
-}
+};
+
+export type TableState = ReturnType<typeof useTableState>;

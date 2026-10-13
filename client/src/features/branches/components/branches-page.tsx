@@ -13,7 +13,6 @@ import {
 import { BranchDetail } from "@/features/branches/components/branch-detail";
 import { BranchFormDialog } from "@/features/branches/components/branch-form-dialog";
 import { BranchListPanel } from "@/features/branches/components/branch-list-panel";
-import { useBranchFilters } from "@/features/branches/hooks/useBranchFilters";
 import {
     useCreateBranch,
     useDeleteBranch,
@@ -21,6 +20,7 @@ import {
 } from "@/features/branches/hooks/useBranchMutations";
 import { useBranches } from "@/features/branches/hooks/useBranchQueries";
 import type { CreateBranchInput } from "@/features/branches/types";
+import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/utils/cn";
 
 const routeApi = getRouteApi("/_dashboard/branches");
@@ -29,10 +29,13 @@ export const BranchesPage = () => {
     const { branch } = routeApi.useSearch();
     const navigate = useNavigate();
     const [createOpen, setCreateOpen] = useState(false);
-    const { data } = useBranches();
+    const [search, setSearch] = useState("");
+    const debouncedSearch = useDebounce(search);
+    const q = debouncedSearch.trim();
+    const { data } = useBranches(q ? { q } : undefined);
 
     const branches = data.success ? data.data : [];
-    const { search, setSearch, filtered } = useBranchFilters(branches);
+    const filtered = branches;
 
     const createBranch = useCreateBranch();
     const updateBranch = useUpdateBranch();

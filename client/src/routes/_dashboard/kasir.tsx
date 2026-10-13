@@ -15,7 +15,9 @@ export const Route = createFileRoute("/_dashboard/kasir")({
     loaderDeps: ({ search: { branch } }) => ({ branch }),
     loader: async ({ context: { queryClient }, deps }) => {
         await Promise.all([
-            queryClient.ensureQueryData(setoransOptions(deps.branch)),
+            queryClient.ensureQueryData(
+                setoransOptions({ branch: deps.branch, pageSize: 20 }),
+            ),
             queryClient.ensureQueryData(branchesOptions()),
         ]);
     },

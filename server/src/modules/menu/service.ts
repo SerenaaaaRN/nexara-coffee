@@ -1,4 +1,4 @@
-import { asc, count, eq, isNotNull } from "drizzle-orm";
+import { and, asc, count, eq, ilike, isNotNull, or } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { menuCategories, menuItems } from "../../db/schema/menu.js";
 import {
@@ -7,6 +7,8 @@ import {
 	uploadImageBase64,
 } from "../../infra/images.js";
 import { fail, ok } from "../../lib/http.js";
+import { containsPattern } from "../../lib/table.js";
+import type { menuItemsQuery } from "./model.js";
 
 export const getMenuCategories = async () => {
 	const rows = await db
@@ -16,27 +18,77 @@ export const getMenuCategories = async () => {
 	return ok(rows);
 };
 
-export const getMenuItems = async (categoryId?: string | null) => {
-	const cond = categoryId
-		? eq(menuItems.categoryId, categoryId)
-		: isNotNull(menuItems.categoryId);
-	const rows = await db
-		.select()
-		.from(menuItems)
-		.innerJoin(menuCategories, eq(menuItems.categoryId, menuCategories.id))
-		.where(cond)
-		.orderBy(asc(menuCategories.displayOrder), asc(menuItems.name))
-		.then((r) =>
-			r.map((row) => ({
-				...row.menu_items,
-				variants: row.menu_items.variants as
-					| { name: string; price: number }[]
-					| null,
-				category: row.menu_categories,
-			})),
+export const getMenuItems = async (params: typeof menuItemsQuery.static) => {
+	const searchConditions = [];
+	const term = params.q?.trim();
+	if (term) {
+		const pattern = containsPattern(term);
+		searchConditions.push(
+			or(ilike(menuItems.name, pattern), ilike(menuItems.description, pattern)),
 		);
+	}
+	const searchWhere =
+		searchConditions.length > 0 ? and(...searchConditions) : undefined;
 
-	return ok(rows);
+	const listConditions = [...searchConditions];
+	if (params.categoryId) {
+		listConditions.push(eq(menuItems.categoryId, params.categoryId));
+	} else {
+		listConditions.push(isNotNull(menuItems.categoryId));
+	}
+	const listWhere = and(...listConditions);
+
+	const toRow = (row: {
+		menu_items: typeof menuItems.$inferSelect;
+		menu_categories: typeof menuCategories.$inferSelect;
+	}) => ({
+		...row.menu_items,
+		variants: row.menu_items.variants as
+			| { name: string; price: number }[]
+			| null,
+		category: row.menu_categories,
+	});
+
+	const [itemRows, [{ value: total }], availabilityGroups, categoryGroups] =
+		await Promise.all([
+			db
+				.select()
+				.from(menuItems)
+				.innerJoin(menuCategories, eq(menuItems.categoryId, menuCategories.id))
+				.where(listWhere)
+				.orderBy(asc(menuCategories.displayOrder), asc(menuItems.name)),
+			db
+				.select({ value: count() })
+				.from(menuItems)
+				.where(listWhere),
+			db
+				.select({ available: menuItems.isAvailable, value: count() })
+				.from(menuItems)
+				.where(listWhere)
+				.groupBy(menuItems.isAvailable),
+			db
+				.select({ categoryId: menuItems.categoryId, value: count() })
+				.from(menuItems)
+				.where(searchWhere)
+				.groupBy(menuItems.categoryId),
+		]);
+
+	let available = 0;
+	let hidden = 0;
+	for (const group of availabilityGroups) {
+		if (group.available) available = group.value;
+		else hidden = group.value;
+	}
+	const byCategory: Record<string, number> = {};
+	for (const group of categoryGroups) {
+		byCategory[group.categoryId] = group.value;
+	}
+
+	return ok({
+		rows: itemRows.map(toRow),
+		total,
+		summary: { total, available, hidden, byCategory },
+	});
 };
 
 export const createCategory = async (data: {

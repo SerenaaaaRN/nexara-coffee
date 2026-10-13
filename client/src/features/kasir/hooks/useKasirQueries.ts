@@ -31,20 +31,50 @@ export const useExpectedCash = (
 
 /**
  * Mengambil data setoran harian beserta nama branch, cashier, dan verifier.
+ * Search/filter/sort/page di-resolve di server.
  */
-export const getSetorans = async (branch?: string | null) => {
+export const getSetorans = async (params?: SetoranFilters) => {
     const { data, error } = await api.kasir.setorans.get({
-        query: branch ? { branch } : {},
+        query: {
+            branch: params?.branch ?? undefined,
+            status: params?.status,
+            q: params?.q,
+            page: params?.page,
+            pageSize: params?.pageSize,
+            sortBy: params?.sortBy,
+            sortDir: params?.sortDir,
+        },
     });
     return toEnvelope(data, error);
 };
 
-export const setoransOptions = (branch?: string | null) =>
+export type SetoranFilters = {
+    branch?: string | null;
+    status?: string;
+    q?: string;
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+};
+
+export const setoransOptions = (params?: SetoranFilters) =>
     queryOptions({
-        queryKey: branch ? kasirKeys.list({ branch }) : kasirKeys.lists(),
-        queryFn: () => getSetorans(branch),
+        queryKey: kasirKeys.list(params),
+        queryFn: () => getSetorans(params),
         staleTime: 0,
     });
 
-export const useSetorans = (branch?: string | null) =>
-    useSuspenseQuery(setoransOptions(branch));
+export const setoransTableOptions = (params?: SetoranFilters) =>
+    queryOptions({
+        queryKey: kasirKeys.list(params),
+        queryFn: () => getSetorans(params),
+        staleTime: 0,
+        placeholderData: (previousData) => previousData,
+    });
+
+export const useSetorans = (params?: SetoranFilters) =>
+    useSuspenseQuery(setoransOptions(params));
+
+export const useSetoransTableQuery = (params?: SetoranFilters) =>
+    useQuery(setoransTableOptions(params));

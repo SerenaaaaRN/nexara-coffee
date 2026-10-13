@@ -1,9 +1,6 @@
 import {
     createColumnHelper,
     getCoreRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
 import { RefreshCcw } from "lucide-react";
@@ -12,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { TransactionRow } from "@/features/transactions/types";
 import { PAYMENT_METHODS } from "@/features/transactions/types";
-import { useTableState } from "@/hooks/useTableState";
+import type { TableState } from "@/hooks/useTableState";
 import { capitalize, formatCurrency, formatDateTime } from "@/utils/format";
 import { getBadgeVariant } from "@/utils/status";
 
@@ -31,19 +28,23 @@ const TRANSACTION_STATUS_OPTIONS = ["completed", "refunded"].map((s) => ({
 }));
 
 /**
- * Mempersiapkan column definitions, filter configs, useTableState, dan instance useReactTable
- * untuk tabel transaksi. canRefund / onRefund diteruskan ke kolom aksi.
+ * Tabel transaksi mode server-driven: search/sort/filter/page di-resolve di
+ * server. `tableState` dibuat di komponen via `useTableState`.
  */
-export function useTransactionsTable(
+export const useTransactionsTable = (
     transactions: TransactionRow[],
-    callbacks: {
-        canRefund: boolean;
-        onRefund: (transactionId: string) => void;
+    options: {
+        tableState: TableState;
+        pageCount: number;
+        callbacks: {
+            canRefund: boolean;
+            onRefund: (transactionId: string) => void;
+        };
     },
-) {
-    const tableState = useTableState({ initialPageSize: 10 });
+) => {
+    const { tableState, pageCount, callbacks } = options;
 
-    /** Filter berdasarkan payment method dan status transaksi. */
+    /** Filter payment method + status — nilainya dikirim sebagai param server. */
     const filterConfigs = useMemo(
         () => [
             {
@@ -63,17 +64,21 @@ export function useTransactionsTable(
         [],
     );
 
-    /** Kolom: createdAt, orderNumber, branchName, paymentMethod, amount, status, actions. */
+    /**
+     * Kolom: createdAt, orderNumber, branchName, paymentMethod, amount,
+     * status, actions. Sort server hanya untuk createdAt/paymentMethod/
+     * amount/status (whitelist `TRANSACTION_SORT_COLUMNS` di server).
+     */
     const columns = useMemo(
         () => [
             columnHelper.accessor("createdAt", {
                 header: "Date",
                 cell: (info) => formatDateTime(info.getValue()),
-                sortingFn: "datetime",
             }),
             columnHelper.accessor((row) => row.orderNumber ?? "—", {
                 id: "orderNumber",
                 header: "Order",
+                enableSorting: false,
                 cell: (info) => (
                     <span className="font-medium">{info.getValue()}</span>
                 ),
@@ -81,13 +86,10 @@ export function useTransactionsTable(
             columnHelper.accessor((row) => row.branchName ?? "—", {
                 id: "branchName",
                 header: "Branch",
+                enableSorting: false,
             }),
             columnHelper.accessor("paymentMethod", {
                 header: "Method",
-                filterFn: (row, _columnId, filterValue) => {
-                    if (!filterValue || filterValue === "all") return true;
-                    return row.original.paymentMethod === filterValue;
-                },
                 cell: (info) => (
                     <Badge variant="secondary">
                         {paymentLabels[info.getValue()] ?? info.getValue()}
@@ -104,10 +106,6 @@ export function useTransactionsTable(
             }),
             columnHelper.accessor("status", {
                 header: "Status",
-                filterFn: (row, _columnId, filterValue) => {
-                    if (!filterValue || filterValue === "all") return true;
-                    return row.original.status === filterValue;
-                },
                 cell: (info) => (
                     <Badge variant={getBadgeVariant(info.getValue())}>
                         {capitalize(info.getValue())}
@@ -117,6 +115,7 @@ export function useTransactionsTable(
             columnHelper.display({
                 id: "actions",
                 header: "Actions",
+                enableSorting: false,
                 cell: ({ row }) => {
                     if (
                         callbacks.canRefund &&
@@ -142,13 +141,17 @@ export function useTransactionsTable(
     );
 
     /**
-     * Instance useReactTable.
-     * globalFilterFn mencari berdasarkan orderNumber, branchName, paymentMethod.
+     * Instance useReactTable server-driven: tanpa row model client
+     * (tanpa getFiltered/Sorted/PaginationRowModel).
      */
     const table = useReactTable({
         data: transactions,
         columns,
         getRowId: (row) => row.id,
+        manualSorting: true,
+        manualFiltering: true,
+        manualPagination: true,
+        pageCount,
         state: {
             sorting: tableState.sorting,
             globalFilter: tableState.globalFilter,
@@ -159,19 +162,7 @@ export function useTransactionsTable(
         onGlobalFilterChange: tableState.setGlobalFilter,
         onColumnFiltersChange: tableState.setColumnFilters,
         onPaginationChange: tableState.setPagination,
-        globalFilterFn: (row, _columnId, filterValue) => {
-            const searchStr = String(filterValue).toLowerCase();
-            const t = row.original;
-            return (
-                (t.orderNumber ?? "").toLowerCase().includes(searchStr) ||
-                (t.branchName ?? "").toLowerCase().includes(searchStr) ||
-                (t.paymentMethod ?? "").toLowerCase().includes(searchStr)
-            );
-        },
         getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
     });
 
     return {
@@ -180,4 +171,4 @@ export function useTransactionsTable(
         filterConfigs,
         searchPlaceholder: "Search by order, branch...",
     };
-}
+};

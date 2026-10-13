@@ -5,12 +5,19 @@ import {
     ChevronLeft,
     ChevronRight,
     ChevronsUpDown,
+    CircleDollarSign,
     Plus,
 } from "lucide-react";
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense } from "react";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
+import {
+    Empty,
+    EmptyDescription,
+    EmptyMedia,
+    EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
     TableBody,
@@ -21,7 +28,7 @@ import {
     Table as UITable,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { SetoranRow } from "@/features/kasir/types";
+import type { SetoranRow, SetoranSummary } from "@/features/kasir/types";
 import { formatCurrency } from "@/utils/format";
 
 const KasirBoard = lazy(() =>
@@ -60,7 +67,8 @@ interface Props {
     canRecord: boolean;
     onRowClick: (row: SetoranRow) => void;
     canApprove: boolean;
-    allSetorans: SetoranRow[];
+    total: number;
+    summary: SetoranSummary;
 }
 
 export const KasirTable = ({
@@ -74,33 +82,12 @@ export const KasirTable = ({
     canRecord,
     onRowClick,
     canApprove,
-    allSetorans,
+    total,
+    summary,
 }: Props) => {
     const rows = table.getRowModel().rows;
-    const filteredCount = table.getFilteredRowModel().rows.length;
     const pageIndex = tableState.pagination.pageIndex;
     const pageCount = table.getPageCount();
-
-    const { filteredRows, totalAmount, pendingCount, approvedCount } =
-        useMemo(() => {
-            const filtered = table
-                .getFilteredRowModel()
-                .rows.map((r) => r.original);
-            let total = 0;
-            let pending = 0;
-            let approved = 0;
-            for (const s of filtered) {
-                total += Number(s.amount);
-                if (s.status === "pending") pending++;
-                else if (s.status === "approved") approved++;
-            }
-            return {
-                filteredRows: filtered,
-                totalAmount: total,
-                pendingCount: pending,
-                approvedCount: approved,
-            };
-        }, [table]);
 
     return (
         <>
@@ -108,14 +95,11 @@ export const KasirTable = ({
                 <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
                     <StatCard
                         label="Total Setoran"
-                        value={formatCurrency(totalAmount)}
+                        value={formatCurrency(summary.totalAmount)}
                     />
-                    <StatCard label="Approved" value={approvedCount} />
-                    <StatCard label="Pending" value={pendingCount} />
-                    <StatCard
-                        label="Total Entries"
-                        value={filteredRows.length}
-                    />
+                    <StatCard label="Approved" value={summary.approved} />
+                    <StatCard label="Pending" value={summary.pending} />
+                    <StatCard label="Total Entries" value={summary.total} />
                 </div>
                 <Button onClick={onRecord} disabled={!canRecord}>
                     <Plus data-icon="inline-start" /> Record Setoran
@@ -126,8 +110,8 @@ export const KasirTable = ({
                 tableState={tableState}
                 searchPlaceholder={searchPlaceholder}
                 filters={filterConfigs}
-                total={allSetorans.length}
-                filtered={filteredRows.length}>
+                total={total}
+                filtered={rows.length}>
                 <Tabs
                     value={view}
                     onValueChange={(v) => onViewChange(v as "table" | "board")}>
@@ -138,7 +122,17 @@ export const KasirTable = ({
                 </Tabs>
             </FilterToolbar>
 
-            {view === "table" ? (
+            {rows.length === 0 ? (
+                <Empty>
+                    <EmptyMedia variant="icon">
+                        <CircleDollarSign />
+                    </EmptyMedia>
+                    <EmptyTitle>No matching setorans</EmptyTitle>
+                    <EmptyDescription>
+                        Try adjusting your search or filters.
+                    </EmptyDescription>
+                </Empty>
+            ) : view === "table" ? (
                 <div className="flex flex-col gap-4">
                     <UITable>
                         <TableHeader>
@@ -164,8 +158,8 @@ export const KasirTable = ({
                                                               .header,
                                                           h.getContext(),
                                                       )}
-                                                {h.column.getCanSort() &&
-                                                    (h.column.getIsSorted() ===
+                                                {h.column.getCanSort() ? (
+                                                    h.column.getIsSorted() ===
                                                     "asc" ? (
                                                         <ArrowUp className="size-3" />
                                                     ) : h.column.getIsSorted() ===
@@ -173,7 +167,8 @@ export const KasirTable = ({
                                                         <ArrowDown className="size-3" />
                                                     ) : (
                                                         <ChevronsUpDown className="size-3 text-muted-foreground opacity-50" />
-                                                    ))}
+                                                    )
+                                                ) : null}
                                             </div>
                                         </TableHead>
                                     ))}
@@ -200,8 +195,8 @@ export const KasirTable = ({
                     </UITable>
                     <div className="flex items-center justify-between mt-2">
                         <p className="text-sm text-muted-foreground">
-                            Showing {filteredCount} setoran
-                            {filteredCount !== 1 ? "s" : ""}
+                            Showing {rows.length} of {total} setoran
+                            {total !== 1 ? "s" : ""}
                         </p>
                         <div className="flex items-center gap-2">
                             <Button
@@ -234,7 +229,7 @@ export const KasirTable = ({
                         </div>
                     }>
                     <KasirBoard
-                        setorans={filteredRows}
+                        setorans={rows.map((r) => r.original)}
                         canApprove={canApprove}
                         onSelectSetoran={onRowClick}
                     />

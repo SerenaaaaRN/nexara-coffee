@@ -42,7 +42,10 @@ export type Customer = GetData<
     (typeof api.customers)["find-or-create"]["post"]
 >;
 
-export type CustomerRow = GetData<typeof api.customers.get>[number];
+export type CustomerRow = GetData<typeof api.customers.get>["rows"][number];
+
+/** Ringkasan agregat customers — from eden treaty. */
+export type CustomerSummary = GetData<typeof api.customers.get>["summary"];
 
 /**
  * Hasil lookup member via HP (read-only, tanpa create) —

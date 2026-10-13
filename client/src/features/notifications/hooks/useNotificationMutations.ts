@@ -25,7 +25,7 @@ export const markAllRead = async (): Promise<Envelope<unknown>> => {
     return toEnvelope(data, error);
 };
 
-export function useMarkNotificationRead() {
+export const useMarkNotificationRead = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (data: z.infer<typeof markReadSchema>) =>
@@ -38,9 +38,9 @@ export function useMarkNotificationRead() {
             }
         },
     });
-}
+};
 
-export function useMarkAllRead() {
+export const useMarkAllRead = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (_data: z.infer<typeof markAllReadSchema>) => markAllRead(),
@@ -52,4 +52,4 @@ export function useMarkAllRead() {
             }
         },
     });
-}
+};

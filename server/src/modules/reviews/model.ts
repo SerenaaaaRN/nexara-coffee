@@ -1,10 +1,14 @@
 import { t } from "elysia";
+import { serverTableQuery } from "../../lib/schema.js";
 
-export const reviewsQuery = t.Object({
-	branchId: t.Optional(t.String()),
-	status: t.Optional(t.String()),
-	rating: t.Optional(t.Numeric({ minimum: 1, maximum: 5 })),
-});
+export const reviewsQuery = t.Composite([
+	t.Object({
+		branchId: t.Optional(t.String()),
+		status: t.Optional(t.String()),
+		rating: t.Optional(t.Numeric({ minimum: 1, maximum: 5 })),
+	}),
+	serverTableQuery,
+]);
 
 export const replyReviewBody = t.Object({
 	reply: t.String({ minLength: 1, maxLength: 1000 }),

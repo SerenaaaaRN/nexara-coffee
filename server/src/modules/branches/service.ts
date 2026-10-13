@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { CurrentUser } from "../../access/index.js";
 import { emptyScope, getAccessibleBranchIds } from "../../access/index.js";
@@ -9,11 +9,28 @@ import { chatChannels } from "../../db/schema/collaboration.js";
 import { employeeDetails } from "../../db/schema/employee.js";
 import { fail, ok } from "../../lib/http.js";
 import { logAudit } from "../../utils/effects.js";
+import { containsPattern } from "../../lib/table.js";
+import type { getBranchesQuery } from "./model.js";
 
-export const getBranches = async (user: CurrentUser) => {
+export const getBranches = async (
+	user: CurrentUser,
+	params?: typeof getBranchesQuery.static,
+) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 	if (emptyScope(ids)) {
 		return ok([]);
+	}
+
+	const conditions = [];
+	const term = params?.q?.trim();
+	if (term) {
+		const pattern = containsPattern(term);
+		conditions.push(
+			or(ilike(branches.name, pattern), ilike(branches.address, pattern)),
+		);
+	}
+	if (ids !== null) {
+		conditions.push(inArray(branches.id, ids));
 	}
 
 	const manager = alias(userTable, "manager");
@@ -38,7 +55,7 @@ export const getBranches = async (user: CurrentUser) => {
 		})
 		.from(branches)
 		.leftJoin(manager, eq(branches.managerId, manager.id))
-		.where(ids !== null ? inArray(branches.id, ids) : undefined)
+		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		.orderBy(asc(branches.name));
 
 	const branchIds = rows.map((r) => r.id);

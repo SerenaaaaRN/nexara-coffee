@@ -36,7 +36,7 @@ export const approvePayout = async (
     return toEnvelope(data, error);
 };
 
-export function useRequestPayout() {
+export const useRequestPayout = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (data: z.infer<typeof requestPayoutSchema>) =>
@@ -45,9 +45,9 @@ export function useRequestPayout() {
             qc.invalidateQueries({ queryKey: payoutKeys.all });
         },
     });
-}
+};
 
-export function useApprovePayout() {
+export const useApprovePayout = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (data: z.infer<typeof approvePayoutSchema>) =>
@@ -56,4 +56,4 @@ export function useApprovePayout() {
             qc.invalidateQueries({ queryKey: payoutKeys.all });
         },
     });
-}
+};

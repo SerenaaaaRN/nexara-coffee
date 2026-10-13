@@ -49,9 +49,9 @@ Satu lapis DB (`server/src/db` Drizzle) dan satu setup Better Auth (`server/src/
 - Branches have limited autonomy: they can manage stock, staff schedules, and request restock — but cannot change menu/pricing without HQ approval
 - Franchise branch revenue is shared according to a commission scheme, disbursed via the Payouts feature
 
-**Built (client):** overview dashboard (3 tabs, 8 charts, 2 tables), auth flow (login/register/forgot-reset password/Google OAuth), customers (card grid + sheet detail + edit/delete — TANPA manual add, akun lahir via self-register; order count via rpc `get_customer_order_counts`), kasir & setoran harian (input + approve/reject + POS reconciliation), orders (queue + status management + Ably realtime), POS (single-file client + hooks `usePosCart`/`usePosCatalog`/`useChargeOrder`, checkout + member lookup via HP saja — field Customer Name dihapus), chat (realtime messaging, DM, branch channels, Ably integration — staff only), maps (MapLibre GL, branch markers, popup, search), menu CRUD (grid, categories, Cloudinary image upload, RHF forms), branches CRUD (table + form + franchise owner assignment), employee CRUD (TanStack Table + shadcn + FilterToolbar), reviews (list + moderate + customer self-review per completed order), transactions (list + filter), payouts (list + approve), notifications (list + mark read), audit log (timeline with search, action/table filter, expandable metadata), customer portal `/my` (order history infinite scroll 20/page incl. offline cashier-recorded orders, loyalty member card, account self-service, per-order review dialog).
+**Built (client):** overview dashboard (3 tabs, 8 charts, 2 tables), auth flow (login/register/forgot-reset password/Google OAuth), customers (infinite card grid + sentinel + sheet detail via `GET /customers/:id` + edit/delete — TANPA manual add, akun lahir via self-register; order count via LEFT JOIN + server summary), kasir & setoran harian (server-pagination table + board + input + approve/reject + POS reconciliation), orders (server-pagination table + kanban board + status management + Ably realtime), POS (single-file client + hooks `usePosCart`/`usePosCatalog`/`useChargeOrder`, checkout + member lookup via HP saja — field Customer Name dihapus), chat (realtime messaging, DM, branch channels, Ably integration, cursor-pagination `before/limit` — staff only), maps (MapLibre GL, branch markers, popup, server search), menu CRUD (grid + server search + server summary, categories, Cloudinary image upload, RHF forms), branches CRUD (server search + form + franchise owner assignment), employee CRUD (server-pagination TanStack Table + shadcn + FilterToolbar), reviews (server-pagination table + moderate + avg rating server + customer self-review per completed order), transactions (server-pagination table + filter + server sums), payouts (server-pagination table + approve + server sums), notifications (infinite feed + sentinel + tab read/unread server + mark read), audit log (infinite timeline + sentinel, server search/filter + endpoint `/audit/tables` for dropdown, expandable metadata), customer portal `/my` (order history infinite scroll 20/page incl. offline cashier-recorded orders, loyalty member card, account self-service, per-order review dialog).
 
-**Built (server):** 19 Elysia modules (overview, kasir, orders, menu, branches, customers, employee, transactions, payouts, reviews, chat, notifications, audit, settings, maps, my-portal, landing, ably + dashboard meta), `requireRole` RBAC macro, `.model()` + string-ref validation (52 named schemas), `ok()/fail()` envelope, token-bucket rate limiting, branch-scope filtering.
+**Built (server):** 19 Elysia modules (overview, kasir, orders, menu, branches, customers, employee, transactions, payouts, reviews, chat, notifications, audit, settings, maps, my-portal, landing, ably + dashboard meta), `requireRole` RBAC macro, `.model()` + string-ref validation, `ok()/fail()` envelope, token-bucket rate limiting, branch-scope filtering. All lists are server-driven (`serverTableQuery` + `resolveTableParams` + `pageResult` + aggregate `summary`; `q` via `ilike` + `containsPattern`; per-module `sortBy` whitelist). Extra endpoints: `GET /audit/tables`, `GET /customers/:id`.
 
 **Not yet implemented:** AI Assistant page.
 
@@ -126,8 +126,9 @@ client/
 │   │   ├── rbac.ts                # Matriks permission — cermin dari server/src/access/rbac.ts
 │   │   └── realtime.ts            # Ably Realtime client (browser-side, STAYS)
 │   ├── stores/                    # Zustand: branch.ts, sidebar.ts (STAYS)
-│   ├── hooks/                     # Shared hooks (STAYS): useConfirmAction, useFormDialog, useImageUpload,
-│   │                              # useMobile, useTableState, useTheme, useAblyToken
+│   ├── hooks/                     # Shared hooks (STAYS): useConfirmAction, useDebounce,
+│   │                              # useFormDialog, useImageUpload, useMobile, useTableState,
+│   │                              # useTheme, useAblyToken
 │   ├── integrations/tanstack-query/ # Query client setup, provider, devtools (STAYS)
 │   ├── utils/                     # cn, convert-types, format, group-by, status
 │   │                              # (branch-scope dilepas — scope dihitung di server)
@@ -145,7 +146,7 @@ server/src/
 ├── index.ts                       # bun run — listen PORT (default 3000)
 ├── env.ts                         # requireEnv() — throw at startup, no ?? "" on critical vars
 ├── routes/                        # api.ts (agregasi 19 modul, prefix /api), health.ts,
-│                                  # sessions.ts, openapi.ts (/openapi/json — 62 paths / 52 schemas)
+│                                  # sessions.ts, openapi.ts (/openapi/json)
 ├── plugins/
 │   ├── auth.ts                    # betterAuth instance + macro auth / requireRole([resource, action])
 │   └── error.ts                   # onError: VALIDATION→400, NOT_FOUND→404, else 500 (envelope fail)
@@ -158,7 +159,9 @@ server/src/
 │   └── user.ts                    # CurrentUser { id, role, name?, email?, image? }
 ├── lib/                           # Inti app murni (tanpa I/O)
 │   ├── http.ts                    # ok(data) / fail(code, msg) — satu-satunya envelope
-│   ├── schema.ts                  # idParams + paginationQuery/pageResult (shared validators)
+│   ├── schema.ts                  # idParams + serverTableQuery/resolveTableParams/
+│   │                              # pageResult (server-driven list contract)
+│   ├── table.ts                   # escapeLikePattern/containsPattern (safe LIKE)
 │   └── auth.ts                    # Better Auth instance (drizzle adapter)
 ├── infra/                         # Klien SDK pihak ketiga saja
 │   ├── ably.ts / email.ts (resend) / images.ts (cloudinary)
@@ -176,6 +179,8 @@ server/src/
 
 Module pattern: `model.ts` (TypeBox schemas, single source of truth) → `.model()` + string-ref di `index.ts` → `service.ts` (plain async function, terima `CurrentUser`, return `ok()/fail()`, tanpa Elysia `Context`, return-jangan-throw). Contoh: `.model({ "menu.createItem": createMenuItemBody })` + `body: "menu.createItem"` + `{ requireRole: ["menu","create"] }`.
 
+List endpoint pattern (fully server-driven — search/filter/sort/page/count/sum/avg 100% in Postgres): `model.ts` = `t.Composite([...specificFilters, serverTableQuery])` + `typeof query.static` as the service params type → `service.ts` = scope (`getAccessibleBranchIds` + `branchFilter`/`emptyScope`) → exact filters → `q` (`ilike` + `containsPattern`) → `sortBy` mapped through a per-module whitelist to Drizzle columns (values outside the whitelist are ignored) → `count` + aggregates + rows in parallel (`Promise.all`) → `pageResult()` + module `summary` → timestamps as ISO via `.toISOString()`. Three response shapes: tables = `{ rows, total, nextPage }` + `summary`; feeds/grids without sort = infinite + sentinel; small reference data (`menu`, `branches`, `maps`) = server filter without paging.
+
 ### Architecture Rules
 
 **Client:**
@@ -185,7 +190,7 @@ Module pattern: `model.ts` (TypeBox schemas, single source of truth) → `.model
 - Each feature is built **vertically**: types → hooks → components → route. Finish each feature 100% (buildable) before moving on; refactor only after complete.
 - **TSX files: 250 is the split floor** — below 250 lines do not split; compose same-flow components in 1 file. Split only above ~350 lines or when logic separates cleanly. **Non-TSX files** have no line limit.
 - **Global layout components** stay in `src/components/layout/`, not in features.
-- **Feature hooks**: split `use{Domain}Queries.ts` / `use{Domain}Mutations.ts`. No custom `useSearch`/`useFilters`/`useSort` — TanStack Table handles it.
+- **Feature hooks**: split `use{Domain}Queries.ts` / `use{Domain}Mutations.ts`. No custom `useSearch`/`useFilters`/`useSort` — tables use the shared `useTableState` (the one and only table-state hook: sorting + filters + pagination + `debouncedSearch`/`sortBy`/`sortDir`/`page`/`pageSize`) + `useDebounce`; TanStack Table in manual mode only (no client row models).
 - **Arrow functions only** — semua komponen, hook, dan helper sebagai arrow function, bukan `function` declaration.
 
 **Server:**
@@ -201,6 +206,7 @@ Module pattern: `model.ts` (TypeBox schemas, single source of truth) → `.model
 - New components must follow the existing design language (spacing, typography, colors, icons, shadcn variants)
 - When in doubt between "cleaner" and "consistent with existing UI", choose **consistent**
 - **Only exception:** conditional rendering uses `? ... : null` instead of `&&` (see RULES.md) — output DOM is identical
+- **Loading-state rule:** StatCard/empty/filter bar ALWAYS render; only the content area is conditional (never let an empty state swallow the toolbar + stats)
 - **Forbidden:** changing padding, margin, colors, fonts, spacing, icons, grid layout, or element order in existing components
 
 ### Per-Feature Execution Order
@@ -221,7 +227,7 @@ Module pattern: `model.ts` (TypeBox schemas, single source of truth) → `.model
 - **Postgres (prod)** — single Drizzle ORM + `postgres.js` layer (`server/src/db`).
 Skema per domain dengan `$defaultFn(crypto.randomUUID())`, migrasi via `drizzle-kit` (`db:generate/migrate/push/pull`).
 - **Ably** — chat, live orders, activity feed (`server/src/infra/ably.ts` + `publishAbly()` fire-and-forget).
-- **Eden Treaty** — konektor resmi client→server. OpenAPI JSON di `/openapi/json` (62 paths / 52 schemas, terverifikasi).
+- **Eden Treaty** — konektor resmi client→server. OpenAPI JSON di `/openapi/json`.
 - **Agregat berat** — server-era via query builder + `Promise.all` (contoh overview: 13 agregat paralel). Expected-cash kasir (volume kecil) di-sum dari baris harian.
 - **RBAC code-level, RLS off**.
 
@@ -257,7 +263,7 @@ Skema per domain dengan `$defaultFn(crypto.randomUUID())`, migrasi via `drizzle-
 | Data Fetching | TanStack Query (keys/stale/invalidasi tidak berubah) | Hanya `queryFn` diganti: `*Fn` → Eden |
 | Routing | TanStack Router (stays) | Type-safe routes/search params; yang dilepas hanya Start |
 | Realtime | Ably | Tidak berubah |
-| Table | TanStack Table + shadcn/ui | Tidak berubah (server pagination ditunda — lihat PLAN Fase 5) |
+| Table | TanStack Table + shadcn/ui | Server pagination (`manualSorting/manualFiltering/manualPagination`, tanpa row model client); feed = infinite; referensi kecil = tanpa paging |
 | Transaction Input | Daily setoran (one per branch per day, not POS) | Audit trail kas fisik |
 | Email / Storage | Resend / Cloudinary | Via `server/src/infra/` |
 | Rate Limit | Native token-bucket `checkRate` (not plugin) | Per-user-per-aksi butuh user terautentikasi; plugin hanya cocok lapis luar per-IP |
@@ -294,8 +300,8 @@ modules/{domain}/index.ts   → new Elysia({ prefix }) + .use(authPlugin) + .mod
 - Sukses `ok(data)`, gagal `fail(code, msg)` (`lib/http.ts`). Bisnis error di-return, bukan throw.
 - `t.Number` = body JSON; `t.Numeric` = query/params saja. Pesan 404 = `"{Entity} not found"`.
 - `publishAbly()` + `logAudit()` = fire-and-forget via `void` (tidak pernah throw ke request).
-- `checkRate(key, max, windowMs)` per-user-per-aksi di service yang sensitif (chat, customers, settings, landing publik).
-- Shared validators `lib/schema.ts` (`idParams`, `paginationQuery`, `pageResult`) — pakai ini, jangan bikin `*IdParams` baru.
+- `checkRate(key, max, windowMs)` per-user-per-action in sensitive services (chat, customers, settings, public landing).
+- Shared validators `lib/schema.ts` (`idParams`, `serverTableQuery`, `resolveTableParams`, `pageResult`) + `lib/table.ts` — use these, don't create new `*IdParams` or new paging validators.
 
 ### Constraints (server)
 
@@ -308,6 +314,10 @@ modules/{domain}/index.ts   → new Elysia({ prefix }) + .use(authPlugin) + .mod
 ## Transition: Client → Server (Eden Treaty) — ✅ SELESAI
 
 Status: frontend Vite SPA murni memanggil Elysia; TanStack Start (server-fns, Nitro, SSR bits) dilepas total. TanStack Router, Query keys, staleTime, invalidasi, dan UI **tidak berubah**. Bagian ini dipertahankan sebagai dokumentasi pola koneksi.
+
+### Server-driven tables — ✅ SELESAI
+
+Follow-up migration, also done: every staff list moved from get-all + client filter to server queries (`q`, filters, `sortBy`/`sortDir`, `page`/`pageSize`, server `total`). Six sortable tables in manual mode (orders, transactions, reviews, kasir, payouts, employee); feeds/grids via infinite query (audit, customers, notifications, `/my/orders`); chat stays cursor-pagination (`before`/`limit`); small reference data (`menu`, `branches`, `maps`) server-filtered without paging. Client row-model engines read zero usages in `features/`; one shared table hook (`useTableState` + `useDebounce`); dead suspense variants and `paginationQuery` removed.
 
 ### Connection pattern
 
@@ -382,13 +392,19 @@ Same-origin satu domain: tanpa CORS, tanpa `VITE_API_URL`. Dev lewat Vite proxy 
 
 ## Data Fetching Pattern
 
-**Current (client):** TanStack Query hooks call Eden Treaty directly.
+**Current (client):** TanStack Query hooks call Eden Treaty directly. The server computes, the client renders — search/filter/sort/page/count/sum/avg 100% in Postgres. The client only owns: input state, debounce, display grouping (`groupByStatus`, `groupByDate`), formatting, ephemeral mirrors (realtime prepend, optimistic flags, POS cart).
 
 ```
-Component
-  └→ useSuspenseQuery({ queryKey, queryFn: () => getXxx() })   # getXxx = Eden wrapper di hooks/
+Reactive tables
+  └→ useQuery({ queryKey, queryFn }) + placeholderData: prev => prev   # no suspense, avoids flicker
+Feeds/grids
+  └→ useInfiniteQuery + sentinel IntersectionObserver                   # audit, customers, notifications, /my/orders
+Details
+  └→ useSuspenseQuery                                                  # wrapped in route errorComponent
 Mutation: useMutation({ mutationFn, onSuccess: invalidateQueries })
 ```
+
+`queryKey` includes ALL deps; the route loader key must exactly match the component's initial key (otherwise the prefetch is wasted + skeleton flashes). Search via `useTableState().debouncedSearch` (300ms). `pageIndex` resets to 0 when filters change (inside the hook).
 
 ### Caching & staleTime (client, unchanged)
 
@@ -403,10 +419,10 @@ Mutation: useMutation({ mutationFn, onSuccess: invalidateQueries })
 | Settings | FREQUENT | 5min |
 | Customer portal | FREQUENT | 5min |
 
-### TanStack Table (client, unchanged)
+### TanStack Table (server-driven)
 
-Sorting `getSortedRowModel()`, filtering `getFilteredRowModel()`, global search, pagination `getPaginationRowModel()`; `createColumnHelper<T>()`; `getRowId`; `header.isPlaceholder`; FilterToolbar wired to table state; pageIndex from controlled state.
-**Infinite vs tabel**: `useInfiniteQuery` HANYA untuk feed tanpa sorting (`/my/orders`, notifications, chat). Tabel bersort wajib **server pagination** (`manualSorting` + `manualPagination`, validator `page/pageSize/sortBy/sortDir` + count) — bukan infinite. Infinite + `getPaginationRowModel` dilarang. (Server pagination staff tables: ditunda — PLAN Fase 5.)
+`manualSorting + manualFiltering + manualPagination: true`, only `getCoreRowModel()` — `getSortedRowModel`/`getFilteredRowModel`/`getPaginationRowModel`/`globalFilterFn` are FORBIDDEN (zero usage in `features/`). `pageCount = ceil(total/pageSize)` from the server; columns outside the sort whitelist get `enableSorting: false`. `createColumnHelper<T>()`; `getRowId`; `header.isPlaceholder`; FilterToolbar wired to table state; pageIndex from controlled state.
+**Infinite vs tables**: `useInfiniteQuery` ONLY for feeds/grids without sorting (`/my/orders`, notifications, audit timeline, customers grid, chat). Sorted tables REQUIRE **server pagination** (`manualSorting` + `manualPagination`, `page/pageSize/sortBy/sortDir` validator + count) — never infinite. Infinite + `getPaginationRowModel` is forbidden. Small reference data (`menu`, `branches`, `maps`) = server filter WITHOUT paging.
 
 ## Database
 
@@ -471,9 +487,11 @@ Key entities (sama di kedua lapis):
 ## Common Mistakes to Avoid
 
 ### Feature Hooks (client)
-- ✅ Return shape `{ success: true, data } | { success: false, error }` — cocok dengan envelope server.
-- ✅ Split `use{Domain}Queries.ts` / `use{Domain}Mutations.ts`. JSDoc Indonesia untuk wrapper query/mutasi, `@see {@link}` untuk hook wrapper.
-- ✅ `useQuery` untuk data reaktif terhadap input user; `useSuspenseQuery` untuk data route-level.
+- ✅ Return shape `{ success: true, data } | { success: false, error }` — matches the server envelope.
+- ✅ Split `use{Domain}Queries.ts` / `use{Domain}Mutations.ts`. Indonesian JSDoc for query/mutation wrappers, `@see {@link}` for hook wrappers.
+- ✅ `useQuery` + `placeholderData` for reactive tables/input-driven data; `useSuspenseQuery` for route-level details; `useInfiniteQuery` + sentinel for feeds.
+- ✅ Never filter/sort/paginate rows on the client; aggregates (`total`/sums/averages) come from the server `summary`.
+- ✅ Form values use concrete `z.infer` types (e.g. `MenuItemSubmitData`) — no `Record<string, unknown>`, no `Parameters<typeof ...>` casts.
 
 ### RBAC
 - ❌ Do NOT forget new resources in `Resource` type (server `access/rbac.ts`; mirror client).
