@@ -27,7 +27,12 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { MenuCategory, MenuItemRow } from "@/features/menu/types";
+import type {
+    CreateMenuItemInput,
+    MenuCategory,
+    MenuItemRow,
+    MenuItemSubmitData,
+} from "@/features/menu/types";
 import { createMenuItemSchema } from "@/features/menu/types";
 import { useFormDialog } from "@/hooks/useFormDialog";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -37,16 +42,16 @@ interface MenuFormDialogProps {
     onOpenChange: (open: boolean) => void;
     categories: MenuCategory[];
     editingItem?: MenuItemRow | null;
-    onSubmit: (data: Record<string, unknown>) => Promise<void>;
+    onSubmit: (data: MenuItemSubmitData) => Promise<void>;
 }
 
-export function MenuFormDialog({
+export const MenuFormDialog = ({
     open,
     onOpenChange,
     categories,
     editingItem,
     onSubmit: onSubmitProp,
-}: MenuFormDialogProps) {
+}: MenuFormDialogProps) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [existingImageUrl, setExistingImageUrl] = useState<string | null>(
         null,
@@ -108,7 +113,7 @@ export function MenuFormDialog({
         setExistingImageUrl(null);
     };
 
-    const onFormSubmit = async (values: Record<string, unknown>) => {
+    const onFormSubmit = async (values: CreateMenuItemInput) => {
         setIsSubmitting(true);
         try {
             if (selectedFile) {
@@ -403,4 +408,4 @@ export function MenuFormDialog({
             </DialogContent>
         </Dialog>
     );
-}
+};

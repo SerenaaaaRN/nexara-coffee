@@ -1,9 +1,13 @@
 import { t } from "elysia";
+import { serverTableQuery } from "../../lib/schema.js";
 
-export const payoutsQuery = t.Object({
-	branchId: t.Optional(t.String()),
-	status: t.Optional(t.String()),
-});
+export const payoutsQuery = t.Composite([
+	t.Object({
+		branchId: t.Optional(t.String()),
+		status: t.Optional(t.String()),
+	}),
+	serverTableQuery,
+]);
 
 export const requestPayoutBody = t.Object({
 	branchId: t.String({ minLength: 1 }),

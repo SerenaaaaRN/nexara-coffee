@@ -6,7 +6,10 @@ import { ORDER_STATUSES, type OrderStatus } from "./data";
  * Baris order — from eden treaty (source of truth: server).
  * Termasuk `branchName`, `customerName`, `createdByName` flat hasil join.
  */
-export type OrderRow = GetData<typeof api.orders.get>[number];
+export type OrderRow = GetData<typeof api.orders.get>["rows"][number];
+
+/** Ringkasan count per status — from eden treaty. */
+export type OrderSummary = GetData<typeof api.orders.get>["summary"];
 
 /** Detail order + items — from eden treaty. */
 export type OrderDetail = GetData<ReturnType<typeof api.orders>["get"]>;

@@ -31,6 +31,13 @@ export const auditLogs = pgTable(
 	(table) => [
 		index("audit_logs_actor_id_idx").on(table.actorId),
 		index("audit_logs_branch_id_idx").on(table.branchId),
+		index("audit_logs_action_idx").on(table.action),
+		index("audit_logs_target_table_idx").on(table.targetTable),
+		index("audit_logs_created_at_idx").on(table.createdAt),
+		index("audit_logs_branch_created_idx").on(
+			table.branchId,
+			table.createdAt,
+		),
 	],
 );
 
@@ -49,7 +56,11 @@ export const notifications = pgTable(
 		isRead: boolean("is_read").notNull().default(false),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
-	(table) => [index("notifications_user_id_idx").on(table.userId)],
+	(table) => [
+		index("notifications_user_id_idx").on(table.userId),
+		index("notifications_user_read_idx").on(table.userId, table.isRead),
+		index("notifications_created_at_idx").on(table.createdAt),
+	],
 );
 
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({

@@ -13,7 +13,7 @@ import { POSClient } from "@/features/pos/components/pos-client";
 
 const routeApi = getRouteApi("/pos");
 
-function POSBranchSwitcher() {
+const POSBranchSwitcher = () => {
     const { dashboardData } = routeApi.useLoaderData();
     if (!dashboardData) return null;
     return (
@@ -23,9 +23,9 @@ function POSBranchSwitcher() {
             defaultBranchId={dashboardData.defaultBranchId}
         />
     );
-}
+};
 
-export function POSPage() {
+export const POSPage = () => {
     const { session } = routeApi.useRouteContext();
     const { branch } = routeApi.useSearch();
     const { dashboardData } = routeApi.useLoaderData();
@@ -33,7 +33,7 @@ export function POSPage() {
     const { data: itemsRes } = useMenuItems();
 
     const categories = categoriesRes.success ? categoriesRes.data : [];
-    const items = itemsRes?.success ? itemsRes.data : [];
+    const items = itemsRes?.success ? itemsRes.data.rows : [];
     const activeBranchId =
         branch ?? dashboardData?.defaultBranchId ?? undefined;
 
@@ -99,4 +99,4 @@ export function POSPage() {
             </main>
         </div>
     );
-}
+};

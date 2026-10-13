@@ -4,6 +4,7 @@ import { authPlugin } from "../../plugins/auth.js";
 import {
 	createCustomerBody,
 	findOrCreateBody,
+	getCustomersQuery,
 	lookupCustomerBody,
 	loyaltyBody,
 	updateCustomerBody,
@@ -12,6 +13,7 @@ import {
 	createCustomer,
 	deleteCustomer,
 	findOrCreateCustomer,
+	getCustomerDetail,
 	getCustomers,
 	lookupCustomerByPhone,
 	updateCustomer,
@@ -21,6 +23,7 @@ import {
 export const customers = new Elysia({ prefix: "/customers" })
 	.use(authPlugin)
 	.model({
+		"customers.query": getCustomersQuery,
 		"customers.params": idParams,
 		"customers.create": createCustomerBody,
 		"customers.update": updateCustomerBody,
@@ -28,7 +31,13 @@ export const customers = new Elysia({ prefix: "/customers" })
 		"customers.lookup": lookupCustomerBody,
 		"customers.loyalty": loyaltyBody,
 	})
-	.get("/", async () => getCustomers(), {
+	.get("/", async ({ query }) => getCustomers(query), {
+		query: "customers.query",
+		requireRole: ["customers", "read"],
+		detail: { tags: ["customers"] },
+	})
+	.get("/:id", async ({ params }) => getCustomerDetail(params.id), {
+		params: "customers.params",
 		requireRole: ["customers", "read"],
 		detail: { tags: ["customers"] },
 	})

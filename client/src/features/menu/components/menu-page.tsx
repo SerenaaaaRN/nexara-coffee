@@ -1,8 +1,17 @@
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, List, Pencil, Plus, Soup, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+    Eye,
+    EyeOff,
+    List,
+    Pencil,
+    Plus,
+    Search,
+    Soup,
+    Trash2,
+} from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { SectionHeader } from "#/components/shared/section-header";
+import { SectionHeader } from "@/components/shared/section-header";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +23,8 @@ import {
     EmptyMedia,
     EmptyTitle,
 } from "@/components/ui/empty";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     useCreateCategory,
     useDeleteCategory,
@@ -30,8 +40,13 @@ import {
     useMenuCategories,
     useMenuItems,
 } from "@/features/menu/hooks/useMenuQueries";
-import type { MenuCategory, MenuItemRow } from "@/features/menu/types";
+import type {
+    MenuCategory,
+    MenuItemRow,
+    MenuItemSubmitData,
+} from "@/features/menu/types";
 import { useConfirmAction } from "@/hooks/useConfirmAction";
+import { useDebounce } from "@/hooks/useDebounce";
 import { formatCurrency, pluralize } from "@/utils/format";
 import { getBadgeVariant, getStatusLabel } from "@/utils/status";
 import { CategoryDialog } from "./category-dialog";
@@ -40,26 +55,32 @@ import { MenuFormDialog } from "./menu-form-dialog";
 
 const routeApi = getRouteApi("/_dashboard/menu");
 
-function ItemGrid({
+const ItemGrid = ({
     items,
+    hasActiveFilter,
     onEdit,
     onDelete,
     onToggle,
 }: {
     items: MenuItemRow[];
+    hasActiveFilter: boolean;
     onEdit: (item: MenuItemRow) => void;
     onDelete: (item: MenuItemRow) => void;
     onToggle: (id: string, current: boolean) => void;
-}) {
+}) => {
     if (items.length === 0) {
         return (
             <Empty>
                 <EmptyMedia>
                     <Soup />
                 </EmptyMedia>
-                <EmptyTitle>No menu items</EmptyTitle>
+                <EmptyTitle>
+                    {hasActiveFilter ? "No matching items" : "No menu items"}
+                </EmptyTitle>
                 <EmptyDescription>
-                    Add your first menu item to get started.
+                    {hasActiveFilter
+                        ? "Try adjusting your search."
+                        : "Add your first menu item to get started."}
                 </EmptyDescription>
             </Empty>
         );
@@ -107,11 +128,11 @@ function ItemGrid({
                             <p className="font-mono text-sm font-medium text-primary">
                                 {formatCurrency(item.price)}
                             </p>
-                            {item.description && (
+                            {item.description ? (
                                 <p className="text-muted-foreground line-clamp-2 text-xs">
                                     {item.description}
                                 </p>
-                            )}
+                            ) : null}
                             {variants?.length ? (
                                 <span className="text-muted-foreground mt-auto text-xs">
                                     {pluralize(variants.length, "variant")}
@@ -148,17 +169,31 @@ function ItemGrid({
             })}
         </div>
     );
-}
+};
 
-export function MenuPage() {
+export const MenuPage = () => {
     const { category } = routeApi.useSearch();
     const navigate = useNavigate();
     const { data: catData } = useMenuCategories();
-    const { data: itemData } = useMenuItems(category);
+    const [search, setSearch] = useState("");
+    const debouncedSearch = useDebounce(search);
+    const q = debouncedSearch.trim();
+    const { data: itemData } = useMenuItems({
+        categoryId: category ?? null,
+        ...(q ? { q } : {}),
+    });
 
     const categories = catData.success ? catData.data : [];
-    const items = itemData?.success ? itemData.data : [];
+    const payload = itemData?.success ? itemData.data : null;
+    const items = payload?.rows ?? [];
+    const summary = payload?.summary ?? {
+        total: 0,
+        available: 0,
+        hidden: 0,
+        byCategory: {},
+    };
     const activeTab = category ?? "all";
+    const hasActiveFilter = q !== "";
 
     const [itemDialogOpen, setItemDialogOpen] = useState(false);
     const [catDialogOpen, setCatDialogOpen] = useState(false);
@@ -176,14 +211,6 @@ export function MenuPage() {
 
     const deleteConfirm = useConfirmAction<MenuItemRow>();
 
-    const itemCounts = useMemo(() => {
-        const counts: Record<string, number> = {};
-        for (const item of items) {
-            counts[item.categoryId] = (counts[item.categoryId] ?? 0) + 1;
-        }
-        return counts;
-    }, [items]);
-
     const handleTabChange = (tab: string) => {
         navigate({
             to: ".",
@@ -194,11 +221,9 @@ export function MenuPage() {
             replace: true,
         });
     };
-    const handleCreateItem = async (data: Record<string, unknown>) => {
+    const handleCreateItem = async (data: MenuItemSubmitData) => {
         try {
-            await createItem.mutateAsync(
-                data as Parameters<typeof createItem.mutate>[0],
-            );
+            await createItem.mutateAsync(data);
             toast.success("Menu item created");
             setItemDialogOpen(false);
         } catch {
@@ -206,13 +231,13 @@ export function MenuPage() {
         }
     };
 
-    const handleUpdateItem = async (data: Record<string, unknown>) => {
+    const handleUpdateItem = async (data: MenuItemSubmitData) => {
         if (!editingItem) return;
         try {
             await updateItem.mutateAsync({
                 ...data,
                 id: editingItem.id,
-            } as Parameters<typeof updateItem.mutate>[0]);
+            });
             toast.success("Menu item updated");
             setEditingItem(null);
             setItemDialogOpen(false);
@@ -308,27 +333,32 @@ export function MenuPage() {
 
             <div className="flex flex-1 flex-col gap-4">
                 <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    <StatCard label="Total Items" value={items.length} />
-                    <StatCard
-                        label="Available"
-                        value={items.filter((i) => i.isAvailable).length}
-                    />
-                    <StatCard
-                        label="Hidden"
-                        value={items.filter((i) => !i.isAvailable).length}
-                    />
+                    <StatCard label="Total Items" value={summary.total} />
+                    <StatCard label="Available" value={summary.available} />
+                    <StatCard label="Hidden" value={summary.hidden} />
                     <StatCard label="Categories" value={categories.length} />
+                </div>
+
+                <div className="relative w-full max-w-xs">
+                    <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search menu items..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-8"
+                    />
                 </div>
 
                 <Tabs value={activeTab} onValueChange={handleTabChange}>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <TabsList className="flex-wrap">
                             <TabsTrigger value="all">
-                                All ({items.length})
+                                All ({summary.total})
                             </TabsTrigger>
                             {categories.map((cat) => (
                                 <TabsTrigger key={cat.id} value={cat.id}>
-                                    {cat.name} ({itemCounts[cat.id] ?? 0})
+                                    {cat.name} (
+                                    {summary.byCategory[cat.id] ?? 0})
                                 </TabsTrigger>
                             ))}
                         </TabsList>
@@ -356,9 +386,10 @@ export function MenuPage() {
                         </div>
                     </div>
 
-                    <TabsContent value="all" className="mt-4">
+                    <div className="mt-4">
                         <ItemGrid
                             items={items}
+                            hasActiveFilter={hasActiveFilter}
                             onEdit={(item) => {
                                 setEditingItem(item);
                                 setItemDialogOpen(true);
@@ -366,28 +397,7 @@ export function MenuPage() {
                             onDelete={(item) => deleteConfirm.setTarget(item)}
                             onToggle={handleToggle}
                         />
-                    </TabsContent>
-
-                    {categories.map((cat) => (
-                        <TabsContent
-                            key={cat.id}
-                            value={cat.id}
-                            className="mt-4">
-                            <ItemGrid
-                                items={items.filter(
-                                    (i) => i.categoryId === cat.id,
-                                )}
-                                onEdit={(item) => {
-                                    setEditingItem(item);
-                                    setItemDialogOpen(true);
-                                }}
-                                onDelete={(item) =>
-                                    deleteConfirm.setTarget(item)
-                                }
-                                onToggle={handleToggle}
-                            />
-                        </TabsContent>
-                    ))}
+                    </div>
                 </Tabs>
 
                 <MenuFormDialog
@@ -416,7 +426,7 @@ export function MenuPage() {
                     open={manageCatOpen}
                     onOpenChange={setManageCatOpen}
                     categories={categories}
-                    itemCounts={itemCounts}
+                    itemCounts={summary.byCategory}
                     onSave={handleCreateCat}
                     onRename={handleRenameCat}
                     onDelete={handleCatDeleteInManage}
@@ -438,4 +448,4 @@ export function MenuPage() {
             </div>
         </div>
     );
-}
+};

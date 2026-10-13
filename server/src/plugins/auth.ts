@@ -1,7 +1,12 @@
 import { Elysia } from "elysia";
-import type { CurrentUser } from "../access/index.js";
-import { type Action, can, type Resource, type Role } from "../access/index.js";
+import { type Action, can, type Resource } from "../access/index.js";
 import { auth } from "../lib/auth.js";
+import {
+	forbidden,
+	type SessionUser,
+	toCurrentUser,
+	unauthorized,
+} from "./session-user.js";
 
 export const betterAuth = new Elysia({ name: "auth" })
 	.mount(auth.handler)
@@ -9,13 +14,9 @@ export const betterAuth = new Elysia({ name: "auth" })
 		auth: {
 			async resolve({ status, request: { headers } }) {
 				const session = await auth.api.getSession({ headers });
-				if (!session)
-					return status(401, {
-						success: false as const,
-						error: "Unauthorized",
-					});
+				if (!session) return status(401, unauthorized);
 				return {
-					user: session.user as unknown as CurrentUser,
+					user: toCurrentUser(session.user as SessionUser),
 					session: session.session,
 				};
 			},
@@ -24,20 +25,10 @@ export const betterAuth = new Elysia({ name: "auth" })
 			seed: `${resource}:${action}`,
 			async resolve({ status, request: { headers } }) {
 				const session = await auth.api.getSession({ headers });
-				if (!session)
-					return status(401, {
-						success: false as const,
-						error: "Unauthorized",
-					});
-				if (!can(session.user.role as Role, action, resource))
-					return status(403, {
-						success: false as const,
-						error: "Forbidden",
-					});
-				return {
-					user: session.user as unknown as CurrentUser,
-					session: session.session,
-				};
+				if (!session) return status(401, unauthorized);
+				const user = toCurrentUser(session.user as SessionUser);
+				if (!can(user.role, action, resource)) return status(403, forbidden);
+				return { user, session: session.session };
 			},
 		}),
 	});

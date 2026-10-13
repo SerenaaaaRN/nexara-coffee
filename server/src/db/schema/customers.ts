@@ -19,7 +19,13 @@ export const customers = pgTable(
     userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [uniqueIndex("customers_user_id_idx").on(table.userId)],
+  (table) => [
+    uniqueIndex("customers_user_id_idx").on(table.userId),
+    index("customers_full_name_idx").on(table.fullName),
+    index("customers_segment_idx").on(table.segment),
+    index("customers_loyalty_tier_idx").on(table.loyaltyTier),
+    index("customers_created_at_idx").on(table.createdAt),
+  ],
 );
 
 export const reviews = pgTable(
@@ -46,6 +52,10 @@ export const reviews = pgTable(
   (table) => [
     index("reviews_branch_id_idx").on(table.branchId),
     index("reviews_customer_id_idx").on(table.customerId),
+    index("reviews_status_idx").on(table.status),
+    index("reviews_rating_idx").on(table.rating),
+    index("reviews_created_at_idx").on(table.createdAt),
+    index("reviews_branch_created_idx").on(table.branchId, table.createdAt),
   ],
 );
 

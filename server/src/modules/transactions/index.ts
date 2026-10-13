@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 import { idParams } from "../../lib/schema.js";
 import { authPlugin } from "../../plugins/auth.js";
-import { recordTransactionBody } from "./model.js";
+import { getTransactionsQuery, recordTransactionBody } from "./model.js";
 import {
 	getTransactionDetail,
 	getTransactions,
@@ -12,10 +12,12 @@ import {
 export const transactions = new Elysia({ prefix: "/transactions" })
 	.use(authPlugin)
 	.model({
+		"transactions.query": getTransactionsQuery,
 		"transactions.params": idParams,
 		"transactions.record": recordTransactionBody,
 	})
-	.get("/", async ({ user }) => getTransactions(user), {
+	.get("/", async ({ query, user }) => getTransactions(user, query), {
+		query: "transactions.query",
 		requireRole: ["finance", "read"],
 		detail: { tags: ["transactions"] },
 	})

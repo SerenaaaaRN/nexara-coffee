@@ -1,45 +1,45 @@
-import { and, desc, eq } from "drizzle-orm";
 import type { CurrentUser } from "../../access/index.js";
-import { branchFilter, getAccessibleBranchIds } from "../../access/index.js";
-import { db } from "../../db/index.js";
-import { user as userTable } from "../../db/schema/auth-schema.js";
-import { branches } from "../../db/schema/branches.js";
-import { auditLogs } from "../../db/schema/system.js";
+import { emptyScope, getAccessibleBranchIds } from "../../access/index.js";
 import { ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
+import type { auditQuery } from "./model.js";
+import { auditRepo } from "./repository.js";
 
 export const getAuditLogs = async (
 	user: CurrentUser,
-	params?: {
-		branch?: string;
-		action?: string;
-		limit?: number;
-		offset?: number;
-	},
+	params?: typeof auditQuery.static,
 ) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
-	const conditions = [];
-	if (params?.branch) conditions.push(eq(auditLogs.branchId, params.branch));
-	else conditions.push(branchFilter(auditLogs, null, ids));
-	if (params?.action) conditions.push(eq(auditLogs.action, params.action));
-	const rows = await db
-		.select({
-			id: auditLogs.id,
-			actorId: auditLogs.actorId,
-			branchId: auditLogs.branchId,
-			action: auditLogs.action,
-			targetTable: auditLogs.targetTable,
-			targetId: auditLogs.targetId,
-			metadata: auditLogs.metadata,
-			createdAt: auditLogs.createdAt,
-			actorName: userTable.name,
-			branchName: branches.name,
-		})
-		.from(auditLogs)
-		.leftJoin(userTable, eq(auditLogs.actorId, userTable.id))
-		.leftJoin(branches, eq(auditLogs.branchId, branches.id))
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.orderBy(desc(auditLogs.createdAt))
-		.limit(params?.limit ?? 100)
-		.offset(params?.offset ?? 0);
-	return ok(rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })));
+	const { page, pageSize } = resolveTableParams(params);
+	if (emptyScope(ids)) {
+		return ok(pageResult([], 0, page, pageSize));
+	}
+
+	const result = await auditRepo.list({
+		ids,
+		branch: params?.branch,
+		action: params?.action,
+		targetTable: params?.targetTable,
+		q: params?.q,
+		page,
+		pageSize,
+	});
+
+	return ok(
+		pageResult(
+			result.rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+			result.total,
+			page,
+			pageSize,
+		),
+	);
+};
+
+export const getAuditTables = async (user: CurrentUser) => {
+	const ids = await getAccessibleBranchIds(user.id, user.role);
+	if (emptyScope(ids)) {
+		return ok({ tables: [], total: 0 });
+	}
+
+	return ok(await auditRepo.tables(ids));
 };

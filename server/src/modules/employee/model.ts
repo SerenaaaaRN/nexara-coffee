@@ -1,4 +1,13 @@
 import { t } from "elysia";
+import { serverTableQuery } from "../../lib/schema.js";
+
+export const getEmployeesQuery = t.Composite([
+	t.Object({
+		branchId: t.Optional(t.String()),
+		role: t.Optional(t.String()),
+	}),
+	serverTableQuery,
+]);
 
 export const createEmployeeBody = t.Object({
 	userId: t.String({ minLength: 1 }),

@@ -1,8 +1,11 @@
 import { t } from "elysia";
+import { serverTableQuery } from "../../lib/schema.js";
 
-export const auditQuery = t.Object({
-	branch: t.Optional(t.String()),
-	action: t.Optional(t.String()),
-	limit: t.Optional(t.Numeric({ minimum: 1, maximum: 500 })),
-	offset: t.Optional(t.Numeric({ minimum: 0 })),
-});
+export const auditQuery = t.Composite([
+	t.Object({
+		branch: t.Optional(t.String()),
+		action: t.Optional(t.String()),
+		targetTable: t.Optional(t.String()),
+	}),
+	serverTableQuery,
+]);

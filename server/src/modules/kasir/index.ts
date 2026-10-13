@@ -37,8 +37,7 @@ export const kasir = new Elysia({ prefix: "/kasir" })
 	)
 	.get(
 		"/setorans",
-		async ({ query, user }) =>
-			getSetorans(user, query.branch ?? null, query.limit, query.offset ?? 0),
+		async ({ query, user }) => getSetorans(user, query),
 		{
 			query: "kasir.setorans",
 			requireRole: ["setoran", "read"],

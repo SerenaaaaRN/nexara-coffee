@@ -40,6 +40,8 @@ export const dailySetorans = pgTable(
 		index("daily_setorans_branch_id_idx").on(table.branchId),
 		index("daily_setorans_cashier_id_idx").on(table.cashierId),
 		index("daily_setorans_date_idx").on(table.date),
+		index("daily_setorans_status_idx").on(table.status),
+		index("daily_setorans_created_at_idx").on(table.createdAt),
 		uniqueIndex("daily_setorans_branch_date_idx").on(
 			table.branchId,
 			table.date,
@@ -70,6 +72,10 @@ export const orders = pgTable(
 	(table) => [
 		index("orders_branch_id_idx").on(table.branchId),
 		index("orders_customer_id_idx").on(table.customerId),
+		index("orders_order_number_idx").on(table.orderNumber),
+		index("orders_status_idx").on(table.status),
+		index("orders_created_at_idx").on(table.createdAt),
+		index("orders_branch_created_idx").on(table.branchId, table.createdAt),
 	],
 );
 

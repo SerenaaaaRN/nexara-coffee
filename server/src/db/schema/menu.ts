@@ -33,7 +33,11 @@ export const menuItems = pgTable(
     imageUrl: text("image_url"),
     isAvailable: boolean("is_available").notNull().default(true),
   },
-  (table) => [index("menu_items_category_id_idx").on(table.categoryId)],
+  (table) => [
+    index("menu_items_category_id_idx").on(table.categoryId),
+    index("menu_items_name_idx").on(table.name),
+    index("menu_items_is_available_idx").on(table.isAvailable),
+  ],
 );
 
 export const menuCategoriesRelations = relations(

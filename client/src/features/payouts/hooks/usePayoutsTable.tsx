@@ -1,9 +1,6 @@
 import {
     createColumnHelper,
     getCoreRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
 import { Check } from "lucide-react";
@@ -12,27 +9,31 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { PayoutRow } from "@/features/payouts/types";
 import { PAYOUT_STATUSES } from "@/features/payouts/types";
-import { useTableState } from "@/hooks/useTableState";
+import type { TableState } from "@/hooks/useTableState";
 import { capitalize, formatCurrency, formatDate } from "@/utils/format";
 import { getBadgeVariant } from "@/utils/status";
 
 const columnHelper = createColumnHelper<PayoutRow>();
 
 /**
- * Mempersiapkan column definitions, filter configs, useTableState, dan instance useReactTable
- * untuk tabel payout. canApprove / onApprove diteruskan ke kolom aksi.
+ * Tabel payout mode server-driven: search/sort/filter/page di-resolve di
+ * server. `tableState` dibuat di komponen via `useTableState`.
  * Kolom `createdAt` disembunyikan secara default via initialState.
  */
-export function usePayoutsTable(
+export const usePayoutsTable = (
     payouts: PayoutRow[],
-    callbacks: {
-        canApprove: boolean;
-        onApprove: (payoutId: string) => void;
+    options: {
+        tableState: TableState;
+        pageCount: number;
+        callbacks: {
+            canApprove: boolean;
+            onApprove: (payoutId: string) => void;
+        };
     },
-) {
-    const tableState = useTableState({ initialPageSize: 10 });
+) => {
+    const { tableState, pageCount, callbacks } = options;
 
-    /** Filter berdasarkan status payout (pending/approved/paid). */
+    /** Filter berdasarkan status payout — nilainya dikirim sebagai param server. */
     const filterConfigs = useMemo(
         () => [
             {
@@ -48,8 +49,9 @@ export function usePayoutsTable(
     );
 
     /**
-     * Kolom: createdAt (hidden), period, branchName, franchiseOwnerName, amount, status,
-     * approvedByName, actions.
+     * Kolom: createdAt (hidden), period, branchName, franchiseOwnerName,
+     * amount, status, approvedByName, actions. Sort server hanya untuk
+     * createdAt/amount/status (whitelist `PAYOUT_SORT_COLUMNS` di server).
      */
     const columns = useMemo(
         () => [
@@ -65,6 +67,7 @@ export function usePayoutsTable(
             columnHelper.display({
                 id: "period",
                 header: "Period",
+                enableSorting: false,
                 cell: ({ row }) => (
                     <>
                         {formatDate(row.original.periodStart, {
@@ -83,6 +86,7 @@ export function usePayoutsTable(
             columnHelper.accessor((row) => row.branchName ?? "—", {
                 id: "branchName",
                 header: "Branch",
+                enableSorting: false,
                 cell: (info) => (
                     <span className="font-medium">{info.getValue()}</span>
                 ),
@@ -90,6 +94,7 @@ export function usePayoutsTable(
             columnHelper.accessor((row) => row.franchiseOwnerName ?? "—", {
                 id: "franchiseOwnerName",
                 header: "Owner",
+                enableSorting: false,
             }),
             columnHelper.accessor("amount", {
                 header: "Amount",
@@ -101,10 +106,6 @@ export function usePayoutsTable(
             }),
             columnHelper.accessor("status", {
                 header: "Status",
-                filterFn: (row, _columnId, filterValue) => {
-                    if (!filterValue || filterValue === "all") return true;
-                    return row.original.status === filterValue;
-                },
                 cell: (info) => (
                     <Badge variant={getBadgeVariant(info.getValue())}>
                         {capitalize(info.getValue())}
@@ -114,10 +115,12 @@ export function usePayoutsTable(
             columnHelper.accessor((row) => row.approvedByName ?? "—", {
                 id: "approvedByName",
                 header: "Approved By",
+                enableSorting: false,
             }),
             columnHelper.display({
                 id: "actions",
                 header: "Actions",
+                enableSorting: false,
                 cell: ({ row }) => {
                     if (
                         callbacks.canApprove &&
@@ -143,14 +146,17 @@ export function usePayoutsTable(
     );
 
     /**
-     * Instance useReactTable.
-     * globalFilterFn mencari berdasarkan branchName dan franchiseOwnerName.
-     * Kolom createdAt disembunyikan secara default (hanya dipakai untuk sorting).
+     * Instance useReactTable server-driven: tanpa row model client
+     * (tanpa getFiltered/Sorted/PaginationRowModel).
      */
     const table = useReactTable({
         data: payouts,
         columns,
         getRowId: (row) => row.id,
+        manualSorting: true,
+        manualFiltering: true,
+        manualPagination: true,
+        pageCount,
         state: {
             sorting: tableState.sorting,
             globalFilter: tableState.globalFilter,
@@ -161,29 +167,18 @@ export function usePayoutsTable(
         onGlobalFilterChange: tableState.setGlobalFilter,
         onColumnFiltersChange: tableState.setColumnFilters,
         onPaginationChange: tableState.setPagination,
-        globalFilterFn: (row, _columnId, filterValue) => {
-            const searchStr = String(filterValue).toLowerCase();
-            const p = row.original;
-            return (
-                (p.branchName ?? "").toLowerCase().includes(searchStr) ||
-                (p.franchiseOwnerName ?? "").toLowerCase().includes(searchStr)
-            );
-        },
         initialState: {
             columnVisibility: {
                 createdAt: false,
             },
         },
         getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
     });
 
     return {
         table,
         tableState,
         filterConfigs,
-        searchPlaceholder: "Search by branch or owner...",
+        searchPlaceholder: "Search by branch, owner...",
     };
-}
+};

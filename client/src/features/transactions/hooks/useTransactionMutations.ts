@@ -36,7 +36,7 @@ export const refundTransaction = async (
     return toEnvelope(data, error);
 };
 
-export function useRecordTransaction() {
+export const useRecordTransaction = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (data: z.infer<typeof recordTransactionSchema>) =>
@@ -45,9 +45,9 @@ export function useRecordTransaction() {
             qc.invalidateQueries({ queryKey: transactionKeys.all });
         },
     });
-}
+};
 
-export function useRefundTransaction() {
+export const useRefundTransaction = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (data: z.infer<typeof refundTransactionSchema>) =>
@@ -56,4 +56,4 @@ export function useRefundTransaction() {
             qc.invalidateQueries({ queryKey: transactionKeys.all });
         },
     });
-}
+};

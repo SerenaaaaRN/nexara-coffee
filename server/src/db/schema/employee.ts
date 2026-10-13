@@ -30,6 +30,8 @@ export const employeeDetails = pgTable(
   (table) => [
     index("employee_details_user_id_idx").on(table.userId),
     index("employee_details_branch_id_idx").on(table.branchId),
+    index("employee_details_hire_date_idx").on(table.hireDate),
+    index("employee_details_created_at_idx").on(table.createdAt),
   ],
 );
 

@@ -1,9 +1,6 @@
 import {
     createColumnHelper,
     getCoreRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
 import { Edit, Trash2 } from "lucide-react";
@@ -11,7 +8,7 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { EmployeeRow } from "@/features/employee/types";
-import { useTableState } from "@/hooks/useTableState";
+import type { TableState } from "@/hooks/useTableState";
 import { formatCurrency, formatDate, formatLabel } from "@/utils/format";
 
 const columnHelper = createColumnHelper<EmployeeRow>();
@@ -26,31 +23,23 @@ const ROLE_OPTIONS = [
 ].map((role) => ({ value: role, label: formatLabel(role) }));
 
 /**
- * Mempersiapkan column definitions, filter configs, useTableState, dan instance useReactTable
- * untuk tabel employee. Callbacks onEdit / onDelete diteruskan ke kolom aksi.
+ * Tabel employee mode server-driven: search/sort/filter/page di-resolve di
+ * server. `tableState` dibuat di komponen via `useTableState`; opsi
+ * filter branch berasal dari endpoint branches server.
  */
 export const useEmployeeTable = (
     employees: EmployeeRow[],
-    callbacks: {
-        onEdit: (employee: EmployeeRow) => void;
-        onDelete: (employee: EmployeeRow) => void;
+    options: {
+        tableState: TableState;
+        pageCount: number;
+        branchOptions: { id: string; name: string }[];
+        callbacks: {
+            onEdit: (employee: EmployeeRow) => void;
+            onDelete: (employee: EmployeeRow) => void;
+        };
     },
 ) => {
-    const tableState = useTableState();
-
-    /** Mengumpulkan daftar branch unik dari data employee untuk opsi filter. */
-    const branchOptions = useMemo(() => {
-        const unique = new Map<string, { id: string; name: string }>();
-        for (const e of employees) {
-            if (!unique.has(e.branchId)) {
-                unique.set(e.branchId, {
-                    id: e.branchId,
-                    name: e.branchName ?? e.branchId,
-                });
-            }
-        }
-        return Array.from(unique.values());
-    }, [employees]);
+    const { tableState, pageCount, branchOptions, callbacks } = options;
 
     /** Konfigurasi filter untuk kolom role dan branch. */
     const filterConfigs = useMemo(
@@ -96,10 +85,6 @@ export const useEmployeeTable = (
             columnHelper.accessor((row) => row.branchName ?? "", {
                 id: "branchId",
                 header: "Branch",
-                filterFn: (row, _columnId, filterValue) => {
-                    if (!filterValue) return true;
-                    return row.original.branchId === filterValue;
-                },
                 cell: (info) => (
                     <Badge variant="secondary">
                         {info.row.original.branchName}
@@ -117,9 +102,6 @@ export const useEmployeeTable = (
             }),
             columnHelper.accessor("baseSalary", {
                 header: "Salary",
-                // baseSalary disimpan sebagai string desimal — urutkan secara numerik.
-                sortingFn: (a, b, columnId) =>
-                    Number(a.getValue(columnId)) - Number(b.getValue(columnId)),
                 cell: (info) =>
                     formatCurrency(parseInt(info.row.original.baseSalary, 10)),
             }),
@@ -130,6 +112,7 @@ export const useEmployeeTable = (
             columnHelper.display({
                 id: "actions",
                 header: "Actions",
+                enableSorting: false,
                 cell: ({ row }) => (
                     <div className="flex gap-1">
                         <Button
@@ -152,13 +135,17 @@ export const useEmployeeTable = (
     );
 
     /**
-     * Instance useReactTable.
-     * globalFilterFn mencari berdasarkan userName, userEmail, userRole, branchName.
+     * Instance useReactTable server-driven: tanpa row model client
+     * (tanpa getFiltered/Sorted/PaginationRowModel).
      */
     const table = useReactTable({
         data: employees,
         columns,
         getRowId: (row) => row.id,
+        manualSorting: true,
+        manualFiltering: true,
+        manualPagination: true,
+        pageCount,
         state: {
             sorting: tableState.sorting,
             globalFilter: tableState.globalFilter,
@@ -169,20 +156,7 @@ export const useEmployeeTable = (
         onGlobalFilterChange: tableState.setGlobalFilter,
         onColumnFiltersChange: tableState.setColumnFilters,
         onPaginationChange: tableState.setPagination,
-        globalFilterFn: (row, _columnId, filterValue) => {
-            const q = String(filterValue).toLowerCase();
-            const e = row.original;
-            return (
-                (e.userName ?? "").toLowerCase().includes(q) ||
-                (e.userEmail ?? "").toLowerCase().includes(q) ||
-                (e.userRole ?? "").toLowerCase().includes(q) ||
-                (e.branchName ?? "").toLowerCase().includes(q)
-            );
-        },
         getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
     });
 
     return {

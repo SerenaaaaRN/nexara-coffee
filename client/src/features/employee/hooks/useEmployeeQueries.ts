@@ -10,18 +10,21 @@ import { api, toEnvelope } from "@/lib/eden";
 /**
  * Mengambil daftar employee beserta nama user & cabang (flat).
  * Scope otomatis berdasarkan role (dihitung di server).
- * Diurutkan berdasarkan hireDate (terlama dulu).
+ * Search/filter/sort/page di-resolve di server.
  */
-export const getEmployees = async () => {
-    const { data, error } = await api.employees.get();
-    const envelope = toEnvelope(data, error);
-    if (!envelope.success) return envelope;
-    return {
-        success: true as const,
-        data: [...envelope.data].sort((a, b) =>
-            a.hireDate < b.hireDate ? -1 : a.hireDate > b.hireDate ? 1 : 0,
-        ),
-    };
+export const getEmployees = async (params?: EmployeeFilters) => {
+    const { data, error } = await api.employees.get({
+        query: {
+            branchId: params?.branchId,
+            role: params?.role,
+            q: params?.q,
+            page: params?.page,
+            pageSize: params?.pageSize,
+            sortBy: params?.sortBy,
+            sortDir: params?.sortDir,
+        },
+    });
+    return toEnvelope(data, error);
 };
 
 /**
@@ -48,14 +51,36 @@ export const getEmployeeBranches = async () => {
     return toEnvelope(data, error);
 };
 
-export const employeesOptions = () =>
+export type EmployeeFilters = {
+    branchId?: string;
+    role?: string;
+    q?: string;
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+};
+
+export const employeesOptions = (params?: EmployeeFilters) =>
     queryOptions({
-        queryKey: employeeKeys.lists(),
-        queryFn: () => getEmployees(),
+        queryKey: employeeKeys.list(params),
+        queryFn: () => getEmployees(params),
         staleTime: STALE.FREQUENT,
     });
 
-export const useEmployees = () => useSuspenseQuery(employeesOptions());
+export const employeesTableOptions = (params?: EmployeeFilters) =>
+    queryOptions({
+        queryKey: employeeKeys.list(params),
+        queryFn: () => getEmployees(params),
+        staleTime: STALE.FREQUENT,
+        placeholderData: (previousData) => previousData,
+    });
+
+export const useEmployees = (params?: EmployeeFilters) =>
+    useSuspenseQuery(employeesOptions(params));
+
+export const useEmployeesTableQuery = (params?: EmployeeFilters) =>
+    useQuery(employeesTableOptions(params));
 
 export const useAvailableUsers = () =>
     useQuery({

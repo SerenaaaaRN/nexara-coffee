@@ -1,18 +1,46 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
 import type { CurrentUser } from "../../access/index.js";
 import {
 	assertBranchAccess,
-	branchFilter,
+	emptyScope,
 	getAccessibleBranchIds,
 } from "../../access/index.js";
-import { db } from "../../db/index.js";
-import { user as userTable } from "../../db/schema/auth-schema.js";
-import { branches } from "../../db/schema/branches.js";
-import { transactions } from "../../db/schema/finance.js";
-import { dailySetorans } from "../../db/schema/orders.js";
 import { fail, ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
 import { logAudit } from "../../utils/effects.js";
+import type { setoransQuery } from "./model.js";
+import { kasirRepo } from "./repository.js";
+
+const emptySummary = { total: 0, totalAmount: "0", approved: 0, pending: 0 };
+
+const toAmountSummary = (
+	groups: { status: string; value: number; amount: string | null }[],
+) => {
+	const summary = { totalAmount: "0", approved: 0, pending: 0 };
+	for (const group of groups) {
+		summary.totalAmount = String(
+			Number(summary.totalAmount) + Number(group.amount ?? 0),
+		);
+		if (group.status === "approved") summary.approved = group.value;
+		else if (group.status === "pending") summary.pending = group.value;
+	}
+	return summary;
+};
+
+const toDailyTotals = (rows: { paymentMethod: string; total: string }[]) => {
+	const result = { cash: 0, qris: 0, debit: 0, credit: 0 };
+	for (const r of rows) {
+		if (r.paymentMethod in result) {
+			result[r.paymentMethod as keyof typeof result] = Number(r.total);
+		}
+	}
+	return {
+		cashTotal: result.cash,
+		qrisTotal: result.qris,
+		debitTotal: result.debit,
+		creditTotal: result.credit,
+		total: result.cash + result.qris + result.debit + result.credit,
+	};
+};
 
 export const getExpectedCash = async (
 	user: CurrentUser,
@@ -27,76 +55,42 @@ export const getExpectedCash = async (
 	const endDate = new Date(startDate);
 	endDate.setUTCDate(endDate.getUTCDate() + 1);
 
-	const rows = await db
-		.select({
-			paymentMethod: transactions.paymentMethod,
-			total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
-		})
-		.from(transactions)
-		.where(
-			and(
-				eq(transactions.branchId, branchId),
-				gte(transactions.createdAt, startDate),
-				lt(transactions.createdAt, endDate),
-			),
-		)
-		.groupBy(transactions.paymentMethod);
+	const rows = await kasirRepo.dailyTotals(branchId, startDate, endDate);
 
-	const result = { cash: 0, qris: 0, debit: 0, credit: 0 };
-	for (const r of rows) {
-		if (r.paymentMethod in result) {
-			result[r.paymentMethod as keyof typeof result] = Number(r.total);
-		}
-	}
-
-	return ok({
-		cashTotal: result.cash,
-		qrisTotal: result.qris,
-		debitTotal: result.debit,
-		creditTotal: result.credit,
-		total: result.cash + result.qris + result.debit + result.credit,
-	});
+	return ok(toDailyTotals(rows));
 };
 
 export const getSetorans = async (
 	user: CurrentUser,
-	branch?: string | null,
-	limit?: number,
-	offset = 0,
+	params: typeof setoransQuery.static,
 ) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
-	const take = limit ?? 300;
+	const { page, pageSize, sortDir } = resolveTableParams(params);
 
-	const conditions = branchFilter(dailySetorans, branch ?? null, ids);
+	if (emptyScope(ids)) {
+		return ok({ ...pageResult([], 0, page, pageSize), summary: emptySummary });
+	}
 
-	const cashierUser = alias(userTable, "cashier");
-	const verifierUser = alias(userTable, "verifier");
+	const result = await kasirRepo.list({
+		ids,
+		branch: params.branch,
+		status: params.status,
+		q: params.q,
+		sortBy: params.sortBy,
+		sortDir,
+		page,
+		pageSize,
+	});
 
-	const rows = await db
-		.select({
-			id: dailySetorans.id,
-			branchId: dailySetorans.branchId,
-			cashierId: dailySetorans.cashierId,
-			amount: dailySetorans.amount,
-			date: dailySetorans.date,
-			status: dailySetorans.status,
-			verifiedBy: dailySetorans.verifiedBy,
-			notes: dailySetorans.notes,
-			createdAt: dailySetorans.createdAt,
-			branchName: branches.name,
-			cashierName: cashierUser.name,
-			verifiedByName: verifierUser.name,
-		})
-		.from(dailySetorans)
-		.leftJoin(branches, eq(dailySetorans.branchId, branches.id))
-		.leftJoin(cashierUser, eq(dailySetorans.cashierId, cashierUser.id))
-		.leftJoin(verifierUser, eq(dailySetorans.verifiedBy, verifierUser.id))
-		.where(conditions)
-		.orderBy(desc(dailySetorans.createdAt))
-		.limit(take)
-		.offset(offset);
-
-	return ok(rows);
+	return ok({
+		...pageResult(
+			result.rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+			result.total,
+			page,
+			pageSize,
+		),
+		summary: { total: result.total, ...toAmountSummary(result.statusGroups) },
+	});
 };
 
 export const createSetoran = async (
@@ -108,18 +102,9 @@ export const createSetoran = async (
 	const denied = assertBranchAccess(ids, branchId);
 	if (denied) return denied;
 
-	const existing = await db
-		.select()
-		.from(dailySetorans)
-		.where(
-			and(
-				eq(dailySetorans.branchId, branchId),
-				eq(dailySetorans.date, formData.date),
-			),
-		)
-		.limit(1);
+	const existing = await kasirRepo.findByBranchDate(branchId, formData.date);
 
-	let setoran: typeof dailySetorans.$inferSelect;
+	let setoran;
 	if (existing.length > 0) {
 		const prev = existing[0];
 		if (prev.status !== "pending") {
@@ -128,27 +113,22 @@ export const createSetoran = async (
 				`Cannot update setoran with status "${prev.status}". Only pending setoran can be edited.`,
 			);
 		}
-		[setoran] = await db
-			.update(dailySetorans)
-			.set({
-				amount: formData.amount.toString(),
-				cashierId: user.id,
-				notes: formData.notes || null,
-			})
-			.where(eq(dailySetorans.id, prev.id))
-			.returning();
+		setoran = await kasirRepo.updateAmount(prev.id, {
+			amount: formData.amount.toString(),
+			cashierId: user.id,
+			notes: formData.notes || null,
+		});
+		if (!setoran) return fail(500, "Failed to update setoran");
 	} else {
 		try {
-			[setoran] = await db
-				.insert(dailySetorans)
-				.values({
-					branchId,
-					cashierId: user.id,
-					amount: formData.amount.toString(),
-					date: formData.date,
-					notes: formData.notes || null,
-				})
-				.returning();
+			setoran = await kasirRepo.create({
+				branchId,
+				cashierId: user.id,
+				amount: formData.amount.toString(),
+				date: formData.date,
+				notes: formData.notes || null,
+			});
+			if (!setoran) return fail(500, "Failed to create setoran");
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
 			const isUnique =
@@ -156,34 +136,26 @@ export const createSetoran = async (
 				msg.toLowerCase().includes("duplicate") ||
 				msg.includes("daily_setorans_branch_date_idx");
 			if (!isUnique) throw err;
-			const [retryExisting] = await db
-				.select()
-				.from(dailySetorans)
-				.where(
-					and(
-						eq(dailySetorans.branchId, branchId),
-						eq(dailySetorans.date, formData.date),
-					),
-				)
-				.limit(1);
-			if (!retryExisting) {
+			const retryExisting = await kasirRepo.findByBranchDate(
+				branchId,
+				formData.date,
+			);
+			if (retryExisting.length === 0) {
 				return fail(409, "Duplicate setoran detected, please retry.");
 			}
-			if (retryExisting.status !== "pending") {
+			const retry = retryExisting[0];
+			if (retry.status !== "pending") {
 				return fail(
 					400,
-					`Cannot update setoran with status "${retryExisting.status}". Only pending setoran can be edited.`,
+					`Cannot update setoran with status "${retry.status}". Only pending setoran can be edited.`,
 				);
 			}
-			[setoran] = await db
-				.update(dailySetorans)
-				.set({
-					amount: formData.amount.toString(),
-					cashierId: user.id,
-					notes: formData.notes || null,
-				})
-				.where(eq(dailySetorans.id, retryExisting.id))
-				.returning();
+			setoran = await kasirRepo.updateAmount(retry.id, {
+				amount: formData.amount.toString(),
+				cashierId: user.id,
+				notes: formData.notes || null,
+			});
+			if (!setoran) return fail(500, "Failed to update setoran");
 		}
 	}
 
@@ -200,16 +172,13 @@ export const createSetoran = async (
 };
 
 export const deleteSetoran = async (user: CurrentUser, id: string) => {
-	const [setoran] = await db
-		.select()
-		.from(dailySetorans)
-		.where(eq(dailySetorans.id, id));
+	const setoran = await kasirRepo.findById(id);
 	if (!setoran) return fail(404, "Setoran not found");
 	if (setoran.cashierId !== user.id) return fail(403, "Forbidden");
 	if (setoran.status !== "pending")
 		return fail(400, "Can only delete pending setoran");
 
-	await db.delete(dailySetorans).where(eq(dailySetorans.id, id));
+	await kasirRepo.remove(id);
 
 	void logAudit({
 		actorId: user.id,
@@ -230,14 +199,12 @@ const setSetoranStatus = async (
 ) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
 
-	const [existing] = await db
-		.select({ branchId: dailySetorans.branchId, status: dailySetorans.status })
-		.from(dailySetorans)
-		.where(eq(dailySetorans.id, id));
-
+	const existing = await kasirRepo.findStatus(id);
 	if (!existing) return fail(404, "Setoran not found");
+
 	const denied = assertBranchAccess(ids, existing.branchId);
 	if (denied) return denied;
+
 	if (existing.status !== "pending") {
 		return fail(
 			400,
@@ -245,16 +212,11 @@ const setSetoranStatus = async (
 		);
 	}
 
-	const [setoran] = await db
-		.update(dailySetorans)
-		.set({
-			status: decision,
-			verifiedBy: user.id,
-			...(notes ? { notes } : {}),
-		})
-		.where(and(eq(dailySetorans.id, id), eq(dailySetorans.status, "pending")))
-		.returning();
-
+	const setoran = await kasirRepo.setDecision(id, {
+		status: decision,
+		verifiedBy: user.id,
+		...(notes ? { notes } : {}),
+	});
 	if (!setoran) return fail(404, "Setoran not found");
 
 	void logAudit({

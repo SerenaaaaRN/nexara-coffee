@@ -1,46 +1,28 @@
-import { useMemo, useState } from "react";
-import type { CustomerRow } from "@/features/customers/types";
+import { useState } from "react";
+import type { CustomerFilters } from "@/features/customers/hooks/useCustomerQueries";
+import { useDebounce } from "@/hooks/useDebounce";
 
 /**
- * Filter & search customer di sisi client.
+ * State input filter customers (search + segment + tier) beserta turunan
+ * `params` siap kirim sebagai query server. Filtering di-resolve di server;
+ * hook ini hanya memegang state mentah + debounce search.
  */
-export const useCustomerFilters = (customers: CustomerRow[]) => {
+export const useCustomerFilters = () => {
     const [search, setSearch] = useState("");
     const [segmentFilter, setSegmentFilter] = useState("all");
     const [tierFilter, setTierFilter] = useState("all");
 
-    const searched = useMemo(() => {
-        if (!search) return customers;
-        const q = search.toLowerCase();
-        return customers.filter(
-            (c) =>
-                c.fullName.toLowerCase().includes(q) ||
-                (c.email ?? "").toLowerCase().includes(q) ||
-                (c.phone ?? "").toLowerCase().includes(q),
-        );
-    }, [customers, search]);
+    const debouncedSearch = useDebounce(search);
+    const q = debouncedSearch.trim();
 
-    const filtered = useMemo(() => {
-        let result = searched;
-        if (segmentFilter !== "all")
-            result = result.filter((c) => c.segment === segmentFilter);
-        if (tierFilter !== "all")
-            result = result.filter((c) => c.loyaltyTier === tierFilter);
-        return result;
-    }, [searched, segmentFilter, tierFilter]);
+    const params: CustomerFilters = {
+        ...(q ? { q } : {}),
+        ...(segmentFilter !== "all" ? { segment: segmentFilter } : {}),
+        ...(tierFilter !== "all" ? { tier: tierFilter } : {}),
+    };
 
     const hasFilters =
-        segmentFilter !== "all" || tierFilter !== "all" || Boolean(search);
-
-    const totalOrders = useMemo(
-        () => filtered.reduce((sum, c) => sum + c.orderCount, 0),
-        [filtered],
-    );
-
-    const totalPoints = useMemo(
-        () => filtered.reduce((sum, c) => sum + c.loyaltyPoints, 0),
-        [filtered],
-    );
+        q !== "" || segmentFilter !== "all" || tierFilter !== "all";
 
     const clearFilters = () => {
         setSearch("");
@@ -55,10 +37,8 @@ export const useCustomerFilters = (customers: CustomerRow[]) => {
         setSegmentFilter,
         tierFilter,
         setTierFilter,
-        filtered,
+        params,
         hasFilters,
-        totalOrders,
-        totalPoints,
         clearFilters,
     };
 };

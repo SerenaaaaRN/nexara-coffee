@@ -6,7 +6,7 @@ import { employeesOptions } from "@/features/employee/hooks/useEmployeeQueries";
 
 export const Route = createFileRoute("/_dashboard/employee")({
     loader: async ({ context: { queryClient } }) => {
-        await queryClient.ensureQueryData(employeesOptions());
+        await queryClient.ensureQueryData(employeesOptions({ pageSize: 20 }));
     },
     component: EmployeePage,
     errorComponent: ({ error }) => <ErrorPage error={error} />,

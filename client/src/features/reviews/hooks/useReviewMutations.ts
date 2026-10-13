@@ -17,7 +17,7 @@ export const replyReview = async (
     return toEnvelope(data, error);
 };
 
-export function useReplyReview() {
+export const useReplyReview = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (
@@ -27,7 +27,7 @@ export function useReplyReview() {
             queryClient.invalidateQueries({ queryKey: reviewKeys.all });
         },
     });
-}
+};
 
 const moderateReviewSchema = z.object({
     status: z.enum(["approved", "rejected"]),
@@ -48,7 +48,7 @@ export const moderateReview = async (input: {
     return toEnvelope(data, error);
 };
 
-export function useModerateReview() {
+export const useModerateReview = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (
@@ -59,4 +59,4 @@ export function useModerateReview() {
             queryClient.invalidateQueries({ queryKey: ["landing"] });
         },
     });
-}
+};

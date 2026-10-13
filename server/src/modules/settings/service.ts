@@ -1,4 +1,3 @@
-import { eq, inArray, ne } from "drizzle-orm";
 import type { CurrentUser } from "../../access/index.js";
 import {
 	ACTIONS,
@@ -11,32 +10,19 @@ import {
 	ROLES,
 	type Role,
 } from "../../access/index.js";
-import { db } from "../../db/index.js";
-import { user as userTable } from "../../db/schema/auth-schema.js";
-import { branches } from "../../db/schema/branches.js";
 import { uploadImageBase64 } from "../../infra/images.js";
 import { fail, ok } from "../../lib/http.js";
 import { checkRate, logAudit } from "../../utils/effects.js";
+import { settingsRepo } from "./repository.js";
+
+const roleLevel = (role: string) =>
+	(ROLES as Record<string, number>)[role] ?? 999;
 
 export const getUsers = async (user: CurrentUser) => {
-	const myLevel = (ROLES as Record<string, number>)[user.role] ?? 999;
-	const rows = await db
-		.select({
-			id: userTable.id,
-			name: userTable.name,
-			email: userTable.email,
-			role: userTable.role,
-			image: userTable.image,
-			createdAt: userTable.createdAt,
-		})
-		.from(userTable)
-		.where(ne(userTable.id, user.id))
-		.orderBy(userTable.name);
-	return ok(
-		rows.filter(
-			(r) => ((ROLES as Record<string, number>)[r.role] ?? 999) > myLevel,
-		),
-	);
+	const myLevel = roleLevel(user.role);
+	const rows = await settingsRepo.otherUsers(user.id);
+
+	return ok(rows.filter((r) => roleLevel(r.role) > myLevel));
 };
 
 export const updateProfile = async (
@@ -45,11 +31,9 @@ export const updateProfile = async (
 ) => {
 	const limited = checkRate(`settings-profile:${user.id}`, 20, 60_000);
 	if (limited) return limited;
-	const [updated] = await db
-		.update(userTable)
-		.set({ name: data.name } as never)
-		.where(eq(userTable.id, user.id))
-		.returning();
+
+	const updated = await settingsRepo.setProfile(user.id, data.name);
+
 	return ok(updated);
 };
 
@@ -68,24 +52,18 @@ export const changeUserRole = async (
 	}
 	const limited = checkRate(`settings-role:${user.id}`, 10, 60_000);
 	if (limited) return limited;
-	const [targetUser] = await db
-		.select({ id: userTable.id, role: userTable.role })
-		.from(userTable)
-		.where(eq(userTable.id, data.userId))
-		.limit(1);
+
+	const targetUser = await settingsRepo.findRole(data.userId);
 	if (!targetUser) return fail(404, "User not found");
-	const myLevel = (ROLES as Record<string, number>)[user.role] ?? 999;
-	const targetLevel = (ROLES as Record<string, number>)[targetUser.role] ?? 999;
-	if (targetLevel <= myLevel)
+
+	const myLevel = roleLevel(user.role);
+	if (roleLevel(targetUser.role) <= myLevel)
 		return fail(
 			403,
 			"You cannot change the role of users with the same or higher level",
 		);
-	const [updated] = await db
-		.update(userTable)
-		.set({ role: data.role } as never)
-		.where(eq(userTable.id, data.userId))
-		.returning();
+
+	const updated = await settingsRepo.setRole(data.userId, data.role);
 	void logAudit({
 		actorId: user.id,
 		action: "update",
@@ -93,28 +71,27 @@ export const changeUserRole = async (
 		targetId: data.userId,
 		metadata: { fromRole: targetUser.role, toRole: data.role },
 	});
+
 	return ok(updated);
 };
 
 export const uploadAvatar = async (user: CurrentUser, base64: string) => {
 	const limited = checkRate(`settings-avatar:${user.id}`, 5, 60_000);
 	if (limited) return limited;
+
 	const result = await uploadImageBase64(base64, "nexara/avatars");
 	if (!result) return fail(500, "Gagal upload gambar");
-	await db
-		.update(userTable)
-		.set({ image: result.url } as never)
-		.where(eq(userTable.id, user.id));
+	await settingsRepo.setAvatar(user.id, result.url);
+
 	return ok({ url: result.url });
 };
 
 export const removeAvatar = async (user: CurrentUser) => {
 	const limited = checkRate(`settings-avatar:${user.id}`, 5, 60_000);
 	if (limited) return limited;
-	await db
-		.update(userTable)
-		.set({ image: null } as never)
-		.where(eq(userTable.id, user.id));
+
+	await settingsRepo.setAvatar(user.id, null);
+
 	return ok(null);
 };
 
@@ -123,16 +100,9 @@ export const getDashboardMeta = async (user: CurrentUser) => {
 	const isSuperAdmin = user.role === "super_admin";
 	const branchList =
 		ids === null
-			? await db
-					.select({ id: branches.id, name: branches.name })
-					.from(branches)
-					.orderBy(branches.name)
+			? await settingsRepo.allBranches()
 			: ids.length > 0
-				? await db
-						.select({ id: branches.id, name: branches.name })
-						.from(branches)
-						.where(inArray(branches.id, ids))
-						.orderBy(branches.name)
+				? await settingsRepo.scopedBranches(ids)
 				: [];
 	const defaultBranchId = ids === null ? null : (branchList[0]?.id ?? null);
 	const role = user.role as Role;
@@ -142,7 +112,7 @@ export const getDashboardMeta = async (user: CurrentUser) => {
 	const defaultRoute = (can(role, "read", "reports") ? "/overview" : "/my") as
 		| "/overview"
 		| "/my";
-	const myLevel = (ROLES as Record<string, number>)[user.role] ?? 999;
+	const myLevel = roleLevel(user.role);
 	const roles = (Object.keys(ROLES) as Role[]).map((value) => ({
 		value,
 		label: value
@@ -155,7 +125,7 @@ export const getDashboardMeta = async (user: CurrentUser) => {
 		role === "branch_manager"
 			? (["cashier", "barista"] as Role[])
 			: (Object.keys(ROLES) as Role[]).filter(
-					(r) => ((ROLES as Record<string, number>)[r] ?? 999) > myLevel,
+					(r) => roleLevel(r) > myLevel,
 				);
 	return ok({
 		isSuperAdmin,

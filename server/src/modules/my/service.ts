@@ -1,100 +1,65 @@
-import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { CurrentUser } from "../../access/index.js";
 import { resolveMyScope } from "../../access/index.js";
-import { db } from "../../db/index.js";
-import { branches } from "../../db/schema/branches.js";
-import { customers, reviews } from "../../db/schema/customers.js";
 import { orders } from "../../db/schema/orders.js";
 import { fail, ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
 import { checkRate, logAudit } from "../../utils/effects.js";
 import { normalizePhone } from "../../utils/loyalty.js";
-
-/** Own-scope portal /my — tanpa can() global, filter by session.user.id (visitor allowed). */
+import { myRepo } from "./repository.js";
 
 export const getMyOrders = async (
 	user: CurrentUser,
 	params: { page?: number; pageSize?: number },
 ) => {
 	const uid = user.id;
-	const page = params.page ?? 0;
-	const pageSize = params.pageSize ?? 20;
+	const { page, pageSize } = resolveTableParams(params);
 	const { scope } = await resolveMyScope(uid);
-
 	const completedScope = and(scope, eq(orders.status, "completed"));
 
-	const [rows, totalRows, completedRows] = await Promise.all([
-		db
-			.select({
-				id: orders.id,
-				branchId: orders.branchId,
-				branchName: branches.name,
-				orderNumber: orders.orderNumber,
-				status: orders.status,
-				totalAmount: orders.totalAmount,
-				createdAt: orders.createdAt,
-			})
-			.from(orders)
-			.leftJoin(branches, eq(orders.branchId, branches.id))
-			.where(scope)
-			.orderBy(desc(orders.createdAt))
-			.limit(pageSize)
-			.offset(page * pageSize),
-		db.select({ cnt: count() }).from(orders).where(scope),
-		db.select({ cnt: count() }).from(orders).where(completedScope),
-	]);
-
-	const reviewed = new Set<string>();
-	if (rows.length > 0) {
-		const reviewRows = await db
-			.select({ orderId: reviews.orderId })
-			.from(reviews)
-			.where(
-				inArray(
-					reviews.orderId,
-					rows.map((r) => r.id),
-				),
-			);
-		for (const rr of reviewRows) if (rr.orderId) reviewed.add(rr.orderId);
-	}
+	const { rows, totalRows, completedRows } = await myRepo.ordersPage({
+		scope,
+		completedScope,
+		page,
+		pageSize,
+	});
+	const reviewed = await myRepo.reviewedOrderIds(rows.map((r) => r.id));
 
 	return ok({
-		rows: rows.map((r) => ({ ...r, hasReview: reviewed.has(r.id) })),
-		nextPage: rows.length === pageSize ? page + 1 : null,
-		total: totalRows[0]?.cnt ?? 0,
+		...pageResult(
+			rows.map((r) => ({
+				...r,
+				createdAt: r.createdAt.toISOString(),
+				hasReview: reviewed.has(r.id),
+			})),
+			totalRows[0]?.cnt ?? 0,
+			page,
+			pageSize,
+		),
 		completedTotal: completedRows[0]?.cnt ?? 0,
 	});
 };
 
 export const getMyLoyalty = async (user: CurrentUser) => {
 	const uid = user.id;
-	const [existing] = await db
-		.select()
-		.from(customers)
-		.where(eq(customers.userId, uid))
-		.limit(1);
+	const existing = await myRepo.findProfile(uid);
 
 	let customer = existing;
 	if (!customer) {
-		const [created] = await db
-			.insert(customers)
-			.values({
-				fullName: user.name ?? "Customer",
-				email: user.email ?? null,
-				segment: "regular",
-				loyaltyPoints: 0,
-				loyaltyTier: "bronze",
-				userId: uid,
-			} as never)
-			.returning();
+		const created = await myRepo.createProfile({
+			fullName: user.name ?? "Customer",
+			email: user.email ?? null,
+			segment: "regular",
+			loyaltyPoints: 0,
+			loyaltyTier: "bronze",
+			userId: uid,
+		});
 		if (!created) return fail(500, "Gagal membuat profil member");
 		customer = created;
 	}
 
 	const { scope } = await resolveMyScope(uid);
-	const [countRow] = await db
-		.select({ cnt: count() })
-		.from(orders)
-		.where(scope);
+	const orderCount = await myRepo.countOrders(scope);
 
 	return ok({
 		id: customer.id,
@@ -103,7 +68,7 @@ export const getMyLoyalty = async (user: CurrentUser) => {
 		segment: customer.segment,
 		loyaltyPoints: customer.loyaltyPoints,
 		loyaltyTier: customer.loyaltyTier,
-		orderCount: countRow?.cnt ?? 0,
+		orderCount,
 	});
 };
 
@@ -120,32 +85,20 @@ export const updateMyPhone = async (
 		return fail(400, "Nomor HP harus terdiri dari 9-15 digit");
 	}
 
-	const [taken] = await db
-		.select({ id: customers.id })
-		.from(customers)
-		.where(and(eq(customers.phone, digits), ne(customers.userId, uid)))
-		.limit(1);
+	const taken = await myRepo.findPhoneOwner(digits, uid);
 	if (taken) return fail(400, "Nomor HP sudah digunakan");
 
-	const [existing] = await db
-		.select({ id: customers.id })
-		.from(customers)
-		.where(eq(customers.userId, uid))
-		.limit(1);
-
+	const existing = await myRepo.findProfile(uid);
 	if (!existing) {
-		const [created] = await db
-			.insert(customers)
-			.values({
-				fullName: user.name ?? "Customer",
-				email: user.email ?? null,
-				phone: digits,
-				segment: "regular",
-				loyaltyPoints: 0,
-				loyaltyTier: "bronze",
-				userId: uid,
-			} as never)
-			.returning({ id: customers.id });
+		const created = await myRepo.createProfile({
+			fullName: user.name ?? "Customer",
+			email: user.email ?? null,
+			phone: digits,
+			segment: "regular",
+			loyaltyPoints: 0,
+			loyaltyTier: "bronze",
+			userId: uid,
+		});
 		if (!created) return fail(500, "Gagal menyimpan nomor HP");
 		void logAudit({
 			actorId: uid,
@@ -157,10 +110,7 @@ export const updateMyPhone = async (
 		return ok({ phone: digits });
 	}
 
-	await db
-		.update(customers)
-		.set({ phone: digits })
-		.where(eq(customers.id, existing.id));
+	await myRepo.setPhone(existing.id, digits);
 	void logAudit({
 		actorId: uid,
 		action: "update",
@@ -182,42 +132,24 @@ export const createMyReview = async (
 	}
 
 	const { ownedIds, scope } = await resolveMyScope(uid);
-
-	const [order] = await db
-		.select({
-			id: orders.id,
-			branchId: orders.branchId,
-			customerId: orders.customerId,
-			status: orders.status,
-		})
-		.from(orders)
-		.where(and(eq(orders.id, input.orderId), scope))
-		.limit(1);
-
+	const order = await myRepo.findOrderInScope(input.orderId, scope);
 	if (!order) return fail(404, "Order tidak ditemukan");
 	if (order.status !== "completed") {
 		return fail(400, "Hanya order yang sudah selesai yang bisa diulas");
 	}
 
-	const [dup] = await db
-		.select({ id: reviews.id })
-		.from(reviews)
-		.where(eq(reviews.orderId, order.id))
-		.limit(1);
+	const dup = await myRepo.findReviewByOrder(order.id);
 	if (dup) return fail(400, "Order ini sudah pernah diulas");
 
-	const [inserted] = await db
-		.insert(reviews)
-		.values({
-			branchId: order.branchId,
-			customerId: order.customerId ?? ownedIds[0] ?? null,
-			orderId: order.id,
-			rating,
-			comment: input.comment?.trim() ? input.comment.trim() : null,
-			status: "pending",
-		} as never)
-		.returning({ id: reviews.id });
-
+	const inserted = await myRepo.createReview({
+		branchId: order.branchId,
+		customerId: order.customerId ?? ownedIds[0] ?? null,
+		orderId: order.id,
+		rating,
+		comment: input.comment?.trim() ? input.comment.trim() : null,
+		status: "pending",
+	});
 	if (!inserted) return fail(500, "Gagal menyimpan ulasan");
+
 	return ok({ id: inserted.id });
 };

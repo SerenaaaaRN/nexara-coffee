@@ -6,7 +6,10 @@ import type { api, GetData } from "@/lib/eden";
  * Termasuk 3 nama join flat (`franchiseOwnerName`, `branchName`,
  * `approvedByName`) dari service.
  */
-export type PayoutRow = GetData<typeof api.payouts.get>[number];
+export type PayoutRow = GetData<typeof api.payouts.get>["rows"][number];
+
+/** Ringkasan agregat payouts — from eden treaty. */
+export type PayoutSummary = GetData<typeof api.payouts.get>["summary"];
 
 export type Payout = Omit<
     PayoutRow,

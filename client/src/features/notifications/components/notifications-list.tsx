@@ -4,12 +4,12 @@ import {
     Calendar,
     Check,
     CheckCheck,
-    ChevronDown,
     Loader2,
     MailOpen,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { NotificationsSkeleton } from "@/components/fallbacks/dashboard";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNotificationsInfinite } from "@/features/notifications/hooks/useNotificationQueries";
 import {
     useMarkAllRead,
     useMarkNotificationRead,
@@ -35,62 +36,75 @@ import { timeAgo } from "@/utils/format";
 import { groupByDate } from "@/utils/group-by";
 
 interface NotificationsListProps {
-    notifications: NotificationRow[];
     currentUserId: string;
-    onRefresh: () => void;
 }
 
 type FilterMode = "all" | "unread" | "read";
 
-const INITIAL_PAGE_SIZE = 30;
-
-export function NotificationsList({
-    notifications: initialNotifications,
+export const NotificationsList = ({
     currentUserId,
-    onRefresh,
-}: NotificationsListProps) {
-    const [notifications, setNotifications] =
-        useState<NotificationRow[]>(initialNotifications);
+}: NotificationsListProps) => {
     const [filter, setFilter] = useState<FilterMode>("all");
+    const [notifications, setNotifications] = useState<NotificationRow[]>([]);
     const [markingId, setMarkingId] = useState<string | null>(null);
     const [isMarkingAll, setIsMarkingAll] = useState(false);
     const [confirmMarkAll, setConfirmMarkAll] = useState(false);
-    const [visibleCount, setVisibleCount] = useState(INITIAL_PAGE_SIZE);
+
+    const params = filter === "all" ? {} : { filter };
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } =
+        useNotificationsInfinite(params);
+
+    const pages = data?.pages ?? [];
+    const serverRows = pages.flatMap((p) => (p.success ? p.data.rows : []));
+    const firstPage = pages[0];
+    const loadError = firstPage && !firstPage.success ? firstPage.error : null;
+    const summary = firstPage?.success
+        ? firstPage.data.summary
+        : { total: 0, unread: 0 };
+
+    const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        setNotifications((prev) => {
+            const serverIds = new Set(serverRows.map((r) => r.id));
+            const localOnly = prev.filter((n) => !serverIds.has(n.id));
+            const merged = [...localOnly, ...serverRows];
+            if (
+                merged.length === prev.length &&
+                merged.every(
+                    (n, i) =>
+                        n.id === prev[i]?.id && n.isRead === prev[i]?.isRead,
+                )
+            ) {
+                return prev;
+            }
+            return merged;
+        });
+    }, [serverRows]);
+
+    useEffect(() => {
+        const el = loadMoreRef.current;
+        if (!el || !hasNextPage || isFetchingNextPage) return;
+        const io = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) fetchNextPage();
+            },
+            { rootMargin: "400px" },
+        );
+        io.observe(el);
+        return () => io.disconnect();
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage, serverRows.length]);
+
+    const visible = useMemo(() => {
+        if (filter === "unread") return notifications.filter((n) => !n.isRead);
+        if (filter === "read") return notifications.filter((n) => n.isRead);
+        return notifications;
+    }, [notifications, filter]);
+
+    const grouped = useMemo(() => groupByDate(visible), [visible]);
 
     const markReadMutation = useMarkNotificationRead();
     const markAllReadMutation = useMarkAllRead();
-
-    useEffect(() => {
-        setNotifications(initialNotifications);
-    }, [initialNotifications]);
-
-    const unreadCount = useMemo(
-        () => notifications.filter((n) => !n.isRead).length,
-        [notifications],
-    );
-
-    const filtered = useMemo(() => {
-        switch (filter) {
-            case "unread":
-                return notifications.filter((n) => !n.isRead);
-            case "read":
-                return notifications.filter((n) => n.isRead);
-            default:
-                return notifications;
-        }
-    }, [notifications, filter]);
-
-    const pagedNotifications = useMemo(
-        () => filtered.slice(0, visibleCount),
-        [filtered, visibleCount],
-    );
-
-    const hasMore = visibleCount < filtered.length;
-
-    const grouped = useMemo(
-        () => groupByDate(pagedNotifications),
-        [pagedNotifications],
-    );
 
     const handleNewNotification = useCallback(
         (data: {
@@ -126,7 +140,7 @@ export function NotificationsList({
 
     useNotificationsRealtime(currentUserId, handleNewNotification);
 
-    async function handleMarkRead(id: string) {
+    const handleMarkRead = async (id: string) => {
         setMarkingId(id);
         setNotifications((prev) =>
             prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
@@ -141,9 +155,9 @@ export function NotificationsList({
         } finally {
             setMarkingId(null);
         }
-    }
+    };
 
-    async function handleMarkAllRead() {
+    const handleMarkAllRead = async () => {
         setConfirmMarkAll(false);
         setIsMarkingAll(true);
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
@@ -151,7 +165,6 @@ export function NotificationsList({
             const res = await markAllReadMutation.mutateAsync({});
             if (res.success) {
                 toast.success("All notifications marked as read");
-                onRefresh();
             } else {
                 throw new Error("Failed");
             }
@@ -162,6 +175,22 @@ export function NotificationsList({
         } finally {
             setIsMarkingAll(false);
         }
+    };
+
+    if (isPending && visible.length === 0 && !loadError) {
+        return <NotificationsSkeleton />;
+    }
+
+    if (loadError) {
+        return (
+            <Empty>
+                <EmptyMedia variant="icon">
+                    <BellOff className="size-8" />
+                </EmptyMedia>
+                <EmptyTitle>Failed to load notifications</EmptyTitle>
+                <EmptyDescription>{loadError}</EmptyDescription>
+            </Empty>
+        );
     }
 
     return (
@@ -172,14 +201,14 @@ export function NotificationsList({
                         Notifications
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                        {unreadCount > 0
-                            ? `${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`
-                            : notifications.length === 0
+                        {summary.unread > 0
+                            ? `${summary.unread} unread notification${summary.unread !== 1 ? "s" : ""}`
+                            : summary.total === 0
                               ? "No notifications yet"
                               : "All caught up"}
                     </p>
                 </div>
-                {unreadCount > 1 && (
+                {summary.unread > 1 ? (
                     <Button
                         variant="outline"
                         size="sm"
@@ -192,37 +221,36 @@ export function NotificationsList({
                         )}
                         Mark all read
                     </Button>
-                )}
+                ) : null}
             </div>
 
             <Tabs
                 value={filter}
                 onValueChange={(v) => {
                     setFilter(v as FilterMode);
-                    setVisibleCount(INITIAL_PAGE_SIZE);
                 }}>
                 <TabsList>
                     <TabsTrigger value="all">
                         All
-                        {notifications.length > 0 && (
+                        {summary.total > 0 ? (
                             <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs tabular-nums">
-                                {notifications.length}
+                                {summary.total}
                             </span>
-                        )}
+                        ) : null}
                     </TabsTrigger>
                     <TabsTrigger value="unread">
                         Unread
-                        {unreadCount > 0 && (
+                        {summary.unread > 0 ? (
                             <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-xs text-primary-foreground tabular-nums">
-                                {unreadCount}
+                                {summary.unread}
                             </span>
-                        )}
+                        ) : null}
                     </TabsTrigger>
                     <TabsTrigger value="read">Read</TabsTrigger>
                 </TabsList>
             </Tabs>
 
-            {filtered.length === 0 ? (
+            {visible.length === 0 ? (
                 <Empty>
                     <EmptyMedia variant="icon">
                         {filter === "unread" ? (
@@ -294,13 +322,13 @@ export function NotificationsList({
                                                             }`}>
                                                             {notification.title}
                                                         </p>
-                                                        {notification.body && (
+                                                        {notification.body ? (
                                                             <p className="mt-0.5 text-xs text-muted-foreground/80 line-clamp-2 leading-relaxed">
                                                                 {
                                                                     notification.body
                                                                 }
                                                             </p>
-                                                        )}
+                                                        ) : null}
                                                     </div>
                                                     <div className="flex shrink-0 items-center gap-2 self-start pt-0.5">
                                                         <span className="whitespace-nowrap text-[11px] tabular-nums text-muted-foreground/60">
@@ -310,7 +338,7 @@ export function NotificationsList({
                                                                 ),
                                                             )}
                                                         </span>
-                                                        {!notification.isRead && (
+                                                        {!notification.isRead ? (
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
@@ -332,7 +360,7 @@ export function NotificationsList({
                                                                     Mark as read
                                                                 </span>
                                                             </Button>
-                                                        )}
+                                                        ) : null}
                                                     </div>
                                                 </div>
 
@@ -342,9 +370,9 @@ export function NotificationsList({
                                                             notification.type,
                                                         )}
                                                     </span>
-                                                    {!notification.isRead && (
+                                                    {!notification.isRead ? (
                                                         <span className="size-1.5 rounded-full bg-primary animate-pulse" />
-                                                    )}
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         </div>
@@ -353,28 +381,24 @@ export function NotificationsList({
                             </div>
                         ))}
 
-                        {hasMore && (
-                            <div className="flex justify-center py-4">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                        setVisibleCount((prev) => prev + 20)
-                                    }>
-                                    <ChevronDown className="mr-2 size-4" />
-                                    Show more
-                                </Button>
+                        {hasNextPage ? (
+                            <div
+                                ref={loadMoreRef}
+                                className="flex justify-center py-4">
+                                <span className="text-sm text-muted-foreground">
+                                    {isFetchingNextPage
+                                        ? "Loading more..."
+                                        : "Scroll to load more"}
+                                </span>
                             </div>
-                        )}
-
-                        {!hasMore && filtered.length > INITIAL_PAGE_SIZE && (
+                        ) : summary.total > 30 ? (
                             <div className="flex justify-center py-4">
                                 <p className="text-xs text-muted-foreground">
-                                    Showing all {filtered.length} notification
-                                    {filtered.length !== 1 ? "s" : ""}
+                                    Showing all {summary.total} notification
+                                    {summary.total !== 1 ? "s" : ""}
                                 </p>
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </ScrollArea>
             )}
@@ -385,8 +409,8 @@ export function NotificationsList({
                 title="Mark all as read?"
                 description={
                     <>
-                        This will mark all {unreadCount} unread notification
-                        {unreadCount !== 1 ? "s" : ""} as read. This action
+                        This will mark all {summary.unread} unread notification
+                        {summary.unread !== 1 ? "s" : ""} as read. This action
                         cannot be undone.
                     </>
                 }
@@ -395,4 +419,4 @@ export function NotificationsList({
             />
         </div>
     );
-}
+};

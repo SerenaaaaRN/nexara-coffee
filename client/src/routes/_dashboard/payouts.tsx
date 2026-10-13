@@ -12,7 +12,9 @@ export const Route = createFileRoute("/_dashboard/payouts")({
     validateSearch: payoutsSearchSchema,
     loaderDeps: ({ search: { branch } }) => ({ branch }),
     loader: ({ context: { queryClient }, deps }) =>
-        queryClient.ensureQueryData(payoutsOptions({ branchId: deps.branch })),
+        queryClient.ensureQueryData(
+            payoutsOptions({ branchId: deps.branch, pageSize: 20 }),
+        ),
     head: () => ({
         meta: [
             { title: "Payouts" },

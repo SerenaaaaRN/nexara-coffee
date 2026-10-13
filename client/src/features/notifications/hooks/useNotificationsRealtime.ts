@@ -17,10 +17,10 @@ type NotificationCallback = (notification: NotificationEvent) => void;
  * Subscribe ke channel `notifications:user:{userId}` untuk menerima
  * notifikasi baru secara langsung.
  */
-export function useNotificationsRealtime(
+export const useNotificationsRealtime = (
     userId: string | null,
     onNotification?: NotificationCallback,
-) {
+) => {
     const callbackRef = useRef(onNotification);
     callbackRef.current = onNotification;
 
@@ -50,4 +50,4 @@ export function useNotificationsRealtime(
             console.warn("Ably realtime init failed (non-critical)");
         }
     }, [userId]);
-}
+};

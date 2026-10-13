@@ -4,7 +4,7 @@ import type { api, GetData } from "@/lib/eden";
  * Baris audit log — from eden treaty (source of truth: server).
  * Termasuk nama aktor dan cabang hasil join di service.
  */
-export type AuditLogRow = GetData<typeof api.audit.logs.get>[number];
+export type AuditLogRow = GetData<typeof api.audit.logs.get>["rows"][number];
 
 export type AuditMetadata =
     | string

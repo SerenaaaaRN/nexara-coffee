@@ -1,4 +1,13 @@
 import { t } from "elysia";
+import { serverTableQuery } from "../../lib/schema.js";
+
+export const getCustomersQuery = t.Composite([
+	t.Object({
+		segment: t.Optional(t.String()),
+		tier: t.Optional(t.String()),
+	}),
+	serverTableQuery,
+]);
 
 export const createCustomerBody = t.Object({
 	fullName: t.String({ minLength: 2, maxLength: 100 }),

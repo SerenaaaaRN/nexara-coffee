@@ -1,20 +1,17 @@
-import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
 import type { CurrentUser } from "../../access/index.js";
 import {
 	assertBranchAccess,
 	emptyScope,
 	getAccessibleBranchIds,
 } from "../../access/index.js";
-import { db } from "../../db/index.js";
-import { user as userTable } from "../../db/schema/auth-schema.js";
-import { branches } from "../../db/schema/branches.js";
-import { customers } from "../../db/schema/customers.js";
-import { menuItems } from "../../db/schema/menu.js";
-import { orderItems, orders } from "../../db/schema/orders.js";
 import { fail, ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
 import { publishAbly } from "../../utils/effects.js";
 import { earnedPointsForTotal, tierForPoints } from "../../utils/loyalty.js";
+import type { getOrdersQuery } from "./model.js";
+import { orderRepo } from "./repository.js";
+
+const emptySummary = { total: 0, pending: 0, completed: 0, cancelled: 0 };
 
 const guardTerminalTransition = (
 	current: string,
@@ -31,91 +28,59 @@ const guardTerminalTransition = (
 	return null;
 };
 
+const toStatusSummary = (
+	total: number,
+	counts: { status: string; value: number }[],
+) => {
+	const summary = { total, pending: 0, completed: 0, cancelled: 0 };
+	for (const row of counts) {
+		if (row.status === "pending") summary.pending = row.value;
+		else if (row.status === "completed") summary.completed = row.value;
+		else if (row.status === "cancelled") summary.cancelled = row.value;
+	}
+	return summary;
+};
+
 export const getOrders = async (
 	user: CurrentUser,
-	params: {
-		branchId?: string;
-		status?: string;
-		dateFrom?: string;
-		dateTo?: string;
-	},
+	params: typeof getOrdersQuery.static,
 ) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
+	const { page, pageSize, sortDir } = resolveTableParams(params);
 
 	if (emptyScope(ids)) {
-		return ok([]);
+		return ok({ ...pageResult([], 0, page, pageSize), summary: emptySummary });
+	}
+	if (ids !== null && params.branchId && !ids.includes(params.branchId)) {
+		return ok({ ...pageResult([], 0, page, pageSize), summary: emptySummary });
 	}
 
-	const createdByUser = alias(userTable, "created_by_user");
-	const conditions = [];
+	const result = await orderRepo.list({
+		ids,
+		branchId: params.branchId,
+		status: params.status,
+		dateFrom: params.dateFrom,
+		dateTo: params.dateTo,
+		q: params.q,
+		sortBy: params.sortBy,
+		sortDir,
+		page,
+		pageSize,
+	});
 
-	if (params.branchId) {
-		if (ids !== null && !ids.includes(params.branchId)) {
-			return ok([]);
-		}
-		conditions.push(eq(orders.branchId, params.branchId));
-	} else if (ids !== null && ids.length > 0) {
-		conditions.push(inArray(orders.branchId, ids));
-	}
-
-	if (params.status) {
-		conditions.push(eq(orders.status, params.status));
-	}
-	if (params.dateFrom) {
-		conditions.push(gte(orders.createdAt, new Date(params.dateFrom)));
-	}
-	if (params.dateTo) {
-		conditions.push(lte(orders.createdAt, new Date(params.dateTo)));
-	}
-
-	const data = await db
-		.select({
-			id: orders.id,
-			branchId: orders.branchId,
-			customerId: orders.customerId,
-			orderNumber: orders.orderNumber,
-			status: orders.status,
-			totalAmount: orders.totalAmount,
-			createdBy: orders.createdBy,
-			createdAt: orders.createdAt,
-			branchName: branches.name,
-			customerName: customers.fullName,
-			createdByName: createdByUser.name,
-		})
-		.from(orders)
-		.leftJoin(branches, eq(orders.branchId, branches.id))
-		.leftJoin(customers, eq(orders.customerId, customers.id))
-		.leftJoin(createdByUser, eq(orders.createdBy, createdByUser.id))
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.orderBy(desc(orders.createdAt));
-
-	return ok(data);
+	return ok({
+		...pageResult(
+			result.rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+			result.total,
+			page,
+			pageSize,
+		),
+		summary: toStatusSummary(result.total, result.statusCounts),
+	});
 };
 
 export const getOrderDetail = async (user: CurrentUser, orderId: string) => {
-	const createdByUser = alias(userTable, "created_by_user");
-
-	const [order] = await db
-		.select({
-			id: orders.id,
-			branchId: orders.branchId,
-			customerId: orders.customerId,
-			orderNumber: orders.orderNumber,
-			status: orders.status,
-			totalAmount: orders.totalAmount,
-			createdBy: orders.createdBy,
-			createdAt: orders.createdAt,
-			branchName: branches.name,
-			customerName: customers.fullName,
-			createdByName: createdByUser.name,
-		})
-		.from(orders)
-		.leftJoin(branches, eq(orders.branchId, branches.id))
-		.leftJoin(customers, eq(orders.customerId, customers.id))
-		.leftJoin(createdByUser, eq(orders.createdBy, createdByUser.id))
-		.where(eq(orders.id, orderId))
-		.limit(1);
-
+	const order = await orderRepo.findDetail(orderId);
 	if (!order) {
 		return fail(404, "Order not found");
 	}
@@ -124,21 +89,7 @@ export const getOrderDetail = async (user: CurrentUser, orderId: string) => {
 	const denied = assertBranchAccess(ids, order.branchId);
 	if (denied) return denied;
 
-	const items = await db
-		.select({
-			id: orderItems.id,
-			orderId: orderItems.orderId,
-			menuItemId: orderItems.menuItemId,
-			nameSnapshot: orderItems.nameSnapshot,
-			priceSnapshot: orderItems.priceSnapshot,
-			variantSnapshot: orderItems.variantSnapshot,
-			qty: orderItems.qty,
-			subtotal: orderItems.subtotal,
-			menuItemName: menuItems.name,
-		})
-		.from(orderItems)
-		.leftJoin(menuItems, eq(orderItems.menuItemId, menuItems.id))
-		.where(eq(orderItems.orderId, orderId));
+	const items = await orderRepo.findItems(orderId);
 
 	return ok({ ...order, items });
 };
@@ -161,9 +112,6 @@ export const createOrder = async (
 	const denied = assertBranchAccess(ids, parsed.branchId);
 	if (denied) return denied;
 
-	// orderId manual tetap dibutuhkan: dipakai menurunkan orderNumber +
-	// FK orderItems sebelum insert (skema $defaultFn hanya untuk kolom id
-	// yang tidak diisi — lihat orderItems di bawah yang mengandalkannya).
 	const orderId = crypto.randomUUID();
 	const total = parsed.items.reduce(
 		(sum, i) => sum + Number(i.price) * i.qty,
@@ -172,17 +120,16 @@ export const createOrder = async (
 	const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
 	const orderNumber = `ORD-${dateStr}-${orderId.slice(0, 4).toUpperCase()}`;
 
-	await db.insert(orders).values({
-		id: orderId,
-		branchId: parsed.branchId,
-		customerId: parsed.customerId ?? null,
-		orderNumber,
-		status: "pending",
-		totalAmount: String(total),
-		createdBy: user.id,
-	});
-
-	await db.insert(orderItems).values(
+	await orderRepo.createFull(
+		{
+			id: orderId,
+			branchId: parsed.branchId,
+			customerId: parsed.customerId ?? null,
+			orderNumber,
+			status: "pending",
+			totalAmount: String(total),
+			createdBy: user.id,
+		},
 		parsed.items.map((item) => ({
 			orderId,
 			menuItemId: item.menuItemId,
@@ -203,17 +150,8 @@ export const updateOrderStatus = async (
 	user: CurrentUser,
 	parsed: { orderId: string; status: string },
 ) => {
-	const [[existing], ids] = await Promise.all([
-		db
-			.select({
-				branchId: orders.branchId,
-				status: orders.status,
-				customerId: orders.customerId,
-				totalAmount: orders.totalAmount,
-			})
-			.from(orders)
-			.where(eq(orders.id, parsed.orderId))
-			.limit(1),
+	const [existing, ids] = await Promise.all([
+		orderRepo.findStatus(parsed.orderId),
 		getAccessibleBranchIds(user.id, user.role),
 	]);
 
@@ -227,30 +165,23 @@ export const updateOrderStatus = async (
 	const terminal = guardTerminalTransition(existing.status, "update");
 	if (terminal) return terminal;
 
-	const [order] = await db
-		.update(orders)
-		.set({ status: parsed.status })
-		.where(eq(orders.id, parsed.orderId))
-		.returning();
+	const order = await orderRepo.setStatus(parsed.orderId, parsed.status);
+	if (!order) {
+		return fail(404, "Order not found");
+	}
 
 	if (parsed.status === "completed" && existing.customerId) {
 		try {
-			const [profile] = await db
-				.select({ loyaltyPoints: customers.loyaltyPoints })
-				.from(customers)
-				.where(eq(customers.id, existing.customerId))
-				.limit(1);
+			const profile = await orderRepo.findLoyaltyProfile(existing.customerId);
 			if (profile) {
 				const next =
 					(profile.loyaltyPoints ?? 0) +
 					earnedPointsForTotal(existing.totalAmount);
-				await db
-					.update(customers)
-					.set({
-						loyaltyPoints: next,
-						loyaltyTier: tierForPoints(next),
-					} as never)
-					.where(eq(customers.id, existing.customerId));
+				await orderRepo.accrueLoyalty(
+					existing.customerId,
+					next,
+					tierForPoints(next),
+				);
 			}
 		} catch (accrueError) {
 			console.error("Gagal akrual poin loyalty:", accrueError);
@@ -266,12 +197,8 @@ export const cancelOrder = async (
 	user: CurrentUser,
 	parsed: { orderId: string; reason?: string },
 ) => {
-	const [[existing], ids] = await Promise.all([
-		db
-			.select({ branchId: orders.branchId, status: orders.status })
-			.from(orders)
-			.where(eq(orders.id, parsed.orderId))
-			.limit(1),
+	const [existing, ids] = await Promise.all([
+		orderRepo.findStatus(parsed.orderId),
 		getAccessibleBranchIds(user.id, user.role),
 	]);
 
@@ -285,11 +212,10 @@ export const cancelOrder = async (
 	const terminal = guardTerminalTransition(existing.status, "cancel");
 	if (terminal) return terminal;
 
-	const [order] = await db
-		.update(orders)
-		.set({ status: "cancelled" })
-		.where(eq(orders.id, parsed.orderId))
-		.returning();
+	const order = await orderRepo.setStatus(parsed.orderId, "cancelled");
+	if (!order) {
+		return fail(404, "Order not found");
+	}
 
 	void publishAbly("orders", "order-cancelled", { orderId: order.id });
 

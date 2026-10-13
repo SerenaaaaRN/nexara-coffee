@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { NotificationsSkeleton } from "@/components/fallbacks/dashboard";
 import { NotificationsPage } from "@/features/notifications/components/notifications-page";
-import { notificationsOptions } from "@/features/notifications/hooks/useNotificationQueries";
+import { notificationsInfiniteOptions } from "@/features/notifications/hooks/useNotificationQueries";
 
 export const Route = createFileRoute("/_dashboard/notifications")({
     loader: ({ context: { queryClient } }) =>
-        queryClient.ensureQueryData(notificationsOptions()),
+        queryClient.prefetchInfiniteQuery(notificationsInfiniteOptions({})),
     head: () => ({
         meta: [
             { title: "Notifications" },

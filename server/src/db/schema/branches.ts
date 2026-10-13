@@ -34,6 +34,7 @@ export const branches = pgTable(
       .notNull(),
   },
   (table) => [
+    index("branches_name_idx").on(table.name),
     index("branches_status_idx").on(table.status),
     index("branches_created_at_idx").on(table.createdAt),
   ],

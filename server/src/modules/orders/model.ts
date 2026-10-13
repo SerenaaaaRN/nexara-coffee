@@ -1,4 +1,5 @@
 import { t } from "elysia";
+import { serverTableQuery } from "../../lib/schema.js";
 
 export const ORDER_STATUSES = [
 	"pending",
@@ -8,16 +9,19 @@ export const ORDER_STATUSES = [
 	"cancelled",
 ] as const;
 
-export const getOrdersQuery = t.Object({
-	branchId: t.Optional(t.String()),
-	status: t.Optional(
-		t.UnionEnum([...ORDER_STATUSES] as [string, ...string[]], {
-			default: undefined,
-		}),
-	),
-	dateFrom: t.Optional(t.String()),
-	dateTo: t.Optional(t.String()),
-});
+export const getOrdersQuery = t.Composite([
+	t.Object({
+		branchId: t.Optional(t.String()),
+		status: t.Optional(
+			t.UnionEnum([...ORDER_STATUSES] as [string, ...string[]], {
+				default: undefined,
+			}),
+		),
+		dateFrom: t.Optional(t.String()),
+		dateTo: t.Optional(t.String()),
+	}),
+	serverTableQuery,
+]);
 
 export const createOrderSchema = t.Object({
 	branchId: t.String({ minLength: 1 }),

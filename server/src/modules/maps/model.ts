@@ -1,5 +1,5 @@
 import { t } from "elysia";
 
-export const mapsQuery = t.Object({
-	branch: t.Optional(t.String()),
+export const mapBranchesQuery = t.Object({
+	q: t.Optional(t.String({ maxLength: 100 })),
 });

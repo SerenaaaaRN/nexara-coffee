@@ -30,11 +30,11 @@ const routeApi = getRouteApi("/_dashboard/maps");
 export const MapsPage = () => {
     const { q } = routeApi.useSearch();
     const navigate = useNavigate();
-    const { data } = useMapBranches();
-    if (!data.success) {
+    const { data } = useMapBranches(q);
+    if (data && !data.success) {
         throw new Error(data.error);
     }
-    const branches = data.data;
+    const branches = data?.success ? data.data : [];
     const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
     const [isListOpen, setIsListOpen] = useState(false);
     const [viewport, setViewport] = useState<MapViewport>(DEFAULT_VIEWPORT);
@@ -58,20 +58,8 @@ export const MapsPage = () => {
     }, []);
 
     const filteredBranches = useMemo(() => {
-        const query = q?.toLowerCase().trim();
-
         return branches.reduce<ParsedBranch[]>((acc, b) => {
             if (!b.lat || !b.lng) return acc;
-
-            if (query) {
-                const matchesName = b.name.toLowerCase().includes(query);
-                const matchesAddress = b.address.toLowerCase().includes(query);
-                const matchesManager = b.managerName
-                    ?.toLowerCase()
-                    .includes(query);
-                if (!matchesName && !matchesAddress && !matchesManager)
-                    return acc;
-            }
 
             const numericLat = Number.parseFloat(b.lat);
             const numericLng = Number.parseFloat(b.lng);
@@ -85,7 +73,7 @@ export const MapsPage = () => {
             });
             return acc;
         }, []);
-    }, [branches, q]);
+    }, [branches]);
 
     const handleSelectBranch = useCallback((branch: ParsedBranch) => {
         setActiveMarkerId(branch.id);

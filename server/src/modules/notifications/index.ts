@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { idParams } from "../../lib/schema.js";
 import { authPlugin } from "../../plugins/auth.js";
+import { notificationsQuery } from "./model.js";
 import {
 	getNotifications,
 	markAllRead,
@@ -9,8 +10,12 @@ import {
 
 export const notifications = new Elysia({ prefix: "/notifications" })
 	.use(authPlugin)
-	.model({ "notifications.params": idParams })
-	.get("/", async ({ user }) => getNotifications(user), {
+	.model({
+		"notifications.query": notificationsQuery,
+		"notifications.params": idParams,
+	})
+	.get("/", async ({ query, user }) => getNotifications(user, query), {
+		query: "notifications.query",
 		requireRole: ["notifications", "read"],
 		detail: { tags: ["notifications"] },
 	})

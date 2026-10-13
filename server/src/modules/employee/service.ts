@@ -1,91 +1,90 @@
-import { eq, inArray, notInArray, sql } from "drizzle-orm";
 import type { CurrentUser } from "../../access/index.js";
-import { getAccessibleBranchIds } from "../../access/index.js";
-import { db } from "../../db/index.js";
-import { user as userTable } from "../../db/schema/auth-schema.js";
-import { branches } from "../../db/schema/branches.js";
-import { employeeDetails } from "../../db/schema/employee.js";
+import { assertBranchAccess, emptyScope, getAccessibleBranchIds } from "../../access/index.js";
 import { fail, ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
 import { checkRate, logAudit } from "../../utils/effects.js";
+import type {
+	createEmployeeBody,
+	getEmployeesQuery,
+	updateEmployeeBody,
+} from "./model.js";
+import { employeeRepo, type NewEmployee } from "./repository.js";
 
-export const getEmployees = async (user: CurrentUser) => {
+const emptySummary = { total: 0, branchCount: 0, totalSalary: "0" };
+
+export const getEmployees = async (
+	user: CurrentUser,
+	params: typeof getEmployeesQuery.static,
+) => {
 	const ids = await getAccessibleBranchIds(user.id, user.role);
-	const condition = ids
-		? ids.length > 0
-			? inArray(employeeDetails.branchId, ids)
-			: sql`1=0`
-		: undefined;
-	const rows = await db
-		.select({
-			id: employeeDetails.id,
-			userId: employeeDetails.userId,
-			branchId: employeeDetails.branchId,
-			baseSalary: employeeDetails.baseSalary,
-			hireDate: employeeDetails.hireDate,
-			createdAt: employeeDetails.createdAt,
-			userName: userTable.name,
-			userEmail: userTable.email,
-			userRole: userTable.role,
-			branchName: branches.name,
-		})
-		.from(employeeDetails)
-		.leftJoin(userTable, eq(employeeDetails.userId, userTable.id))
-		.leftJoin(branches, eq(employeeDetails.branchId, branches.id))
-		.where(condition);
-	return ok(rows);
+	const { page, pageSize, sortDir } = resolveTableParams(params);
+	const emptyPage = {
+		...pageResult([], 0, page, pageSize),
+		summary: emptySummary,
+	};
+
+	if (emptyScope(ids)) {
+		return ok(emptyPage);
+	}
+
+	const result = await employeeRepo.list({
+		ids,
+		branchId: params.branchId,
+		role: params.role,
+		q: params.q,
+		sortBy: params.sortBy,
+		sortDir,
+		page,
+		pageSize,
+	});
+
+	return ok({
+		...pageResult(
+			result.rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+			result.total,
+			page,
+			pageSize,
+		),
+		summary: {
+			total: result.total,
+			branchCount: result.branchTotal,
+			totalSalary: String(result.salaryTotal ?? 0),
+		},
+	});
 };
 
 export const getAvailableUsers = async () => {
-	const existing = await db
-		.select({ userId: employeeDetails.userId })
-		.from(employeeDetails);
-	const ids = existing.map((e) => e.userId);
-	const rows = await db
-		.select({
-			id: userTable.id,
-			name: userTable.name,
-			email: userTable.email,
-			role: userTable.role,
-		})
-		.from(userTable)
-		.where(ids.length > 0 ? notInArray(userTable.id, ids) : undefined);
-	return ok(rows);
+	return ok(await employeeRepo.availableUsers());
 };
 
 export const getBranchesForEmployee = async () => {
-	const rows = await db
-		.select({ id: branches.id, name: branches.name })
-		.from(branches)
-		.orderBy(branches.name);
-	return ok(rows);
+	return ok(await employeeRepo.branches());
 };
 
 export const createEmployee = async (
 	user: CurrentUser,
-	data: {
-		userId: string;
-		branchId: string;
-		baseSalary: number;
-		hireDate: string;
-	},
+	data: typeof createEmployeeBody.static,
 ) => {
 	const limited = checkRate(`employee:create:${user.id}`, 20, 60_000);
 	if (limited) return limited;
-	const [existing] = await db
-		.select({ id: employeeDetails.id })
-		.from(employeeDetails)
-		.where(eq(employeeDetails.userId, data.userId))
-		.limit(1);
+
+	const ids = await getAccessibleBranchIds(user.id, user.role);
+	const denied = assertBranchAccess(ids, data.branchId);
+	if (denied) return denied;
+
+	const existing = await employeeRepo.findByUserId(data.userId);
 	if (existing) return fail(409, "User already assigned to a branch");
-	const [row] = await db
-		.insert(employeeDetails)
-		.values({
-			userId: data.userId,
-			branchId: data.branchId,
-			baseSalary: String(data.baseSalary),
-			hireDate: data.hireDate,
-		} as never)
-		.returning();
+
+	const payload: NewEmployee = {
+		userId: data.userId,
+		branchId: data.branchId,
+		baseSalary: String(data.baseSalary),
+		hireDate: data.hireDate,
+	};
+
+	const row = await employeeRepo.create(payload);
+	if (!row) return fail(500, "Failed to create employee");
+
 	void logAudit({
 		actorId: user.id,
 		action: "create",
@@ -93,53 +92,70 @@ export const createEmployee = async (
 		targetId: row.id,
 		branchId: row.branchId,
 	});
+
 	return ok(row);
 };
 
 export const updateEmployee = async (
 	user: CurrentUser,
 	id: string,
-	data: { branchId?: string; baseSalary?: number; hireDate?: string },
+	data: typeof updateEmployeeBody.static,
 ) => {
 	const limited = checkRate(`employee:update:${user.id}`, 30, 60_000);
 	if (limited) return limited;
-	const updates: Record<string, unknown> = {};
-	if (data.branchId !== undefined) updates.branchId = data.branchId;
+
+	const existing = await employeeRepo.findById(id);
+	if (!existing) return fail(404, "Employee not found");
+
+	const ids = await getAccessibleBranchIds(user.id, user.role);
+	const denied = assertBranchAccess(ids, existing.branchId);
+	if (denied) return denied;
+
+	const patch: Partial<NewEmployee> = {};
+	if (data.branchId !== undefined) {
+		const branchDenied = assertBranchAccess(ids, data.branchId);
+		if (branchDenied) return branchDenied;
+		patch.branchId = data.branchId;
+	}
 	if (data.baseSalary !== undefined)
-		updates.baseSalary = String(data.baseSalary);
-	if (data.hireDate !== undefined) updates.hireDate = data.hireDate;
-	const [row] = await db
-		.update(employeeDetails)
-		.set(updates as never)
-		.where(eq(employeeDetails.id, id))
-		.returning();
+		patch.baseSalary = String(data.baseSalary);
+	if (data.hireDate !== undefined) patch.hireDate = data.hireDate;
+
+	const row = await employeeRepo.update(id, patch);
 	if (!row) return fail(404, "Employee not found");
+
 	void logAudit({
 		actorId: user.id,
 		action: "update",
 		targetTable: "employee_details",
 		targetId: id,
 		branchId: row.branchId,
-		metadata: updates,
+		metadata: patch,
 	});
+
 	return ok(row);
 };
 
 export const deleteEmployee = async (user: CurrentUser, id: string) => {
 	const limited = checkRate(`employee:delete:${user.id}`, 10, 60_000);
 	if (limited) return limited;
-	const [existing] = await db
-		.select({ branchId: employeeDetails.branchId })
-		.from(employeeDetails)
-		.where(eq(employeeDetails.id, id))
-		.limit(1);
-	await db.delete(employeeDetails).where(eq(employeeDetails.id, id));
+
+	const existing = await employeeRepo.findById(id);
+	if (!existing) return fail(404, "Employee not found");
+
+	const ids = await getAccessibleBranchIds(user.id, user.role);
+	const denied = assertBranchAccess(ids, existing.branchId);
+	if (denied) return denied;
+
+	await employeeRepo.remove(id);
+
 	void logAudit({
 		actorId: user.id,
 		action: "delete",
 		targetTable: "employee_details",
 		targetId: id,
-		branchId: existing?.branchId,
+		branchId: existing.branchId,
 	});
+
 	return ok(null);
 };

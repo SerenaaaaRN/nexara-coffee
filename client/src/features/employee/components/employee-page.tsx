@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { SectionHeader } from "@/components/shared/section-header";
@@ -8,21 +8,73 @@ import { useDeleteEmployee } from "@/features/employee/hooks/useEmployeeMutation
 import {
     useAvailableUsers,
     useEmployeeBranches,
-    useEmployees,
+    useEmployeesTableQuery,
 } from "@/features/employee/hooks/useEmployeeQueries";
+import type { EmployeeFilters } from "@/features/employee/hooks/useEmployeeQueries";
 import type { EmployeeRow } from "@/features/employee/types";
 import { useConfirmAction } from "@/hooks/useConfirmAction";
+import { useTableState } from "@/hooks/useTableState";
 
 export const EmployeePage = () => {
-    const { data: employeesData } = useEmployees();
+    const tableState = useTableState();
     const { data: usersData } = useAvailableUsers();
     const { data: branchesData } = useEmployeeBranches();
 
     const deleteMutation = useDeleteEmployee();
 
-    const employees = employeesData?.success ? employeesData.data : [];
     const users = usersData?.success ? usersData.data : [];
     const branches = branchesData?.success ? branchesData.data : [];
+
+    const role = tableState.getFilterValue("user.role");
+    const branchId = tableState.getFilterValue("branchId");
+
+    const queryParams = useMemo(() => {
+        const params: EmployeeFilters = {
+            role,
+            branchId,
+            pageSize: tableState.pagination.pageSize,
+        };
+        const q = tableState.debouncedSearch.trim();
+        if (q) params.q = q;
+        if (tableState.pagination.pageIndex > 0) {
+            params.page = tableState.pagination.pageIndex;
+        }
+        if (tableState.sortBy) {
+            params.sortBy = tableState.sortBy;
+            params.sortDir = tableState.sortDir ?? "desc";
+        }
+        return params;
+    }, [
+        role,
+        branchId,
+        tableState.debouncedSearch,
+        tableState.pagination.pageIndex,
+        tableState.pagination.pageSize,
+        tableState.sortBy,
+        tableState.sortDir,
+    ]);
+
+    const { data: response, isPending } = useEmployeesTableQuery(queryParams);
+
+    const payload = response?.success ? response.data : null;
+    const rows = payload?.rows ?? [];
+    const total = payload?.total ?? 0;
+    const summary = payload?.summary ?? {
+        total: 0,
+        branchCount: 0,
+        totalSalary: "0",
+    };
+    const loadError = response && !response.success ? response.error : null;
+
+    const hasActiveFilter =
+        tableState.debouncedSearch.trim() !== "" ||
+        role !== undefined ||
+        branchId !== undefined;
+
+    const pageCount = Math.max(
+        1,
+        Math.ceil(total / tableState.pagination.pageSize),
+    );
 
     const [editEmployee, setEditEmployee] = useState<EmployeeRow | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
@@ -50,11 +102,18 @@ export const EmployeePage = () => {
         setCreateOpen(false);
     };
 
-    const availableUsers = users.filter(
-        (u) =>
-            !employees.find((e) => e.userId === u.id) ||
-            editEmployee?.userId === u.id,
-    );
+    const availableUsers = useMemo(() => {
+        if (!editEmployee) return users;
+        if (users.some((u) => u.id === editEmployee.userId)) return users;
+        const { userId, userName, userEmail, userRole } = editEmployee;
+        if (userName == null || userEmail == null || userRole == null) {
+            return users;
+        }
+        return [
+            ...users,
+            { id: userId, name: userName, email: userEmail, role: userRole },
+        ];
+    }, [users, editEmployee]);
 
     return (
         <div className="space-y-6">
@@ -63,7 +122,15 @@ export const EmployeePage = () => {
                 subtitle="Manage employees and payroll."
             />
             <EmployeeTable
-                employees={employees}
+                rows={rows}
+                total={total}
+                summary={summary}
+                tableState={tableState}
+                pageCount={pageCount}
+                branchOptions={branches}
+                hasActiveFilter={hasActiveFilter}
+                loadError={loadError}
+                isLoading={isPending && !payload && !loadError}
                 onEdit={setEditEmployee}
                 onDelete={(e) =>
                     setDeleteTarget({ id: e.id, name: e.userName ?? e.userId })

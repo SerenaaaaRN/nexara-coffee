@@ -7,7 +7,14 @@ export const PAYMENT_METHODS = ["cash", "qris", "debit", "credit"] as const;
  * Baris transaksi — from eden treaty (source of truth: server).
  * Termasuk `orderNumber` + `branchName` flat hasil join di service.
  */
-export type TransactionRow = GetData<typeof api.transactions.get>[number];
+export type TransactionRow = GetData<
+    typeof api.transactions.get
+>["rows"][number];
+
+/** Ringkasan agregat transaksi — from eden treaty. */
+export type TransactionSummary = GetData<
+    typeof api.transactions.get
+>["summary"];
 
 export type Transaction = Omit<TransactionRow, "orderNumber" | "branchName">;
 

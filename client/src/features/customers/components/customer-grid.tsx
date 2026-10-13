@@ -16,19 +16,21 @@ import { cn } from "@/utils/cn";
 import { formatLabel, pluralize } from "@/utils/format";
 
 type CustomerGridProps = {
-    customers: CustomerRow[];
-    filtered: CustomerRow[];
+    rows: CustomerRow[];
+    total: number;
+    hasActiveFilter: boolean;
     selectedId: string | undefined;
     onSelect: (id: string | null) => void;
 };
 
 export const CustomerGrid = ({
-    customers,
-    filtered,
+    rows,
+    total,
+    hasActiveFilter,
     selectedId,
     onSelect,
 }: CustomerGridProps) => {
-    if (customers.length === 0) {
+    if (rows.length === 0 && !hasActiveFilter) {
         return (
             <Empty>
                 <EmptyMedia variant="icon">
@@ -42,7 +44,7 @@ export const CustomerGrid = ({
         );
     }
 
-    if (filtered.length === 0) {
+    if (rows.length === 0) {
         return (
             <Empty>
                 <EmptyMedia variant="icon">
@@ -59,7 +61,7 @@ export const CustomerGrid = ({
     return (
         <>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {filtered.map((c) => (
+                {rows.map((c) => (
                     <button
                         type="button"
                         key={c.id}
@@ -133,8 +135,7 @@ export const CustomerGrid = ({
                 ))}
             </div>
             <p className="text-sm text-muted-foreground">
-                Showing {filtered.length}{" "}
-                {pluralize(filtered.length, "customer")}
+                Showing {rows.length} of {total} {pluralize(total, "customer")}
             </p>
         </>
     );

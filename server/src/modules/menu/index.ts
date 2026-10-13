@@ -38,7 +38,7 @@ export const menu = new Elysia({ prefix: "/menu" })
 		requireRole: ["menu", "read"],
 		detail: { tags: ["menu"] },
 	})
-	.get("/items", async ({ query }) => getMenuItems(query.categoryId ?? null), {
+	.get("/items", async ({ query }) => getMenuItems(query), {
 		query: "menu.itemsQuery",
 		requireRole: ["menu", "read"],
 		detail: { tags: ["menu"] },

@@ -5,7 +5,10 @@ import type { api, GetData } from "@/lib/eden";
  * Baris setoran — from eden treaty (source of truth: server).
  * Termasuk `branchName`, `cashierName`, `verifiedByName` flat hasil join.
  */
-export type SetoranRow = GetData<typeof api.kasir.setorans.get>[number];
+export type SetoranRow = GetData<typeof api.kasir.setorans.get>["rows"][number];
+
+/** Ringkasan agregat setoran — from eden treaty. */
+export type SetoranSummary = GetData<typeof api.kasir.setorans.get>["summary"];
 
 export type Setoran = Omit<
     SetoranRow,

@@ -1,49 +1,49 @@
-import { and, desc, eq } from "drizzle-orm";
-import { db } from "../../db/index.js";
-import { branches } from "../../db/schema/branches.js";
-import { customers, reviews } from "../../db/schema/customers.js";
 import { fail, ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
+import type { reviewsQuery } from "./model.js";
+import { reviewRepo } from "./repository.js";
 
-export const getReviews = async (params?: {
-	branchId?: string;
-	status?: string;
-	rating?: number;
-}) => {
-	const conditions = [];
-	if (params?.branchId) conditions.push(eq(reviews.branchId, params.branchId));
-	if (params?.status) conditions.push(eq(reviews.status, params.status));
-	if (params?.rating != null)
-		conditions.push(eq(reviews.rating, Math.floor(Number(params.rating))));
-	const rows = await db
-		.select({
-			id: reviews.id,
-			branchId: reviews.branchId,
-			customerId: reviews.customerId,
-			orderId: reviews.orderId,
-			rating: reviews.rating,
-			comment: reviews.comment,
-			status: reviews.status,
-			reply: reviews.reply,
-			createdAt: reviews.createdAt,
-			branchName: branches.name,
-			customerName: customers.fullName,
-		})
-		.from(reviews)
-		.leftJoin(branches, eq(reviews.branchId, branches.id))
-		.leftJoin(customers, eq(reviews.customerId, customers.id))
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.orderBy(desc(reviews.createdAt));
-	return ok(rows);
+export const getReviews = async (params?: typeof reviewsQuery.static) => {
+	const { page, pageSize, sortDir } = resolveTableParams(params);
+
+	const result = await reviewRepo.list({
+		branchId: params?.branchId,
+		status: params?.status,
+		rating: params?.rating != null ? Math.floor(Number(params.rating)) : undefined,
+		q: params?.q,
+		sortBy: params?.sortBy,
+		sortDir,
+		page,
+		pageSize,
+	});
+
+	let pending = 0;
+	let approved = 0;
+	for (const group of result.statusGroups) {
+		if (group.status === "pending") pending = group.value;
+		else if (group.status === "approved") approved = group.value;
+	}
+
+	return ok({
+		...pageResult(
+			result.rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+			result.total,
+			page,
+			pageSize,
+		),
+		summary: {
+			total: result.total,
+			averageRating: Number(result.average ?? 0).toFixed(1),
+			pending,
+			approved,
+		},
+	});
 };
 
 export const replyReview = async (id: string, reply: string) => {
-	// Parity coffee replyReviewFn: hanya set reply, status tidak diubah.
-	const [row] = await db
-		.update(reviews)
-		.set({ reply: reply || null } as never)
-		.where(eq(reviews.id, id))
-		.returning();
+	const row = await reviewRepo.setReply(id, reply || null);
 	if (!row) return fail(404, "Review not found");
+
 	return ok(row);
 };
 
@@ -51,11 +51,8 @@ export const moderateReview = async (
 	id: string,
 	reviewStatus: "approved" | "rejected",
 ) => {
-	const [row] = await db
-		.update(reviews)
-		.set({ status: reviewStatus } as never)
-		.where(eq(reviews.id, id))
-		.returning();
+	const row = await reviewRepo.setStatus(id, reviewStatus);
 	if (!row) return fail(404, "Review not found");
+
 	return ok(row);
 };

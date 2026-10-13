@@ -1,45 +1,42 @@
-import { and, desc, eq } from "drizzle-orm";
 import type { CurrentUser } from "../../access/index.js";
-import { db } from "../../db/index.js";
-import { notifications } from "../../db/schema/system.js";
 import { fail, ok } from "../../lib/http.js";
+import { pageResult, resolveTableParams } from "../../lib/schema.js";
+import type { notificationsQuery } from "./model.js";
+import { notificationRepo } from "./repository.js";
 
-export const getNotifications = async (user: CurrentUser) => {
-	const rows = await db
-		.select({
-			id: notifications.id,
-			userId: notifications.userId,
-			type: notifications.type,
-			title: notifications.title,
-			body: notifications.body,
-			isRead: notifications.isRead,
-			createdAt: notifications.createdAt,
-		})
-		.from(notifications)
-		.where(eq(notifications.userId, user.id))
-		.orderBy(desc(notifications.createdAt))
-		.limit(100);
-	const data = rows.map((r) => ({
-		...r,
-		createdAt: r.createdAt.toISOString(),
-	}));
-	return ok(data);
+export const getNotifications = async (
+	user: CurrentUser,
+	params?: typeof notificationsQuery.static,
+) => {
+	const { page, pageSize } = resolveTableParams(params);
+
+	const result = await notificationRepo.list({
+		userId: user.id,
+		filter: params?.filter,
+		page,
+		pageSize,
+	});
+
+	return ok({
+		...pageResult(
+			result.rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+			result.total,
+			page,
+			pageSize,
+		),
+		summary: { total: result.total, unread: result.unread },
+	});
 };
 
 export const markNotificationRead = async (user: CurrentUser, id: string) => {
-	const [row] = await db
-		.update(notifications)
-		.set({ isRead: true } as never)
-		.where(and(eq(notifications.id, id), eq(notifications.userId, user.id)))
-		.returning();
+	const row = await notificationRepo.markRead(user.id, id);
 	if (!row) return fail(404, "Notification not found");
+
 	return ok(row);
 };
 
 export const markAllRead = async (user: CurrentUser) => {
-	await db
-		.update(notifications)
-		.set({ isRead: true } as never)
-		.where(eq(notifications.userId, user.id));
+	await notificationRepo.markAllRead(user.id);
+
 	return ok(null);
 };

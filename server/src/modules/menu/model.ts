@@ -2,6 +2,7 @@ import { t } from "elysia";
 
 export const menuItemsQuery = t.Object({
 	categoryId: t.Optional(t.String()),
+	q: t.Optional(t.String({ maxLength: 100 })),
 });
 
 export const createMenuItemBody = t.Object({

@@ -53,7 +53,7 @@ export const cancelOrder = async (input: z.infer<typeof cancelOrderSchema>) => {
  * Custom hook untuk mutasi pembuatan order baru.
  * Otomatis memvalidasi ulang query list orders jika berhasil.
  */
-export function useCreateOrder() {
+export const useCreateOrder = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (data: z.infer<typeof createOrderSchema>) =>
@@ -64,13 +64,13 @@ export function useCreateOrder() {
             }
         },
     });
-}
+};
 
 /**
  * Custom hook untuk mutasi update status order.
  * Otomatis memvalidasi ulang query list dan detail order jika berhasil.
  */
-export function useUpdateOrderStatus() {
+export const useUpdateOrderStatus = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (data: z.infer<typeof updateStatusSchema>) =>
@@ -88,13 +88,13 @@ export function useUpdateOrderStatus() {
             }
         },
     });
-}
+};
 
 /**
  * Custom hook untuk mutasi pembatalan order.
  * Otomatis memvalidasi ulang query list dan detail order jika berhasil.
  */
-export function useCancelOrder() {
+export const useCancelOrder = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (data: z.infer<typeof cancelOrderSchema>) =>
@@ -108,4 +108,4 @@ export function useCancelOrder() {
             }
         },
     });
-}
+};
